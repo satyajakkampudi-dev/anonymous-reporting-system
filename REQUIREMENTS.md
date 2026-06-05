@@ -77,8 +77,20 @@ specs**. This rebuild keeps the proven feature set and fixes all of the above, m
 - The **User app** is open to any authenticated user; it only ever shows **the caller's own** reports.
 - The **Admin app** is **role-gated** (platform license/role + an in-code access gate). Non-admins
   are refused with a clear message.
+- **Reporters** are crew (on any vessel) **and** shore-based staff — any internal authenticated
+  employee. **Admins are a central shore-based compliance team**, deliberately *not* on the
+  reporter's vessel (anonymity): `PRIMARY_ADMIN` = compliance officer(s), `SECONDARY_ADMIN` =
+  senior/escalation (e.g. the Designated Person Ashore). `shipName`/`location` are incident
+  **metadata**, not routing keys.
 - **Role routing:** a report flagged *against an admin* routes to `SECONDARY_ADMIN`; all others
   start with `PRIMARY_ADMIN`. Escalation moves a report to `SECONDARY_ADMIN`.
+- **Routing seam (future-proofing, D17):** routing is resolved in **one** function
+  `resolveAssignees(report)` (`lib/access.js`). **v1 = single central team** — it returns the
+  role pool (all admins of the target role, `scope = GLOBAL`). It is designed so **scoped routing**
+  (per fleet/region/vessel-group) can be added later *additively*: give `admin-users` a populated
+  `scope`, add a structured vessel→scope mapping, and extend the resolver — the queue, notifications,
+  and report schema stay as-is. The queue + bot-to-bot notifications always call the resolver, never
+  a hardcoded role query.
 
 ---
 
@@ -697,3 +709,9 @@ LoG.ai pipeline.
   export**. Confirm against the org's legal policy before go-live.
 - **D16 (OQ-16) Withdraw/amend** — reporter may **withdraw** while `OPEN`/`UNDER_REVIEW` (→ `WITHDRAWN`),
   and **amend/append** information in any non-terminal state (appended + audited).
+- **D17 Routing scope** — **v1 = single central compliance team** (all reports → the role pool).
+  Reporters = crew + shore staff. Routing is encapsulated in `resolveAssignees(report)` and
+  `admin-users` carries an optional `scope` (default `GLOBAL`) so **fleet/region-scoped routing**
+  can be added later additively (populate `scope` + add a structured vessel→scope mapping + extend
+  the resolver) — no report-schema or queue rewrite. Per-vessel admins are explicitly rejected
+  (anonymity).

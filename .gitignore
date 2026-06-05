@@ -5,3 +5,4 @@ dist/
 # Caches & logs
 .cache/
 *.log
+.claude/

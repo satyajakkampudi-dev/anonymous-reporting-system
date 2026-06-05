@@ -138,8 +138,15 @@ own `availability`; calling reads `available` rows to ring.
 | `adminUserId` | string (PK) | Admin's FrontM userId. |
 | `adminEmail` | string | Used to invite to the call meeting. |
 | `role` | enum | `PRIMARY \| SECONDARY`. |
+| `scope` | string | Routing scope (D17). v1 default `GLOBAL`; future `FLEET_A`/region/etc. |
 | `availability` | enum | `available \| busy \| unavailable`. |
 | `updatedOn` | number (ms) | Last status change. |
+
+**Routing (D17):** `resolveAssignees(report)` in `lib/access.js` is the single routing chokepoint.
+v1 returns all `admin-users` of the target role with `scope = GLOBAL` (central team). Scoped routing
+later = populate `scope` + add a structured vessel→scope mapping + extend the resolver; the report
+schema and admin queue are unchanged. `shipName` is incident metadata; a structured `vesselId` may
+be added then for the vessel→scope mapping (free-text `shipName` retained as fallback).
 
 ### Masking (anonymity — `lib/calling.js`)
 - `hostUserEmail` = a masked/system account (never `state.user.userEmail`).
