@@ -12,12 +12,15 @@
 //      autoSaveBuffer write. Runs AFTER the gate passes.
 //   4. Gateway load only (rule 15): loadReportsForAdmin applies { projection:
 //      adminProjection } — admin code NEVER queries `reports` directly.
-//   5. Placeholder render. The Dashboard Display Doc is A-DISPLAY-SHELL; this scaffold
-//      never sendResponse()s a Data Doc (rule 4/8).
+//   5. Render the DISPLAY Doc (Two-Doc, rule 4/8): hide the tab bar, then
+//      adminDisplayDoc.sendResponse(). adminReportDoc (the Data Doc) is NEVER sent — it
+//      owns the Fields + persistence; adminDisplayDoc owns the CardsSet screens. The
+//      Dashboard is grid row 0, so it leads; A-D-* tasks fill each card's content.
 
 import { Context } from "@frontmltd/frontmjs/core/Context";
 import { state } from "@frontmltd/frontmjs/core/State";
 import { resolveAdminRole, loadReportsForAdmin } from "../../../lib/access";
+import { adminDisplayDoc } from "../docs/admin-display-doc";
 import { CONTEXT, STATE_KEYS } from "../constants";
 
 // Side-effect imports: register every Section + Field on adminReportDoc, the two
@@ -31,6 +34,21 @@ import "../sections/status-history";
 import "../sections/amendments";
 import "../sections/admin-user";
 import "../sections/call-queue";
+
+// Side-effect imports: register every Display Doc CardsSet section so the shell is
+// laid out (grid rows 0–10, input-schema order) before sendResponse(). A-D-* tasks
+// fill the card content per platform via renderForPlatform.
+import "../sections/display/dashboard";
+import "../sections/display/report-queue";
+import "../sections/display/manage-header";
+import "../sections/display/manage-content";
+import "../sections/display/manage-resolution";
+import "../sections/display/manage-actions";
+import "../sections/display/status-history";
+import "../sections/display/amendments";
+import "../sections/display/alerts";
+import "../sections/display/on-call";
+import "../sections/display/incoming-call";
 
 export const appStart = async () => {
   // 1. Access gate — Context B, before any bootstrap or gateway read (rule 27).
@@ -50,6 +68,8 @@ export const appStart = async () => {
   // 4. Gateway load only (rule 15): identity-free, projection applied.
   await loadReportsForAdmin({});
 
-  // 5. Placeholder render — the Dashboard Display Doc is A-DISPLAY-SHELL.
-  "Admin console ready. The dashboard is added in the display task.".sendResponse();
+  // 5. Render the Display Doc. Single-tab app → hide the (empty) tab bar first.
+  //    Dashboard (grid row 0) leads; adminReportDoc (Data Doc) is NEVER sent (rule 4/8).
+  adminDisplayDoc.tabBarHidden = true;
+  adminDisplayDoc.sendResponse();
 };
