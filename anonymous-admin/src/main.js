@@ -7,11 +7,32 @@ import "../../lib/collections/reports";
 import "../../lib/collections/call-queue";
 import "../../lib/collections/admin-users";
 
-// --- Feature modules ---
-// The admin access gate, dashboard, queue, manage views, jobs, analytics, on-call
-// availability, and incoming-call handling are imported here as they are added
-// during the build phase (see ../../REQUIREMENTS.md §8, "Admin app" + "Calling").
-// Access is role-gated (FR-A1).
+// --- Data model: sections register every Field on adminReportDoc + the aux Docs ---
+import "./sections/manual-log";
+import "./sections/resolve-popup";
+import "./sections/severity-popup";
+import "./sections/transition-note-popup";
+import "./sections/status-history";
+import "./sections/amendments";
+import "./sections/admin-user";
+import "./sections/call-queue";
+
+// --- Navigation intents (side-effect: register the intents) ---
+import "./frames/nav-dashboard";
+import "./frames/nav-queue";
+import "./frames/nav-manage-report";
+import "./frames/nav-manual-log";
+import "./frames/nav-on-call";
+
+import { appStart } from "./frames/app-start";
+
+// Shell UI flags — mirror of BRD §8.2 (rule 23). The ONLY non-default row for
+// anonymous-admin is contextAware, REQUIRED because adminReportDoc is autoSave: true
+// (manual-log draft + in-flight triage buffer, D-L3-2). Read by the framework before
+// the first render.
+state.onConfig = () => {
+  state.contextAware = true;
+};
 
 export const main = Intent.Create({
   intentId: SYSTEM_INTENTS.MAIN,
@@ -19,6 +40,5 @@ export const main = Intent.Create({
   state,
 });
 
-main.onResolution = async () => {
-  "Anonymous Reporting (admin app) — skeleton".sendResponse();
-};
+// main.onResolution = access-gate-then-bootstrap ordering (rule 27). See app-start.js.
+main.onResolution = appStart;
