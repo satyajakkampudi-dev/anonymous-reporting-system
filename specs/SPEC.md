@@ -59,6 +59,28 @@
 | `rejectReason` | text | Reporter's reason on reject. Sanitised. |
 | audit fields | — | `createdBy`/`modifiedBy`/`createdOn`/`modifiedOn` via `audit: true` — **admin actions only**; ensure the reporter-create path does not stamp reporter identity here, or exclude it from `adminProjection` (ER-A2). |
 
+### Report history sub-collections (added Layer 3 — D-L3-1)
+The report's **status timeline** (U-F2/A-F6) and **append-only amendment trail** (U-F13) are
+modelled as two embedded sub-collections on the report Doc (`forCollection: true`), since `audit:
+true` records only the *last* modifier and cannot reconstruct a timeline.
+
+| Sub-collection (`dbName`) | Field | Type | Notes |
+|---|---|---|---|
+| `statusHistory` | `historyId` | string (PK) | Generated per entry. |
+| | `fromStatus` / `toStatus` | enum | STATUS values. |
+| | `actorRole` | enum | `REPORTER \| PRIMARY_ADMIN \| SECONDARY_ADMIN \| SYSTEM`. Identity-free (role only — never admin/reporter id on the reporter-visible side). |
+| | `changedOn` | number (ms) | Transition timestamp. |
+| | `note` | text | Optional, sanitised (e.g. reject reason, escalate note). |
+| `amendments` | `amendmentId` | string (PK) | Generated per entry. |
+| | `amendmentNote` | text | Sanitised. Mandatory. |
+| | `amendmentEvidenceKey` | string | Optional S3 key (≤ limits, validated). |
+| | `amendedOn` | number (ms) | Append timestamp. |
+
+Both are **append-only** (no edit/delete of existing rows). `statusHistory` is written by every
+status transition in `lib/ticket-status.js`'s transition path (both apps); `amendments` is written
+by U-F13 only. On the admin side both sub-collections pass through `adminProjection` unchanged (they
+already carry **no** reporter identity — `actorRole` not `actorId`).
+
 ## Enumerations (canonical values in `lib/constants.js`)
 - `STATUS`: `OPEN, UNDER_REVIEW, ESCALATED, RESOLVED, REOPENED, CLOSED_BY_USER, CLOSED_BY_SYSTEM, CLOSED_REJECTED, WITHDRAWN`
 - `CATEGORY`, `URGENCY`, `SEVERITY`, `LOCATION`, `CONTACT_METHOD` — as in REQUIREMENTS §5.
