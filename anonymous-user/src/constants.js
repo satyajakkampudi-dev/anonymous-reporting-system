@@ -9,6 +9,9 @@ export const INTENT = {
   OPEN_SUBMIT_REPORT: "openSubmitReport",
   OPEN_MY_REPORTS: "openMyReports",
   OPEN_REPORT_DETAIL: "openReportDetail",
+  // Voice path — the handler is built in U-F15; the Home CTA emits it now so the
+  // navigation contract (input-schema display_elements) is complete.
+  START_ANONYMOUS_CALL: "startAnonymousCall",
 };
 
 // Context ids (CLAUDE.md "App Entry-Point Bootstrap").
