@@ -1,0 +1,19 @@
+{
+  "userDomain": "ga",
+  "frameworkVersion": "v4",
+  "conversational": false,
+  "authorisedAccess": false,
+  "botName": "Hello GA",
+  "description": "Hello GA",
+  "userRoles": ["developer"],
+  "category": ["Development"],
+  "developer": "FrontM",
+  "botClients": {
+    "web": true
+  },
+  "systemId": "",
+  "featured": false,
+  "systemBot": false,
+  "buildType": "",
+  "botId": "8c14815b4bf647ca3f3f1"
+}

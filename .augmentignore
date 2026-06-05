@@ -1,0 +1,47 @@
+# FrontM.ai Augment Ignore File
+# Files and directories to exclude from Augment Code indexing
+
+# Dependencies
+node_modules/
+.npm/
+
+# Build outputs
+dist/
+build/
+.serverless/
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Environment files (security)
+.env
+.env.*
+*.pem
+*.key
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Large binary files
+*.zip
+*.tar.gz
+*.pdf
+

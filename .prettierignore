@@ -1,0 +1,23 @@
+# Dependencies
+node_modules
+
+# Build outputs
+dist
+build
+out
+.next
+
+# Generated files
+coverage
+.cache
+
+# Excluded directories
+config
+resources
+docs
+.augment
+
+# Minified files
+*.min.js
+*.bundle.js
+

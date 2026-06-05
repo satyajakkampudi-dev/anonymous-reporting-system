@@ -1,0 +1,33 @@
+{
+  "version": "1.0.0",
+  "name": "provider-portal",
+  "devDependencies": {
+    "@babel/core": "^7.29.0",
+    "@babel/preset-env": "^7.29.0",
+    "@eslint/js": "^10.0.1",
+    "babel-loader": "^10.1.0",
+    "eslint": "^10.0.3",
+    "globals": "^17.4.0",
+    "prettier": "^3.8.1",
+    "webpack": "^5.105.4",
+    "webpack-cli": "^7.0.2"
+  },
+  "bin": {
+    "frontm-build": "./node_modules/@frontmltd/frontmjs/after.js"
+  },
+  "scripts": {
+    "lint": "eslint . --ignore-pattern 'dist/**' --ignore-pattern 'node_modules/**' --max-warnings=100",
+    "lint:fix": "eslint . --ignore-pattern 'dist/**' --ignore-pattern 'node_modules/**' --max-warnings=100 --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prebuild": "npm run format:check && npm run lint",
+    "build": "webpack --mode=production --node-env=production && npm exec frontm-build",
+    "build:dev": "webpack --mode=development && npm exec frontm-build",
+    "build:fast": "webpack --mode=production --node-env=production && npm exec frontm-build",
+    "build:prod": "npm run lint && npm run format && webpack --mode=production --node-env=production && npm exec frontm-build",
+    "watch": "webpack --watch"
+  },
+  "dependencies": {
+    "@frontmltd/frontmjs": "github:frontmltd/frontm.js#5.0.b9"
+  }
+}

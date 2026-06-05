@@ -1,0 +1,6 @@
+[submodule "docs"]
+	path = docs
+	url = https://github.com/frontmltd/frontm.js-docs.git
+[submodule ".claude"]
+	path = .claude
+	url = https://github.com/frontmltd/frontm-ai-claude-config
