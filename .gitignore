@@ -1,4 +1,7 @@
 /.idea/
-/node_modules/
-/dist
-*.json
+node_modules/
+dist/
+
+# Caches & logs
+.cache/
+*.log

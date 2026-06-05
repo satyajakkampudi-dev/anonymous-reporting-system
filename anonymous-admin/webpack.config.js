@@ -7,7 +7,12 @@ const FRAMEWORK_DIR = path.resolve(appDirectory, BASE_FRAMEWORK_PATH);
 const babelLoaderConfiguration = {
   test: /\.js$/,
   // Add every directory that needs to be compiled by Babel during the build.
-  include: [FRAMEWORK_DIR, path.resolve(appDirectory, "src")],
+  // "../lib" is the shared library consumed by both microapps.
+  include: [
+    FRAMEWORK_DIR,
+    path.resolve(appDirectory, "src"),
+    path.resolve(appDirectory, "../lib"),
+  ],
   use: {
     loader: "babel-loader",
     options: {

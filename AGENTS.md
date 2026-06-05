@@ -52,7 +52,6 @@ The documentation is interconnected:
 ├── dist/              # Build output (bundle.js)
 ├── package.json       # Project configuration
 ├── domain.json        # Domain configuration
-└── .augment/          # Augment Code configuration
 ```
 
 ## Key Framework Concepts

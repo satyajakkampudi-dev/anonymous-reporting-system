@@ -1,0 +1,20 @@
+{
+  "userDomain": "",
+  "frameworkVersion": "v5",
+  "conversational": false,
+  "authorisedAccess": true,
+  "botName": "Anonymous Reporting — Admin",
+  "description": "Triage, investigate, resolve, and escalate anonymous reports.",
+  "userRoles": ["admin"],
+  "category": ["Business"],
+  "developer": "FrontM",
+  "botClients": {
+    "web": true,
+    "mobile": true
+  },
+  "systemId": "",
+  "featured": false,
+  "systemBot": false,
+  "buildType": "",
+  "botId": ""
+}

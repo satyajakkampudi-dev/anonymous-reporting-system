@@ -1,16 +1,18 @@
 {
-  "version": "1.0.0",
-  "name": "provider-portal",
+  "version": "0.1.0",
+  "name": "anonymous-user",
+  "description": "Anonymous Reporting — user microapp (submit and track reports)",
   "devDependencies": {
     "@babel/core": "^7.29.0",
     "@babel/preset-env": "^7.29.0",
     "@eslint/js": "^10.0.1",
+    "@frontmltd/frontmai-cli": "github:frontmltd/frontmjs-cli",
     "babel-loader": "^10.1.0",
     "eslint": "^10.0.3",
     "globals": "^17.4.0",
     "prettier": "^3.8.1",
     "webpack": "^5.105.4",
-    "webpack-cli": "^7.0.2"
+    "webpack-cli": "^6.0.1"
   },
   "bin": {
     "frontm-build": "./node_modules/@frontmltd/frontmjs/after.js"
@@ -25,6 +27,7 @@
     "build:dev": "webpack --mode=development && npm exec frontm-build",
     "build:fast": "webpack --mode=production --node-env=production && npm exec frontm-build",
     "build:prod": "npm run lint && npm run format && webpack --mode=production --node-env=production && npm exec frontm-build",
+    "deploy": "npm run build && ./node_modules/.bin/frontmai-cli deploy",
     "watch": "webpack --watch"
   },
   "dependencies": {
