@@ -7,9 +7,26 @@ import "../../lib/collections/reports";
 import "../../lib/collections/call-queue";
 import "../../lib/collections/admin-users";
 
-// --- Feature modules ---
-// Collections / docs / sections / frames are imported here as they are added
-// during the build phase (see ../../REQUIREMENTS.md §8, "User app" + "Calling").
+// --- Data model: sections register every Field on reportDoc + the sub-collections ---
+import "./sections/report-details";
+import "./sections/contact";
+import "./sections/evidence";
+import "./sections/amendments";
+import "./sections/status-history";
+
+// --- Navigation intents (side-effect: register the intents) ---
+import "./frames/nav-submit-report";
+import "./frames/nav-my-reports";
+import "./frames/nav-report-detail";
+
+import { appStart } from "./frames/app-start";
+
+// Shell UI flags — mirror of BRD §8.1 (rule 23). The ONLY non-default row for
+// anonymous-user is contextAware, REQUIRED because reportDoc is autoSave: true
+// (draft autosave, U-F9). Read by the framework before first render.
+state.onConfig = () => {
+  state.contextAware = true;
+};
 
 export const main = Intent.Create({
   intentId: SYSTEM_INTENTS.MAIN,
@@ -17,6 +34,4 @@ export const main = Intent.Create({
   state,
 });
 
-main.onResolution = async () => {
-  "Anonymous Reporting (user app) — skeleton".sendResponse();
-};
+main.onResolution = appStart;
