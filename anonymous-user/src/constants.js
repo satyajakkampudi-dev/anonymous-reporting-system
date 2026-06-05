@@ -23,4 +23,26 @@ export const CONTEXT = {
 export const STATE_KEYS = {
   // reportId stashed by openReportDetail's payload, read after loadDocument.
   CURRENT_REPORT_ID: "CURRENT_REPORT_ID",
+  // Active My Reports filter — { statusGroup, category, search }. The list
+  // renderer (U-D-myreports) reads this to highlight the active chip and to
+  // filter the rendered rows. The openMyReports loader stashes the chip's
+  // data-payload here (loader wiring + search box are deferred to the follow-up
+  // fix task — see specs/4 MP-FIX-MYREPORTS-FILTERS).
+  MY_REPORTS_FILTER: "MY_REPORTS_FILTER",
 };
+
+// My Reports list — coarse status-group filter chips (wireframe §3:
+// [All][Open][In progress][Done]). Group membership is DERIVED from the shared
+// status state machine (lib/ticket-status STATUS_META.terminal) inside the list
+// renderer, so this enum only fixes the chip VALUES that the chip data-payload
+// and the loader agree on (no magic strings — rule 19).
+export const MY_REPORTS_STATUS_GROUP = {
+  ALL: "all",
+  OPEN: "open",
+  IN_PROGRESS: "in_progress",
+  DONE: "done",
+};
+
+// "All categories" sentinel for the category filter chip — distinct from every
+// CATEGORY token so an empty/absent filter never collides with a real value.
+export const MY_REPORTS_CATEGORY_ALL = "all";
