@@ -5,7 +5,7 @@ import { state } from "@frontmltd/frontmjs/core/State";
 // --- Shared lib (side-effect: registers the shared Docs + Collections) ---
 import "../../lib/collections/reports";
 import "../../lib/collections/call-queue";
-import "../../lib/collections/admin-availability";
+import "../../lib/collections/admin-users";
 
 // --- Feature modules ---
 // The admin access gate, dashboard, queue, manage views, jobs, analytics, on-call

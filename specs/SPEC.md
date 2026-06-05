@@ -81,7 +81,7 @@ Defined in `lib/ticket-status.js` as `{ [status]: { transitions: [{ to, actor, a
 | ESCALATED | RESOLVED | secondary admin | resolve |
 | RESOLVED | CLOSED_BY_USER | reporter | accept |
 | RESOLVED | CLOSED_BY_SYSTEM | system | auto-close (+30d) |
-| RESOLVED | REOPENED | reporter | reject (reason) — until reopen cap (OQ-10) |
+| RESOLVED | REOPENED | reporter | reject (reason) — once only, `reopenCount` 0→1 (D10) |
 | REOPENED | UNDER_REVIEW | admin | take review |
 | REOPENED | ESCALATED | admin | escalate |
 | REOPENED | CLOSED_REJECTED | admin | close as rejected (or force-close past reopen cap) |
@@ -128,13 +128,16 @@ One entry per call attempt. **Identity-free** — never stores reporter id/email
 | `voicemailKey` | string | S3 key if a voicemail was left (MISSED path). |
 | `linkedReportId` | string | Report auto-created from voicemail (`source=CALL`). |
 
-### Collection `admin-availability` → `admin_availability_${systemId}` (`shared: true`)
-Per-admin on-call status. Admin writes own; calling reads `available` rows to ring.
+### Collection `admin-users` → `admin_users_${systemId}` (`shared: true`)
+The **seeded admin registry** (D3) — single source for access gating, PRIMARY/SECONDARY role +
+routing, recusal, on-call availability, and call ringing. Seeded out-of-band; admins update their
+own `availability`; calling reads `available` rows to ring.
 
 | Field (`dbName`) | Type | Notes |
 |---|---|---|
 | `adminUserId` | string (PK) | Admin's FrontM userId. |
-| `adminEmail` | string | Used to invite to the meeting. |
+| `adminEmail` | string | Used to invite to the call meeting. |
+| `role` | enum | `PRIMARY \| SECONDARY`. |
 | `availability` | enum | `available \| busy \| unavailable`. |
 | `updatedOn` | number (ms) | Last status change. |
 

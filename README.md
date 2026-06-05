@@ -29,7 +29,7 @@ anonymous-reporting-system/
 │   └── collections/        # shared Docs + Collections (shared: true)
 │       ├── reports.js          # the reports collection (audit: true)
 │       ├── call-queue.js       # anonymous call entries (identity-free)
-│       └── admin-availability.js  # per-admin on-call status
+│       └── admin-users.js       # admin registry: role + availability (D3)
 ├── anonymous-user/         # User microapp (submit + track) — own bot
 └── anonymous-admin/        # Admin microapp (triage + resolve) — own bot
 ```

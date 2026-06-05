@@ -151,7 +151,7 @@ anonymous-reporting-system/            # one repo
 │   └── collections/                   # shared Docs + Collections (shared: true)
 │       ├── reports.js                 #   reports collection (audit: true)
 │       ├── call-queue.js              #   anonymous call entries (identity-free)
-│       └── admin-availability.js      #   per-admin on-call status
+│       └── admin-users.js             #   admin registry: role + availability (D3)
 ├── anonymous-user/                    # User microapp  (its own bot)
 └── anonymous-admin/                   # Admin microapp (its own bot)
 ```
@@ -173,8 +173,8 @@ anonymous-reporting-system/            # one repo
 - **Anonymous calling:** the FrontM **`VideoCall`** class (Daily.co WebRTC, **voice-only**) +
   **VoIP push** + bot-to-bot ring messages. Modelled on the existing call-centre apps
   (`frontm apps/healthMarinerCommonLib` queue routing + `Vikand-Clinician-Portal`). Two shared
-  collections support it: **`call-queue`** (call entries + lifecycle) and **`admin-availability`**
-  (which admins are on-call/available). Calling helpers live in `lib/calling.js`.
+  collections support it: **`call-queue`** (call entries + lifecycle) and **`admin-users`**
+  (the admin registry — role + on-call availability, D3). Calling helpers live in `lib/calling.js`.
 
 > **Note on framework idioms:** code follows the **actual `sailors-cart` conventions** (e.g.
 > `new Intent(...)`, `new Doc(...)`, side-effect imports in `main.js`, `loadCollectionWithQuery`,
@@ -194,8 +194,8 @@ types, and constraints are in [`specs/SPEC.md`](specs/SPEC.md). Key groups:
 
 Two further shared collections support **anonymous calling** (full detail in `specs/SPEC.md`):
 `call-queue` (call entries: `callRef` PK, `status` `RINGING|ACTIVE|ENDED|MISSED`, `meetingId`,
-`attendedBy`, timestamps, duration — **identity-free**) and `admin-availability` (per-admin
-`available|busy|unavailable` on-call status).
+`attendedBy`, timestamps, duration — **identity-free**) and `admin-users` (admin registry:
+`userId`, `email`, `role`, `available|busy|unavailable` availability — D3).
 - **Reporter-private (never shown to admin):** `reporterId`, `contactMethod`, `contactValue`.
 - **Reporter-entered content:** `category`, `urgency`, `shipName`, `location`, `incidentDate`,
   `description`, `accusedParty`, `againstAdmin` (routes to Secondary).
@@ -236,7 +236,7 @@ stateDiagram-v2
     UNDER_REVIEW --> WITHDRAWN: reporter withdraws
     RESOLVED --> CLOSED_BY_USER: reporter accepts resolution
     RESOLVED --> CLOSED_BY_SYSTEM: auto-close job (30d no response)
-    RESOLVED --> REOPENED: reporter rejects (until reopen cap, OQ-10)
+    RESOLVED --> REOPENED: reporter rejects (once only — D10)
     CLOSED_BY_USER --> [*]
     CLOSED_BY_SYSTEM --> [*]
     CLOSED_REJECTED --> [*]
@@ -252,8 +252,8 @@ Each status carries display **metadata** (label, tone/colour, allowed actions pe
   its **current** DB status before writing; a stale write (status already changed by another admin
   or a job) is rejected and surfaced, not silently overwritten. A `version`/`updatedOn` guard backs
   this (ER-B5).
-- **Reopen cap** — `RESOLVED → REOPENED` is allowed only until `reopenCount` reaches a cap (OQ-10);
-  beyond it the reporter can no longer reject and the admin may force-close (prevents an
+- **Reopen cap** — `RESOLVED → REOPENED` is allowed **once** (`reopenCount` 0→1, D10); after that
+  the reporter can no longer reject and the admin may force-close to `CLOSED_REJECTED` (prevents an
   un-closeable report / reject-loop griefing, ER-B6).
 - **Escalation is not a dead-end** — if an `ESCALATED` report is unactioned within an SLA, it raises
   an alert/digest rather than rotting (ER-B7, OQ-11). `REOPENED` reports can also be escalated.
@@ -388,7 +388,7 @@ the queue like any report.
 sequenceDiagram
     actor R as Reporter
     participant U as User app
-    participant Q as call-queue / admin-availability
+    participant Q as call-queue / admin-users
     participant A as Admin app (bot, on-call admins)
     R->>U: Tap "Call compliance (anonymous)"
     U->>U: Create voice meeting (host=masked, allowGuests, video muted)
@@ -445,7 +445,8 @@ Built **end-to-end**; the "Build order" tags (B1/B2/B3) are sequencing only, not
 - **FR-U8 Reporter notifications** — email + web push on received, status change, resolved, closed.
 
 ### Admin app (B2/B3)
-- **FR-A1 Access gate** — license/role check + in-code gate; refuse non-admins clearly.
+- **FR-A1 Access gate** — license/role check + in-code gate driven by the seeded `admin-users`
+  registry (D3); refuse non-admins clearly.
 - **FR-A2 Dashboard** — custom stat cards (counts by status/severity/age) from live aggregation.
 - **FR-A3 Report queue** — custom card list, **role-filtered** (Primary: OPEN/UNDER_REVIEW;
   Secondary: ESCALATED + against-admin), **identity-stripped** via `adminProjection`; search/filter/paginate.
@@ -456,7 +457,8 @@ Built **end-to-end**; the "Build order" tags (B1/B2/B3) are sequencing only, not
 - **FR-A6 Manual logging** — Form Doc to log phone/in-person reports (`source=MANUAL`).
 - **FR-A7 Auto-escalation job** — scheduled at submit (CRITICAL +1d, others +3d); escalates if unactioned.
 - **FR-A8 Auto-close job** — scheduled at resolve (+30d); closes if still unacknowledged; notifies reporter.
-- **FR-A9 Analytics** — live aggregation stats and/or MongoDB Atlas Charts embed.
+- **FR-A9 Analytics** — **custom-built HTML** stat cards (counts by status/severity/age) derived
+  from the reports collection, with small-cell suppression. **No MongoDB Atlas Charts embed** (D4).
 - **FR-A10 Admin notifications** — email + web push on new report (assigned) and on escalation.
 
 ### Anonymous calling (B3) — shared across both apps
@@ -465,7 +467,7 @@ Built **end-to-end**; the "Build order" tags (B1/B2/B3) are sequencing only, not
   the reporter joins as a **masked guest**, and a `call-queue` entry is created with **no reporter
   identity** (status `RINGING`).
 - **FR-C2 Admin availability** — Admin app toggle to set on-call status
-  (`available`/`busy`/`unavailable`) stored in `admin-availability`. Only `available` admins are rung.
+  (`available`/`busy`/`unavailable`) stored in `admin-users`. Only `available` admins are rung.
 - **FR-C3 Ring available admins** — ring every `available` admin via bot-to-bot
   `MSG_INCOMING_CALL` + **VoIP push**, all payloads **identity-free** (opaque call ref only).
 - **FR-C4 Answer / ring-stop** — first admin to answer sets the entry `ACTIVE` (`attendedBy`),
@@ -499,7 +501,7 @@ Shared HTML/card builders + escaping in `lib/utils/format.js`.
 | Admin | Report detail / manage | Form Doc (admin fields) + read-only content + evidence links |
 | Admin | Manual log | Form Doc |
 | Admin | On-call availability toggle + incoming-call ring | Buttons/Display + VideoCall ring UI |
-| Admin | Analytics | Display cards and/or Atlas Charts dashboard |
+| Admin | Analytics | Display (custom HTML stat cards; no Atlas Charts — D4) |
 
 Card action buttons use `data-action="intent"` on `readOnly` HTML cards; intents reload their own
 data (independent execution context).
@@ -591,7 +593,7 @@ Defined once in `lib/constants.js`. **No payload includes reporter identity.**
 2. **B2 — Core apps:** User (submit, evidence, my-reports, detail, accept/reject, notifications) +
    Admin (gate, queue, detail/manage, transitions, manual log, admin notifications) + bot-to-bot.
 3. **B3 — Automation, analytics & calling:** auto-escalation + auto-close jobs, dashboard,
-   analytics, and the anonymous voice-calling feature (call-queue + admin-availability + voicemail).
+   analytics, and the anonymous voice-calling feature (call-queue + admin-users + voicemail).
 
 ---
 
@@ -656,37 +658,42 @@ requirement; genuine business-rule choices are deferred to §15 Open Questions (
 
 ---
 
-## 15. Open questions
-- **OQ-1** Evidence: max number of files and per-file size limit? (Proposed: 5 files, 25 MB each,
-  allow images/pdf/doc/audio/video/text.)
-- **OQ-2** Escalation timing confirmation: CRITICAL +1 day, others +3 days? Auto-close +30 days?
-- **OQ-3** Are Primary/Secondary admins resolved by FrontM **role/license** or a seeded
-  `admin_users` collection? (Affects FR-A1 + routing.)
-- **OQ-4** Analytics: live aggregation cards sufficient, or is a MongoDB Atlas Charts embed required?
-- **OQ-5** Final app/bot names + per-app `deployment.config.json` (domain, roles, botIds).
-- **OQ-6** Severity: reporter-implied from urgency, or admin-set, or both?
-- **OQ-7** Calling: ring timeout before "no answer → voicemail" (proposed 30s)? Max voicemail
-  length/size (proposed 3 min / 25 MB)? Are admins rung regardless of role, or Primary-only first?
-- **OQ-8** Masked call host: a dedicated system/bot account email for `hostUserEmail`, or a
-  per-call throwaway guest identity for both sides?
-- **OQ-9** Recusal rules (ER-A4): how is "this report is about admin X" captured — a structured
-  "accused is an admin" picker vs free-text — and who handles a report against the *only* secondary
-  admin? (Proposed: structured optional "named person is a compliance admin" flag → route to a
-  designated alternate/ombudsperson; if none configured, hold for a super-admin.)
-- **OQ-10** Reopen cap (ER-B6): max reopens before the reporter can no longer reject?
-  (Proposed: 3, then admin may force-close to `CLOSED_REJECTED`.)
-- **OQ-11** SLA backstop (ER-B7): time before an unactioned `OPEN`/`ESCALATED` report raises an
-  alert, and who receives it? (Proposed: OPEN 24 h, ESCALATED 24 h → digest to all admins.)
-- **OQ-12** Concurrent callers (ER-C12): when several reporters call at once, ring-all-available or
-  one-call-per-admin/busy routing? (Proposed: mark an admin `busy` on answer so they're skipped for
-  other rings; remaining callers ring the rest, else voicemail.)
-- **OQ-13** Evidence safety (ER-C10): is malware scanning required, and what is the exact allowed
-  file-type/size list? (Proposed: rely on type+size allow-list for v1; flag scanning as future.)
-- **OQ-14** Connectivity (ER-C13): is **offline draft + resumable upload** in v1 scope, or
-  online-only with draft autosave? (Proposed: draft autosave in v1; full offline deferred.)
-- **OQ-15** Retention & erasure (ER-D14): retention period for reports/evidence/voicemails, erasure
-  policy, and whether case export is needed in v1. (Proposed: 7-year retention, admin-initiated
-  erasure on terminal reports, CSV/PDF case export — confirm against the org's legal policy.)
-- **OQ-16** Withdraw/amend (ER-C11): may a reporter withdraw after an admin has started review, and
-  may they amend a report already `RESOLVED`? (Proposed: withdraw allowed only in `OPEN`/`UNDER_REVIEW`;
-  amend allowed any non-terminal state, appended + audited.)
+## 15. Resolved decisions
+
+Decisions confirmed by the PM (2026-06-05). These are now binding requirements; the input to the
+LoG.ai pipeline.
+
+- **D1 (OQ-1) Evidence limits** — up to **5 files, 25 MB each**; allow images, PDF, doc/docx,
+  audio, video, text.
+- **D2 (OQ-2) Timing** — auto-escalate **CRITICAL +1 day**, others **+3 days**; auto-close
+  resolved reports **+30 days**.
+- **D3 (OQ-3) Admin registry** — a seeded shared **`admin-users`** collection holds each admin's
+  `userId`, `email`, **role** (`PRIMARY`/`SECONDARY`) and **availability** — the single source for
+  access gating, routing, recusal, and call ringing. (Consolidates the earlier separate
+  `admin-availability` concept.)
+- **D4 (OQ-4) Analytics** — **custom-built HTML** stat cards only; **no MongoDB Atlas Charts**
+  embed. Counts are derived from the reports collection and rendered as our own HTML (with
+  small-cell suppression, ER-A6).
+- **D5 (OQ-5) Names/deploy** — app/bot names, domain, systemId, botIds **decided at deploy time**;
+  `deployment.config.json` left with placeholders until then.
+- **D6 (OQ-6) Severity** — reporter **urgency → initial severity**; **admin can override** in triage.
+- **D7 (OQ-7) Call timing** — **30 s** ring timeout before voicemail; voicemail capped **3 min / 25 MB**.
+- **D8 (OQ-8) Call host** — a **dedicated system/bot account** hosts every call; reporter joins as a
+  per-call throwaway masked guest.
+- **D9 (OQ-9) Recusal** — a report flagged *against an admin* routes to **`SECONDARY` only** (the
+  simple rule). ⚠️ **Residual gap (accepted for v1):** a report *about the secondary admin* is still
+  visible to them — revisit when a designated alternate/ombudsperson exists. Tracked as ER-A4.
+- **D10 (OQ-10) Reopen cap** — **1 reopen only**: a reporter may reject a resolution once
+  (`reopenCount` 0→1); after that they cannot reject, and the admin may force-close to `CLOSED_REJECTED`.
+- **D11 (OQ-11) SLA backstop** — unactioned **OPEN 24 h** / **ESCALATED 24 h** → **digest to all admins**.
+- **D12 (OQ-12) Call routing** — **ring all available** admins; the admin who answers is marked
+  **`busy`** and skipped for other concurrent calls; remaining callers ring the rest, else voicemail.
+- **D13 (OQ-13) Evidence safety** — **type + size allow-list** for v1; malware scanning is future;
+  admin sees a "download at your own risk" note.
+- **D14 (OQ-14) Connectivity** — **draft autosave** of the submission form in v1 (survives
+  crashes/navigation) + limited/resumable uploads; **full offline submission deferred**.
+- **D15 (OQ-15) Retention & erasure** — **7-year retention** for reports/evidence/voicemails;
+  **admin-initiated erasure** on terminal reports (clears identity + linked S3); **CSV/PDF case
+  export**. Confirm against the org's legal policy before go-live.
+- **D16 (OQ-16) Withdraw/amend** — reporter may **withdraw** while `OPEN`/`UNDER_REVIEW` (→ `WITHDRAWN`),
+  and **amend/append** information in any non-terminal state (appended + audited).
