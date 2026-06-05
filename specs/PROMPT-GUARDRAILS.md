@@ -32,4 +32,28 @@ submodule updates; if a submodule update reverts the skill edits, re-inject from
    (FrontM has **no unit-test files**). Runtime bugs → `/frontm-fix-task` (append-only), never a
    silent `src/` edit.
 
-> Only after this gate passes should the prompt's "WHAT to build" be implemented.
+## PRE-IMPLEMENTATION BRIEFING — write this and get the PM's go-ahead BEFORE any code
+
+The analysis above (steps 1–7) is for *you*; this briefing is the **output you show the PM first**.
+Do not write or change a single line of code until you have presented it and received an explicit
+go-ahead. Keep it tight — the goal is shared understanding + an honest confidence check, not an essay.
+
+1. **What & why** — the task in plain language + the real-world purpose / end-user value (who relies
+   on this, what it lets them do).
+2. **How** — the concrete framework approach: the exact primitives (Doc / Section / Field / Intent /
+   CardsSet / job / VideoCall …), the files you'll add or change, and the key APIs you'll call.
+3. **Framework confidence (the important part)** — for each key mechanism, cite the `./docs/` page (or
+   `framework-mapping` rule) that confirms it and rate confidence:
+   - **✅ High** — verified in `./docs/` with a matching example / `/frontm-api-verify` confirmed it.
+   - **🟡 Medium** — composed from documented primitives but no exact example; state the assumption.
+   - **🔴 Low / unknown** — not found in `./docs/`; needs a doc spike or a PM decision. **Never code a 🔴 blind.**
+   Give an overall confidence (High / Medium / Low) for the task.
+4. **Edge cases & risks** to be handled (cross-referenced to `REQUIREMENTS.md` ER-*), and the
+   non-negotiables this task touches (anonymity, mobile+web, etc.).
+5. **Open questions / blockers** — anything to confirm with the PM first.
+
+**Gate rule:** if overall confidence is High and there are no open questions, present the briefing and
+proceed. If anything is 🟡/🔴 or there's an open question, **STOP and get the PM's decision** before coding.
+
+> Only after this gate passes AND the briefing is acknowledged should the prompt's "WHAT to build"
+> be implemented.
