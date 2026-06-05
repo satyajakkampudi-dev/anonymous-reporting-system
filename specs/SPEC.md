@@ -105,10 +105,11 @@ through a **single gateway** `loadReportsForAdmin()` / `loadReportForAdmin()` th
 Admin Display/Form Docs bind no identity field; bot-to-bot payloads and admin emails are built from
 this set only. Dashboard/analytics aggregations apply small-cell suppression (ER-A6).
 
-## Retention & erasure (ER-D14 — policy in OQ-15)
-Define retention for reports, evidence files, and voicemails; an admin-initiated erasure path on
-terminal reports; and case export. Erasure must also clear `reporterId`/contact and the linked S3
-objects. (Exact periods/policy pending OQ-15.)
+## Retention & export (ER-D14 — decision D15)
+**v1:** 7-year retention for reports, evidence files, and voicemails; **CSV/PDF case export** from
+the `adminProjection` set only (no reporter identity). **Deferred to post-v1:** admin-initiated
+erasure on terminal reports (would also clear `reporterId`/contact + linked S3 objects) — irreversible,
+pending legal sign-off. Confirm retention against the org's legal policy before go-live.
 
 ## Anonymous calling data model
 

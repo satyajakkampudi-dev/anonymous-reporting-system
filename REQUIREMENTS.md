@@ -704,9 +704,10 @@ LoG.ai pipeline.
   admin sees a "download at your own risk" note.
 - **D14 (OQ-14) Connectivity** — **draft autosave** of the submission form in v1 (survives
   crashes/navigation) + limited/resumable uploads; **full offline submission deferred**.
-- **D15 (OQ-15) Retention & erasure** — **7-year retention** for reports/evidence/voicemails;
-  **admin-initiated erasure** on terminal reports (clears identity + linked S3); **CSV/PDF case
-  export**. Confirm against the org's legal policy before go-live.
+- **D15 (OQ-15) Retention & export** — **7-year retention** for reports/evidence/voicemails and
+  **CSV/PDF case export** ship in v1. **Admin-initiated erasure is deferred to post-v1** (Layer-2 PM
+  decision): it is irreversible and pending legal sign-off (tracked: ER-D14, BRD §12). Confirm
+  retention against the org's legal policy before go-live.
 - **D16 (OQ-16) Withdraw/amend** — reporter may **withdraw** while `OPEN`/`UNDER_REVIEW` (→ `WITHDRAWN`),
   and **amend/append** information in any non-terminal state (appended + audited).
 - **D17 Routing scope** — **v1 = single central compliance team** (all reports → the role pool).
