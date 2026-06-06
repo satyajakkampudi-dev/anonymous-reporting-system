@@ -220,7 +220,6 @@ reportDoc.onSubmit = async (self) => {
     }
     persisted = true;
   }
-  if (!persisted) return;
 
   // 7. Post-save hook (rule 16): X1 wires the identity-free MSG_NEW_REPORT sender HERE
   //    — { reportId, category, urgency, severity, assignedTo, createdOn } only, via
