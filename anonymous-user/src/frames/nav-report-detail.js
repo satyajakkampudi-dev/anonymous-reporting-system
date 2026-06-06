@@ -16,6 +16,7 @@ import { reportDoc } from "../collections/reports";
 import { reporterIdField } from "../sections/report-details";
 import { amendmentsCollection } from "../sections/amendments";
 import { statusHistoryCollection } from "../sections/status-history";
+import { prepareDetailContentEvidence } from "../sections/display/detail-content";
 import { INTENT } from "../constants";
 
 export const openReportDetail = Intent.Create({
@@ -46,6 +47,11 @@ openReportDetail.onResolution = async () => {
   // Sub-collections are not auto-populated by loadDocument.
   await amendmentsCollection.loadCollectionWithQuery({});
   await statusHistoryCollection.loadCollectionWithQuery({});
+
+  // Sign the report's evidence S3 keys BEFORE rendering — onResponse (the detail
+  // content render handler) is synchronous and NOT awaited, so the signing must
+  // complete here (S3 guide "Signed URLs before sendResponse", rule 11/18).
+  await prepareDetailContentEvidence();
 
   reportDoc.sendResponse();
 };
