@@ -76,6 +76,15 @@ import "./frames/override-severity";
 // (payload { filter }/{ scope:"queue" }) whose UI trigger is a flagged follow-up.
 import "./frames/export-report";
 
+// --- Cross-app contract RECEIVERS (side-effect: register the onMatching intents) ---
+// Each matches a single MSG.* bot-to-bot type from the reporter app and acts on it:
+//   X1 new-report      — notify assignees (A-F15) + arm auto-escalate (A-F16).
+//   X2 report-reopened — notify assignees (A-F15).
+//   X3 incoming-call   — load callQueueDoc + render the in-app ring banner.
+import "./frames/contracts/new-report";
+import "./frames/contracts/report-reopened";
+import "./frames/contracts/incoming-call";
+
 import { appStart } from "./frames/app-start";
 
 // Shell UI flags — mirror of BRD §8.2 (rule 23). The ONLY non-default row for

@@ -76,7 +76,8 @@ import {
   appendStatusHistoryRow,
 } from "./status-history-writer";
 import { STATUS } from "../../../lib/ticket-status";
-import { assignedRoleFor } from "../../../lib/access";
+import { assignedRoleFor, resolveAssignees } from "../../../lib/access";
+import { sendBotMessage, resolvePeerBotId } from "../../../lib/notifications";
 import { validateEvidenceEnvelope } from "../../../lib/validation";
 import {
   generateReportId,
@@ -91,6 +92,8 @@ import {
   ACTOR_ROLE,
   severityFromUrgency,
   ERROR_CODES,
+  MSG,
+  STATIC_DATA_KEYS,
 } from "../../../lib/constants";
 import { INTENT, STATE_KEYS, VOICEMAIL } from "../constants";
 
@@ -101,6 +104,57 @@ export const callTimeout = Intent.Create({
   prompt: "Handle a compliance call that no one answered in time",
   state,
 });
+
+// X1 — emit the identity-free MSG_NEW_REPORT for the just-saved report to its assigned
+// admins in the admin app. `doc` is the LIVE, just-saved reportDoc. Payload carries ONLY
+// { reportId, category, urgency, severity, assignedTo, createdOn } — NO reporterId /
+// contact (rule 16; the call report's reporterId is empty anyway). Best-effort + logged;
+// NEVER throws into the voicemail flow. Sibling of the submit-report.js sender.
+const sendNewReportMessage = async (doc) => {
+  try {
+    const report = {
+      reportId: doc.f[reportIdField.id]?.value,
+      category: doc.f[categoryField.id]?.value,
+      urgency: doc.f[urgencyField.id]?.value,
+      severity: doc.f[severityField.id]?.value,
+      assignedTo: doc.f[assignedToField.id]?.value,
+      createdOn: doc.f[createdOnField.id]?.value,
+    };
+    if (!report.reportId) {
+      D.log({
+        message: "X1: MSG_NEW_REPORT skipped — no reportId on saved doc",
+      });
+      return;
+    }
+    const assignees = await resolveAssignees(report);
+    const userIds = (assignees || []).map((a) => a.adminUserId).filter(Boolean);
+    if (!userIds.length) {
+      D.log({
+        message:
+          "X1: MSG_NEW_REPORT — no assignees to deliver to (queued only)",
+        data: { reportId: report.reportId, assignedTo: report.assignedTo },
+      });
+      return;
+    }
+    const botId = await resolvePeerBotId(STATIC_DATA_KEYS.ADMIN_BOT_ID);
+    await sendBotMessage({
+      type: MSG.NEW_REPORT,
+      payload: report,
+      userIds,
+      botId,
+      userDomain: state.currentUserDomain,
+    });
+    D.log({
+      message: "X1: MSG_NEW_REPORT sent (voicemail report)",
+      data: { reportId: report.reportId, recipients: userIds.length },
+    });
+  } catch (error) {
+    D.log({
+      message: "X1: MSG_NEW_REPORT send swallowed an error",
+      data: { error: String(error) },
+    });
+  }
+};
 
 // --- 1. Timeout handler: guarded MISSED transition, then open the voicemail popup ---
 callTimeout.onResolution = async () => {
@@ -330,9 +384,11 @@ voicemailDoc.onSubmit = async (self) => {
   // Clear the stash so a stale callRef cannot leak into a later popup.
   state.clearField(STATE_KEYS.CURRENT_CALL_REF);
 
-  // X1 hook (rule 16): MSG_NEW_REPORT (identity-free — { reportId, category, urgency,
-  // severity, assignedTo, createdOn }) is sent HERE, AFTER save(), by task X1 (which
-  // depends on U-F16). Mirror of the hook in submit-report.js — do NOT invent it now.
+  // X1 (rule 16): emit the identity-free MSG_NEW_REPORT for this auto-created
+  // source=CALL report, AFTER save(). Same payload shape + best-effort guarantees as
+  // submit-report.js — read off the just-saved reportDoc (a system report; reporterId is
+  // empty by construction, never sent). Mirror of the submit-report.js sender.
+  await sendNewReportMessage(reportDoc);
 
   "Thank you. Your voice message has been received securely and passed to the compliance team, who will follow it up. Your identity has remained anonymous throughout.".sendResponse();
 };

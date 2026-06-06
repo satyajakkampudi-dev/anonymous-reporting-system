@@ -64,7 +64,8 @@ import {
   appendStatusHistoryRow,
 } from "./status-history-writer";
 import { STATUS } from "../../../lib/ticket-status";
-import { assignedRoleFor } from "../../../lib/access";
+import { assignedRoleFor, resolveAssignees } from "../../../lib/access";
+import { sendBotMessage, resolvePeerBotId } from "../../../lib/notifications";
 import { sanitiseText, isValidIncidentDate } from "../../../lib/validation";
 import {
   generateReportId,
@@ -78,6 +79,8 @@ import {
   SOURCE,
   ACTOR_ROLE,
   ERROR_CODES,
+  MSG,
+  STATIC_DATA_KEYS,
 } from "../../../lib/constants";
 
 // Free-text fields sanitised on submit (rule 10). category/urgency/location are
@@ -94,6 +97,64 @@ const FREE_TEXT_FIELDS = [
 // action that fires onSubmit. The admin bundle never sendResponse()s reportDoc, so
 // this is inert there.
 reportDoc.confirm = "Submit report";
+
+// X1 — emit the identity-free MSG_NEW_REPORT to the report's assigned admins in the
+// admin app. `self` is the LIVE, just-saved reportDoc (Context A). Payload carries ONLY
+// { reportId, category, urgency, severity, assignedTo, createdOn } — NO reporterId /
+// contact (rule 16). Recipients = resolveAssignees(report).adminUserId (the routing
+// chokepoint). botId = the admin app, from deployment static data. Best-effort + logged;
+// NEVER throws into the submit flow (no admins / no botId / send fault → logged no-op,
+// the report still sits in the queue and the SLA digest is the backstop).
+const sendNewReportMessage = async (self) => {
+  try {
+    const report = {
+      reportId: self.f[reportIdField.id].value,
+      category: self.f[categoryField.id].value,
+      urgency: self.f[urgencyField.id].value,
+      severity: self.f[severityField.id].value,
+      assignedTo: self.f[assignedToField.id].value,
+      createdOn: self.f[createdOnField.id].value,
+    };
+    if (!report.reportId) {
+      D.log({
+        message: "X1: MSG_NEW_REPORT skipped — no reportId on saved doc",
+      });
+      return;
+    }
+    // resolveAssignees honours the LIVE assignedTo (routing chokepoint, rule 14) and
+    // returns identity-free admin rows { adminUserId, adminEmail, ... }.
+    const assignees = await resolveAssignees(report);
+    const userIds = (assignees || []).map((a) => a.adminUserId).filter(Boolean);
+    if (!userIds.length) {
+      // No admins to deliver to — log, do NOT send (the report is persisted; the SLA
+      // digest / Alerts surface an unassigned report). Mirrors ER-B7.
+      D.log({
+        message:
+          "X1: MSG_NEW_REPORT — no assignees to deliver to (queued only)",
+        data: { reportId: report.reportId, assignedTo: report.assignedTo },
+      });
+      return;
+    }
+    const botId = await resolvePeerBotId(STATIC_DATA_KEYS.ADMIN_BOT_ID);
+    await sendBotMessage({
+      type: MSG.NEW_REPORT,
+      payload: report,
+      userIds,
+      botId,
+      userDomain: state.currentUserDomain,
+    });
+    D.log({
+      message: "X1: MSG_NEW_REPORT sent",
+      data: { reportId: report.reportId, recipients: userIds.length },
+    });
+  } catch (error) {
+    // Absolute backstop — a cross-app send fault must never fail the reporter's submit.
+    D.log({
+      message: "X1: MSG_NEW_REPORT send swallowed an error",
+      data: { error: String(error) },
+    });
+  }
+};
 
 reportDoc.onSubmit = async (self) => {
   // 1. Sanitise free-text (idempotent — safe on a re-submit).
@@ -221,12 +282,13 @@ reportDoc.onSubmit = async (self) => {
     persisted = true;
   }
 
-  // 7. Post-save hook (rule 16): X1 wires the identity-free MSG_NEW_REPORT sender HERE
-  //    — { reportId, category, urgency, severity, assignedTo, createdOn } only, via
-  //    state.notification.sendMessageToUserInBot. Built by task X1 (depends on U-F8).
-
-  // 8. Reporter confirmation. The custom read screens + any navigation belong to the
-  //    Display Doc; U-F8 gives clear, trustworthy feedback with the tracking ID.
+  // 7. Post-save (rule 16): emit the identity-free MSG_NEW_REPORT to the assigned
+  //    admins in the admin app (X1). The payload carries ONLY non-identity report
+  //    facts — NEVER reporterId / contact (rule 16) — built straight off the saved
+  //    reportDoc fields. Best-effort + logged (sendBotMessage swallows its own
+  //    failure); a send fault must never fail the reporter's submit — the SLA digest
+  //    / Alerts backstop catches an undelivered report. Sent here, AFTER save().
   const reportId = self.f[reportIdField.id].value;
+  await sendNewReportMessage(self);
   `Thank you. Your report has been submitted securely and anonymously.\n\nYour tracking ID is **${reportId}** — please keep it so you can follow up on this report. We will never reveal your identity.`.sendResponse();
 };

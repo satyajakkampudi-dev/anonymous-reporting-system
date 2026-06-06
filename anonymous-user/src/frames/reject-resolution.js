@@ -42,12 +42,20 @@ import {
   reopenCountField,
   rejectReasonField,
   updatedOnField,
+  assignedToField,
 } from "../sections/report-details";
 import { rejectReasonInputField } from "../sections/reject-reason";
 import { appendStatusHistoryRow } from "./status-history-writer";
-import { ownsReport } from "../../../lib/access";
+import { ownsReport, resolveAssignees } from "../../../lib/access";
+import { sendBotMessage, resolvePeerBotId } from "../../../lib/notifications";
 import { canTransition, STATUS } from "../../../lib/ticket-status";
-import { ACTOR_ROLE, ERROR_CODES, REOPEN_CAP } from "../../../lib/constants";
+import {
+  ACTOR_ROLE,
+  ERROR_CODES,
+  REOPEN_CAP,
+  MSG,
+  STATIC_DATA_KEYS,
+} from "../../../lib/constants";
 import { sanitiseText } from "../../../lib/validation";
 import { INTENT, STATE_KEYS } from "../constants";
 
@@ -65,6 +73,54 @@ const ILLEGAL_MSG =
   "This report can no longer be reopened — its status has changed. Please refresh to see the latest update.";
 const CAP_MSG =
   "You have already reopened this report once. If you still have concerns, please add an amendment or contact the compliance team.";
+
+// X2 — emit the identity-free MSG_REPORT_REOPENED to the report's assigned admins in
+// the admin app. `doc` is the LIVE, just-saved reportDoc; `reason` the sanitised reject
+// reason. Payload carries ONLY { reportId, reopenCount, rejectReason } — NO reporterId /
+// contact (rule 16). Recipients = resolveAssignees(report).adminUserId (routing
+// chokepoint, honouring the report's live assignedTo). Best-effort + logged; NEVER
+// throws into the reopen flow. Sibling of the X1 sender.
+const sendReportReopenedMessage = async (reportId, doc, reason) => {
+  try {
+    if (!reportId) {
+      D.log({ message: "X2: MSG_REPORT_REOPENED skipped — no reportId" });
+      return;
+    }
+    const reopenCount = Number(doc.f[reopenCountField.id]?.value || 0);
+    const payload = { reportId, reopenCount, rejectReason: reason };
+    // resolveAssignees needs the live assignedTo to route to the right role.
+    const assignees = await resolveAssignees({
+      reportId,
+      assignedTo: doc.f[assignedToField.id]?.value,
+    });
+    const userIds = (assignees || []).map((a) => a.adminUserId).filter(Boolean);
+    if (!userIds.length) {
+      D.log({
+        message:
+          "X2: MSG_REPORT_REOPENED — no assignees to deliver to (reopened only)",
+        data: { reportId },
+      });
+      return;
+    }
+    const botId = await resolvePeerBotId(STATIC_DATA_KEYS.ADMIN_BOT_ID);
+    await sendBotMessage({
+      type: MSG.REPORT_REOPENED,
+      payload,
+      userIds,
+      botId,
+      userDomain: state.currentUserDomain,
+    });
+    D.log({
+      message: "X2: MSG_REPORT_REOPENED sent",
+      data: { reportId, reopenCount, recipients: userIds.length },
+    });
+  } catch (error) {
+    D.log({
+      message: "X2: MSG_REPORT_REOPENED send swallowed an error",
+      data: { reportId, error: String(error) },
+    });
+  }
+};
 
 // --- 1. Trigger intent: guard off the buffer, then open the reason popup ---
 rejectResolution.onResolution = async () => {
@@ -208,9 +264,13 @@ rejectReasonDoc.onSubmit = async (self) => {
     return;
   }
 
-  // 10. Post-save (rule 16): the MSG_REPORT_REOPENED sender is the X2 contract task,
-  //     wired HERE after save() with payload {reportId, reopenCount, rejectReason}.
-  //     Not built in U-F11 — do NOT invent it now.
+  // 10. Post-save (rule 16): emit the identity-free MSG_REPORT_REOPENED to the report's
+  //     assigned admins in the admin app (X2). Payload carries ONLY { reportId,
+  //     reopenCount, rejectReason } — NO reporterId / contact (rule 16). reopenCount is
+  //     the just-incremented value; rejectReason is the sanitised reason. Best-effort +
+  //     logged; NEVER throws into the reopen flow (no admins / no botId / fault → logged
+  //     no-op; the SLA digest / Alerts surface the reopened report).
+  await sendReportReopenedMessage(reportId, reportDoc, reason);
 
   `Thank you. Your report **${reportId}** has been reopened and sent back to the compliance team for another look.\n\nYour reason has been added to the report's timeline. Your identity has remained anonymous throughout. Note that a report can be reopened only once.`.sendResponse();
 };

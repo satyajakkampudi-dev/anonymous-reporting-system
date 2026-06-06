@@ -33,9 +33,20 @@ import {
   meetingIdField,
   callCreatedOnField,
 } from "../sections/call-queue";
-import { initiateAnonymousCall, generateCallRef } from "../../../lib/calling";
+import {
+  initiateAnonymousCall,
+  generateCallRef,
+  resolveAvailableAdmins,
+  ringAvailableAdmins,
+} from "../../../lib/calling";
+import { resolvePeerBotId } from "../../../lib/notifications";
 import { isDuplicateKeyError } from "../../../lib/id-generator";
-import { CALL_STATUS, ERROR_CODES, TIMING } from "../../../lib/constants";
+import {
+  CALL_STATUS,
+  ERROR_CODES,
+  TIMING,
+  STATIC_DATA_KEYS,
+} from "../../../lib/constants";
 import { INTENT, VIDEO_CALL, VOICEMAIL } from "../constants";
 
 // VideoCall instance — MUST be exported so the framework can route JOIN_MEETING and
@@ -162,10 +173,32 @@ startAnonymousCall.onResolution = async () => {
     });
   }
 
-  // 4. [X3 hook — rule 16] AFTER save(): ring all available admins via the
+  // 4. [X3 — rule 16] AFTER save(): ring all CURRENTLY-AVAILABLE admins via the
   //    identity-free MSG_INCOMING_CALL bot-to-bot message + VoIP push, payload
-  //    { callRef, meetingId } ONLY (lib/calling.ringAvailableAdmins). Built by task
-  //    X3 (which depends on U-F15) — do NOT invent the sender here.
+  //    { callRef, meetingId } ONLY (lib/calling.ringAvailableAdmins builds both).
+  //    resolveAvailableAdmins is the single source for "who is on call right now"
+  //    (GLOBAL admins whose availability === AVAILABLE) — ONLY those are rung. botId is
+  //    the admin app, from deployment static data. Best-effort + logged; a ring fault
+  //    must NEVER block the reporter from joining the meeting (step 5) — the no-answer
+  //    timeout (step 3b) is the backstop. No available admins → ringAvailableAdmins
+  //    logs and rings no one; the timeout still offers voicemail.
+  try {
+    const admins = await resolveAvailableAdmins();
+    const toBotId = await resolvePeerBotId(STATIC_DATA_KEYS.ADMIN_BOT_ID);
+    await ringAvailableAdmins({
+      callRef,
+      meetingId,
+      admins,
+      toBotId,
+      userDomain: state.currentUserDomain,
+    });
+  } catch (error) {
+    D.log({
+      message:
+        "U-F15/X3: ringAvailableAdmins failed (non-fatal — reporter still joins)",
+      data: { callRef, error: String(error) },
+    });
+  }
 
   // 5. Place the reporter into the meeting as the masked guest (voice-only, camera
   //    off via the meeting's startVideoOff). Uses the masked-guest token minted in
