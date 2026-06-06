@@ -18,9 +18,10 @@
 //      Dashboard is grid row 0, so it leads; A-D-* tasks fill each card's content.
 
 import { Context } from "@frontmltd/frontmjs/core/Context";
-import { state } from "@frontmltd/frontmjs/core/State";
+import { D, state } from "@frontmltd/frontmjs/core/State";
 import { resolveAdminRole, loadReportsForAdmin } from "../../../lib/access";
 import { adminDisplayDoc } from "../docs/admin-display-doc";
+import { sendAccessRefusal } from "../sections/display/access-refusal";
 import { CONTEXT, STATE_KEYS } from "../constants";
 
 // Side-effect imports: register every Section + Field on adminReportDoc, the two
@@ -52,10 +53,29 @@ import "../sections/display/incoming-call";
 
 export const appStart = async () => {
   // 1. Access gate — Context B, before any bootstrap or gateway read (rule 27).
-  const role = await resolveAdminRole();
+  //    resolveAdminRole reads the seeded admin-users registry (lib/access.js — the
+  //    SINGLE gating source, D3; no hardcoded allowlist). It performs a MongoDB read,
+  //    so on a poor maritime link it can throw. A thrown error is NOT a deny — it
+  //    must never accuse a legitimate admin, and (rule 27) must never fall through to
+  //    the bootstrap. So: catch it, show a neutral retry message, and STOP — same
+  //    no-bootstrap / no-gateway-read outcome as a deny, different copy.
+  let role;
+  try {
+    role = await resolveAdminRole();
+  } catch (error) {
+    D.log({
+      message: "A-F1: access-gate role resolution failed",
+      data: { error: String(error) },
+    });
+    "We couldn't verify your access just now. Please try opening the console again in a moment.".sendResponse();
+    return;
+  }
+
   if (!role) {
-    // DENY: clear refusal, then STOP. No bootstrap, no read.
-    "This console is restricted to the compliance team.".sendResponse();
+    // DENY (caller not in the admin-users registry): clear refusal card, then STOP.
+    // No Context.CreateAndInit, no gateway read — nothing is loaded behind the wall.
+    D.log({ message: "A-F1: access denied (caller not an admin)" });
+    sendAccessRefusal();
     return;
   }
 
