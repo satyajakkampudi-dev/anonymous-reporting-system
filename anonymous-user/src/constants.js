@@ -16,6 +16,13 @@ export const INTENT = {
   // fired by the jobScheduler message armed at ring-start (start-anonymous-call.js),
   // so the string value is the scheduled-message intentId contract, not a public CTA.
   CALL_TIMEOUT: "callTimeout",
+  // Call end/abandon target (U-F17, input-schema "callEnd"). NOT a navigation CTA — it
+  // is fired with a { callRef } by either (a) a hang-up/cancel invoke_intent from the
+  // meeting UI (payload one level deep under .payload), or (b) the mid-call inactivity
+  // timeout jobScheduler message armed admin-side at ACTIVE/A-F21 (payload under .data).
+  // The handler is status-conditional (RINGING->ABANDONED, ACTIVE->ENDED), so the string
+  // value is the shared scheduled-message + invoke_intent contract, not a public CTA.
+  CALL_END: "callEnd",
   // Reporter detail-actions (input-schema detailActions / U-F10–F13). Handlers are
   // built later; the detail-actions card emits these data-intent-id values now, so
   // the string values ARE the public navigation contract and must match the schema.

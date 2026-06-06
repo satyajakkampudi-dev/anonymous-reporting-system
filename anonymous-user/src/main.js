@@ -54,6 +54,10 @@ import "./frames/start-anonymous-call";
 // Registers the callTimeout intent + wires voicemailDoc.onSubmit; needs the voicemail
 // section + report-details/evidence/status-history Field exports above.
 import "./frames/call-timeout";
+// Call end/abandon (U-F17) — status-conditional guarded transition handler
+// (RINGING->ABANDONED, ACTIVE->ENDED; ER-C12). Registers the callEnd intent; needs the
+// call-queue section Field exports above.
+import "./frames/call-end";
 
 import { appStart } from "./frames/app-start";
 
