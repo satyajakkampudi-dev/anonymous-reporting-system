@@ -2,13 +2,22 @@
 //
 // Independent intent (Context B). Attaches to the existing context via
 // Context.Create (preserves the autoSaveBuffer — rule 22; NO re-loadDocument).
-// SCAFFOLD: renders the Data Doc submit form inline. The fresh-draft reset and the
-// Display Doc wiring are later tasks; for now the in-flight draft (autosaved) shows.
+// Renders the U-F5 anonymity guard immediately above the Data Doc submit form
+// ("inline at the top", wireframes §2). The fresh-draft reset is a later task;
+// for now the in-flight draft (autosaved) shows.
+//
+// U-F5: the guard is a STANDALONE CardsSet (it cannot live on reportDoc — Fields
+// + CardsSet may not share a Doc). It is sent BEFORE reportDoc.sendResponse() so
+// it stacks above the editable form. NOTE (verify on live runtime, /verify): two
+// sequential sendResponse() in one resolution. If the runtime does not stack them
+// above the form, the documented fallback is a two-step gate (guard card with a
+// "Continue" button → a second intent that renders the form) — see U-F5 briefing.
 
 import { Intent } from "@frontmltd/frontmjs/core/Intent";
 import { Context } from "@frontmltd/frontmjs/core/Context";
 import { state } from "@frontmltd/frontmjs/core/State";
 import { reportDoc } from "../collections/reports";
+import { sendSubmitGuard } from "../sections/display/submit-guard";
 import { INTENT } from "../constants";
 
 export const openSubmitReport = Intent.Create({
@@ -19,5 +28,6 @@ export const openSubmitReport = Intent.Create({
 
 openSubmitReport.onResolution = async () => {
   await Context.Create(state.currentTabId, { state });
-  reportDoc.sendResponse();
+  sendSubmitGuard(); // U-F5 — anonymity guard, above the form
+  reportDoc.sendResponse(); // editable submit form (Data Doc)
 };
