@@ -18,6 +18,11 @@ import "./sections/status-history";
 //     onValidation; needs the evidence Field exports above) ---
 import "./frames/report-validation";
 
+// --- Submit transforms (side-effect: wire reportDoc.onSubmit + the submit-button
+//     label; U-F8. Needs the report-details / evidence / status-history Field
+//     exports above) ---
+import "./frames/submit-report";
+
 // --- Navigation intents (side-effect: register the intents) ---
 import "./frames/nav-submit-report";
 import "./frames/nav-my-reports";
