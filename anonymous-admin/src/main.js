@@ -24,6 +24,9 @@ import "./frames/nav-manage-report";
 import "./frames/nav-manual-log";
 import "./frames/nav-on-call";
 
+// --- Manage-detail transition intents (side-effect: register the intents) ---
+import "./frames/take-review";
+
 import { appStart } from "./frames/app-start";
 
 // Shell UI flags — mirror of BRD §8.2 (rule 23). The ONLY non-default row for
