@@ -16,6 +16,7 @@ import { Context } from "@frontmltd/frontmjs/core/Context";
 import { state } from "@frontmltd/frontmjs/core/State";
 import { reportsCollection } from "../collections/reports";
 import { reportDisplayDoc } from "../docs/report-display-doc";
+import { showScreen, SCREEN } from "./display-nav";
 import { CONTEXT } from "../constants";
 
 // Side-effect imports: register every Section + Field on reportDoc and the two
@@ -46,7 +47,9 @@ export const appStart = async () => {
     query: { reporterId: state.user?.userId },
   });
 
-  // 3. Render the Display Doc. Single-tab app → hide the (empty) tab bar first.
+  // 3. Render the Display Doc on the Home screen (not all 8 sections stacked).
+  //    Single-tab app → hide the (empty) tab bar first.
+  showScreen(SCREEN.HOME);
   reportDisplayDoc.tabBarHidden = true;
   reportDisplayDoc.sendResponse();
 };

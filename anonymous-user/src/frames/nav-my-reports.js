@@ -10,6 +10,8 @@ import { Intent } from "@frontmltd/frontmjs/core/Intent";
 import { Context } from "@frontmltd/frontmjs/core/Context";
 import { state } from "@frontmltd/frontmjs/core/State";
 import { reportsCollection } from "../collections/reports";
+import { reportDisplayDoc } from "../docs/report-display-doc";
+import { showScreen, SCREEN } from "./display-nav";
 import { INTENT } from "../constants";
 
 export const openMyReports = Intent.Create({
@@ -23,6 +25,7 @@ openMyReports.onResolution = async () => {
   await reportsCollection.loadCollectionWithQuery({
     query: { reporterId: state.user?.userId },
   });
-  const count = (reportsCollection.rows || []).length;
-  `You have ${count} report(s). The list view is added in the display task.`.sendResponse();
+  // Two-Doc: render the My Reports list via the Display Doc.
+  showScreen(SCREEN.MY_REPORTS);
+  reportDisplayDoc.sendResponse();
 };

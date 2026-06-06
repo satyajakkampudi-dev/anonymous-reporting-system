@@ -13,6 +13,8 @@ import { state } from "@frontmltd/frontmjs/core/State";
 import { ownsReport } from "../../../lib/access";
 import { ERROR_CODES } from "../../../lib/constants";
 import { reportDoc } from "../collections/reports";
+import { reportDisplayDoc } from "../docs/report-display-doc";
+import { showScreen, SCREEN } from "./display-nav";
 import { reporterIdField } from "../sections/report-details";
 import { amendmentsCollection } from "../sections/amendments";
 import { statusHistoryCollection } from "../sections/status-history";
@@ -57,5 +59,7 @@ openReportDetail.onResolution = async () => {
   // not awaited). The sub-collection is already loaded above.
   await prepareAmendmentsEvidence();
 
-  reportDoc.sendResponse();
+  // Two-Doc: render via the Display Doc, not the editable Data Doc form.
+  showScreen(SCREEN.DETAIL);
+  reportDisplayDoc.sendResponse();
 };
