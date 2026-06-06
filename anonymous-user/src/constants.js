@@ -12,6 +12,13 @@ export const INTENT = {
   // Voice path — the handler is built in U-F15; the Home CTA emits it now so the
   // navigation contract (input-schema display_elements) is complete.
   START_ANONYMOUS_CALL: "startAnonymousCall",
+  // Reporter detail-actions (input-schema detailActions / U-F10–F13). Handlers are
+  // built later; the detail-actions card emits these data-intent-id values now, so
+  // the string values ARE the public navigation contract and must match the schema.
+  ADD_AMENDMENT: "addAmendment",
+  WITHDRAW_REPORT: "withdrawReport",
+  ACCEPT_RESOLUTION: "acceptResolution",
+  REJECT_RESOLUTION: "rejectResolution",
 };
 
 // Context ids (CLAUDE.md "App Entry-Point Bootstrap").
