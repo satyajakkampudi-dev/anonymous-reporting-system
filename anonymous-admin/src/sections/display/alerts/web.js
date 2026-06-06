@@ -84,8 +84,8 @@ export const renderWeb = (data) => {
 
   const breachBlock = breaches.length
     ? `<div style="padding:${SPACING.SM}px ${SPACING.XL}px ${SPACING.XS}px;` +
-        `font-size:${TYPOGRAPHY.SIZE_XS}px;text-transform:uppercase;letter-spacing:0.04em;` +
-        `color:${COLORS.TEXT_FAINT};">SLA breaches</div>` +
+      `font-size:${TYPOGRAPHY.SIZE_XS}px;text-transform:uppercase;letter-spacing:0.04em;` +
+      `color:${COLORS.TEXT_FAINT};">SLA breaches</div>` +
       `<div>${breaches.map((r) => rowHtml(r, data.openIntent)).join("")}</div>`
     : "";
 

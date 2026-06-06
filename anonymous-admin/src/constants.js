@@ -26,6 +26,12 @@ export const INTENT = {
   ESCALATE_REPORT: "escalateReport",
   CLOSE_REJECTED: "closeRejected",
   EXPORT_REPORT: "exportReport",
+  // On-call presence action. The On-call display card (A-D-oncall) emits this
+  // data-intent-id NOW on its Available/Busy/Unavailable buttons; the handler
+  // that registers it is A-F20 (setAvailability). Defining the id here keeps the
+  // emit + consume sides from drifting (rule 19) — matches the schema/wireframe
+  // `intent:setAvailability` source verbatim.
+  SET_AVAILABILITY: "setAvailability",
 };
 
 // Context ids (CLAUDE.md "App Entry-Point Bootstrap").

@@ -74,8 +74,8 @@ export const renderMobile = (data) => {
 
   const breachBlock = breaches.length
     ? `<div style="font-size:${TYPOGRAPHY.SIZE_XS}px;text-transform:uppercase;` +
-        `letter-spacing:0.04em;color:${COLORS.TEXT_FAINT};margin-bottom:${SPACING.SM}px;">` +
-        `SLA breaches</div>` +
+      `letter-spacing:0.04em;color:${COLORS.TEXT_FAINT};margin-bottom:${SPACING.SM}px;">` +
+      `SLA breaches</div>` +
       breaches.map((r) => cardHtml(r, data.openIntent)).join("")
     : "";
 
