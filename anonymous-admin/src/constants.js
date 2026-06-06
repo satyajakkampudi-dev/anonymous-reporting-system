@@ -32,6 +32,15 @@ export const INTENT = {
   // emit + consume sides from drifting (rule 19) — matches the schema/wireframe
   // `intent:setAvailability` source verbatim.
   SET_AVAILABILITY: "setAvailability",
+  // Incoming-call ring-banner actions. The Incoming-call display card
+  // (A-D-incomingcall) emits these data-intent-id values NOW on its Answer /
+  // Dismiss buttons; the handlers that register them are A-F21 (answerCall —
+  // atomic claim → ACTIVE/attendedBy, first writer wins) and A-F22 (dismissCall
+  // — local dismiss only; others keep ringing). Defining the ids here keeps the
+  // emit + consume sides from drifting (rule 19) — match the schema
+  // `intent:answerCall` / `intent:dismissCall` sources verbatim.
+  ANSWER_CALL: "answerCall",
+  DISMISS_CALL: "dismissCall",
 };
 
 // Context ids (CLAUDE.md "App Entry-Point Bootstrap").
