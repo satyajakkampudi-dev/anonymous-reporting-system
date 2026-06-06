@@ -61,6 +61,14 @@ export const STATE_KEYS = {
   ADMIN_ROLE: "ADMIN_ROLE",
   // reportId stashed by openManageReport's payload, read after the gateway load.
   CURRENT_REPORT_ID: "CURRENT_REPORT_ID",
+  // Target STATUS armed by a note-popup trigger intent (escalateReport A-F10 /
+  // closeRejected A-F11). noteCaptureDoc is SHARED by both transitions and has
+  // exactly ONE onSubmit slot, so a single shared dispatcher (frames/note-transition.js)
+  // owns that slot and reads THIS key to learn which transition the trigger armed
+  // (Context B — the popup submit is a fresh invocation; the target survives via Redis).
+  // Lost (warm-container reset / direct submit) → the dispatcher treats it as a
+  // neutral 500, never guesses a transition.
+  PENDING_NOTE_TARGET: "PENDING_NOTE_TARGET",
   // Evidence signed-URL stash for the opened report. PRODUCED by A-F7 in the
   // openManageReport frame (Context B) — for each evidenceFile* S3 key it calls
   // state.frontmlib.getS3SignedUrl(bucket, "${conversationId}/${key}", expiry)

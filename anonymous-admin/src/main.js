@@ -27,6 +27,12 @@ import "./frames/nav-on-call";
 // --- Manage-detail transition intents (side-effect: register the intents) ---
 import "./frames/take-review";
 import "./frames/resolve-report";
+// note-transition owns the SINGLE noteCaptureDoc.onSubmit (shared dispatcher); it MUST
+// be imported so the slot binds. escalate-report registers its ESCALATED entry into that
+// dispatcher's registry at module load. Import order is immaterial — registration happens
+// at module load, dispatch at runtime, so both are loaded before any popup submits.
+import "./frames/note-transition";
+import "./frames/escalate-report";
 
 import { appStart } from "./frames/app-start";
 
