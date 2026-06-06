@@ -41,6 +41,21 @@ export const INTENT = {
   // `intent:answerCall` / `intent:dismissCall` sources verbatim.
   ANSWER_CALL: "answerCall",
   DISMISS_CALL: "dismissCall",
+  // In-call hang-up. The in-call UI (the meeting hang-up control / a "End call"
+  // button) emits this data-intent-id with payload { callRef } when the answering
+  // admin ends the call; A-F22 (endCall) applies the guarded ACTIVE->ENDED transition
+  // (records durationMs) and frees the admin (availability -> available). Defining the
+  // id here keeps the emit + consume sides from drifting (rule 19). NOTE: the in-call
+  // UI surface that emits this is the meeting client's hang-up — if a bespoke in-app
+  // "End call" button is added later it MUST emit this id with { callRef }.
+  END_CALL: "endCall",
+  // Mid-call inactivity backstop (ER-C12). A-F21 arms a jobScheduler message at claim
+  // time (now + TIMING.CALL_INACTIVITY_TIMEOUT_MS, deterministic jobId per call, to the
+  // answering admin's OWN userId) carrying { callRef }. This handler (A-F22) moves
+  // ACTIVE->ENDED ONLY if the call is still ACTIVE — a clean prior hang-up makes it a
+  // guarded no-op (rule 13). Separate id from endCall so the timeout can never be
+  // mistaken for a user-initiated hang-up in logs/audit.
+  CALL_INACTIVITY: "callInactivity",
   // System-scheduled auto-close. resolveReport (A-E-resolveReport) arms a
   // jobScheduler message for resolvedOn + AUTO_CLOSE_DELAY_MS (D2) carrying
   // payload { reportId } ONLY (no identity). The handler that registers this id
@@ -69,6 +84,21 @@ export const INTENT = {
 // Context ids (CLAUDE.md "App Entry-Point Bootstrap").
 export const CONTEXT = {
   MAIN_APP: "mainApp",
+};
+
+// VideoCall control id for the admin app's exported VideoCall instance (A-F21). The
+// framework routes JOIN_MEETING + the call-lifecycle responses through the instance
+// keyed by this id, so it MUST be exported (frames/answer-call.js). Distinct from the
+// user app's anonymousVideoCall — each app exports its own instance.
+export const VIDEO_CALL = {
+  CONTROL_ID: "adminVideoCall",
+};
+
+// Deterministic jobScheduler jobId prefix for the mid-call inactivity backstop (A-F21
+// arms it; A-F22 receives it). Per-call (`${prefix}${callRef}`) so a re-arm overwrites
+// rather than stacks (ER-B8).
+export const CALL = {
+  INACTIVITY_JOB_ID_PREFIX: "callInactivity-",
 };
 
 // state.setField keys used to pass data between independent intents (Context B).

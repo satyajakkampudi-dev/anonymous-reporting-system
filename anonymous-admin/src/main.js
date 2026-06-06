@@ -31,6 +31,16 @@ import "./frames/resolve-report";
 // keyed by their own userId — only-own-row). Registers the SET_AVAILABILITY intent the
 // On-call display card's Available/Busy/Unavailable buttons emit.
 import "./frames/set-availability";
+// answer-call (A-F21): the atomic claim — first admin to flip RINGING -> ACTIVE wins,
+// joins the meeting, is marked busy (OQ-12), STOP_RINGs the other available admins (X7),
+// and arms the inactivity backstop. Importing it registers the ANSWER_CALL intent the
+// Incoming-call banner's Answer button emits AND exports the adminVideoCall instance the
+// framework needs to route JOIN_MEETING.
+import "./frames/answer-call";
+// end-call (A-F22): registers END_CALL (admin hang-up: guarded ACTIVE -> ENDED + free the
+// admin), CALL_INACTIVITY (the scheduled mid-call backstop, same guarded transition), and
+// DISMISS_CALL (local dismiss only — never mutates the shared call-queue status).
+import "./frames/end-call";
 // auto-close is the +30d system job (A-F17) armed by resolve-report; importing it
 // registers the AUTO_CLOSE_REPORT receiving intent so the scheduled message resolves.
 import "./frames/auto-close";

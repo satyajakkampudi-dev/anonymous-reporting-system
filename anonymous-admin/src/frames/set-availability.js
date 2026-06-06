@@ -44,15 +44,9 @@
 // field exists on adminUserDoc; the payload's adminUserId (if any) is NEVER trusted.
 
 import { Intent } from "@frontmltd/frontmjs/core/Intent";
-import { Context } from "@frontmltd/frontmjs/core/Context";
 import { D, state } from "@frontmltd/frontmjs/core/State";
-import { adminUserDoc } from "../docs/admin-user-doc";
-import {
-  adminUserIdField,
-  availabilityField,
-  adminUpdatedOnField,
-} from "../sections/admin-user";
 import { AVAILABILITY } from "../../../lib/constants";
+import { setOwnAvailability } from "./availability-writer";
 import { INTENT } from "../constants";
 
 // The closed set of writable presence states (rule 19) — anything outside it is rejected.
@@ -83,8 +77,7 @@ setAvailability.onResolution = async () => {
   }
 
   // 3. Identity — the ONLY key we ever address is the caller's own userId.
-  const userId = state.user?.userId;
-  if (!userId) {
+  if (!state.user?.userId) {
     state.addErrorToStack(
       401,
       "We couldn't confirm your identity just now. Please try again in a moment."
@@ -92,46 +85,32 @@ setAvailability.onResolution = async () => {
     return;
   }
 
-  // 4. Attach to the existing context (preserve the buffer, rule 22) and load the
-  //    caller's OWN row fresh. Keyed by their own userId — structurally "own row only".
-  await Context.Create(state.currentTabId, { state });
-  await adminUserDoc.loadDocument({ adminUserId: userId });
-
-  // 5. Existence — a hydrated row carries its primary key. Not hydrated → caller is not
-  //    in the seeded registry; neutral error, do NOT create a row (D3 — seeded only).
-  if (!adminUserDoc.f[adminUserIdField.id]?.value) {
-    state.addErrorToStack(
-      404,
-      "Your on-call record isn't available right now. Please try again in a moment."
-    );
-    D.log({
-      message: "A-F20: setAvailability — caller's admin-users row not found",
-      data: { availability },
-    });
-    return;
-  }
-
-  // 6. Apply. Presence is last-write-wins (no version/CAS — not a report transition).
-  adminUserDoc.f[availabilityField.id].value = availability;
-  adminUserDoc.f[adminUpdatedOnField.id].value = Date.now();
-
-  // 7. Persist. A save abort adds to the error stack WITHOUT throwing — detect it and do
-  //    not claim success (mirrors take-review.js).
-  const errorsBefore = (state.errorStack || []).length;
-  try {
-    await adminUserDoc.save();
-  } catch (error) {
-    state.addSystemErrorToStack(
-      500,
-      "We couldn't update your availability just now. Please try again."
-    );
-    D.log({
-      message: "A-F20: admin-users save failed on setAvailability",
-      data: { availability, error: String(error) },
-    });
-    return;
-  }
-  if ((state.errorStack || []).length > errorsBefore) {
+  // 4-7. Attach, load the caller's OWN row, apply + persist via the SHARED writer (the
+  //      single chokepoint reused by A-F21/A-F22 — rule 14). It loads keyed by the
+  //      caller's own userId (structurally "own row only"), never creates a row (D3),
+  //      and detects a save abort. Map its reason to the existing user-facing copy.
+  const { ok, reason } = await setOwnAvailability(availability);
+  if (!ok) {
+    if (reason === "not-found") {
+      state.addErrorToStack(
+        404,
+        "Your on-call record isn't available right now. Please try again in a moment."
+      );
+    } else if (reason === "no-identity") {
+      state.addErrorToStack(
+        401,
+        "We couldn't confirm your identity just now. Please try again in a moment."
+      );
+    } else if (reason === "save-aborted") {
+      // A field/onSave gate stacked an error — it is already on the stack; do not add a
+      // second, contradictory message.
+      D.log({ message: "A-F20: setAvailability aborted via error stack" });
+    } else {
+      state.addSystemErrorToStack(
+        500,
+        "We couldn't update your availability just now. Please try again."
+      );
+    }
     return;
   }
 
