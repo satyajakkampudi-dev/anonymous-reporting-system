@@ -60,7 +60,17 @@ import {
 } from "../sections/manual-log";
 import { appendStatusHistoryRow } from "./status-history-writer";
 import { canTransition, STATUS } from "../../../lib/ticket-status";
-import { ACTOR_ROLE, TRANSITION_ACTOR, TIMING } from "../../../lib/constants";
+import {
+  ACTOR_ROLE,
+  TRANSITION_ACTOR,
+  TIMING,
+  MSG,
+  STATIC_DATA_KEYS,
+} from "../../../lib/constants";
+import {
+  broadcastBotMessage,
+  resolvePeerBotId,
+} from "../../../lib/notifications";
 import { INTENT } from "../constants";
 
 const AUTO_CLOSE_NOTE =
@@ -171,11 +181,25 @@ autoCloseReport.onResolution = async () => {
     return; // save aborted via the error stack — do not claim success
   }
 
-  // 10. DEFERRED X6 hook (rule 16): the identity-free MSG_REPORT_CLOSED
-  //     ({ reportId, newStatus: CLOSED_BY_SYSTEM } — NO identity, NO actorId) is sent HERE,
-  //     AFTER save(), by cross-app task X6 (which DEPENDS on A-F17). The admin app cannot
-  //     address the reporter (it holds no reporterId — rule 30); identity-free delivery is
-  //     X6's responsibility. Do NOT invent the sender now.
+  // 10. Post-save hook (rule 16) — X6 MSG_REPORT_CLOSED. The admin app holds NO reporterId
+  //     (rule 30) so it CANNOT address the reporter. We BROADCAST an identity-free
+  //     { reportId, closeType: CLOSED_BY_SYSTEM } to the entire user bot; the user-side
+  //     receiver (report-closed.js) loads by reportId and notifies ONLY its owning reporter
+  //     (reporterId === state.user.userId — the ownership filter). AFTER save(), best-effort;
+  //     a broadcast failure NEVER rolls back the (already-closed) report.
+  try {
+    const userBotId = await resolvePeerBotId(STATIC_DATA_KEYS.USER_BOT_ID);
+    await broadcastBotMessage({
+      type: MSG.REPORT_CLOSED,
+      botId: userBotId,
+      payload: { reportId, closeType: STATUS.CLOSED_BY_SYSTEM },
+    });
+  } catch (error) {
+    D.log({
+      message: "A-F17: X6 MSG_REPORT_CLOSED broadcast failed (non-fatal)",
+      data: { reportId, error: String(error) },
+    });
+  }
 
   D.log({
     message: "A-F17: report auto-closed",

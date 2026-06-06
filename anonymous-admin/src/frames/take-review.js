@@ -87,7 +87,11 @@ import {
 import { appendStatusHistoryRow } from "./status-history-writer";
 import { resolveAdminRole } from "../../../lib/access";
 import { canTransition, STATUS, statusLabel } from "../../../lib/ticket-status";
-import { ERROR_CODES } from "../../../lib/constants";
+import { ERROR_CODES, MSG, STATIC_DATA_KEYS } from "../../../lib/constants";
+import {
+  broadcastBotMessage,
+  resolvePeerBotId,
+} from "../../../lib/notifications";
 import { INTENT } from "../constants";
 
 export const takeReview = Intent.Create({
@@ -189,10 +193,26 @@ takeReview.onResolution = async () => {
     return;
   }
 
-  // 8. Post-save hook (rule 16): X5 wires the identity-free MSG_REPORT_STATUS_CHANGED
-  //    sender HERE — payload { reportId, newStatus: UNDER_REVIEW } only, AFTER save().
-  //    Deferred to cross-app task X5 (the admin app cannot address the reporter — see
-  //    the file header). Do NOT add reporterId or any identity to the payload.
+  // 8. Post-save hook (rule 16) — X5 MSG_REPORT_STATUS_CHANGED. The admin app holds NO
+  //    reporterId (rule 30) so it CANNOT address the reporter. We BROADCAST an
+  //    identity-free { reportId, newStatus: UNDER_REVIEW } to the entire user bot; the
+  //    user-side receiver (report-status-changed.js) loads by reportId and notifies ONLY
+  //    its owning reporter (reporterId === state.user.userId — the ownership filter).
+  //    Best-effort, AFTER save(); a broadcast failure NEVER rolls back the transition.
+  try {
+    const userBotId = await resolvePeerBotId(STATIC_DATA_KEYS.USER_BOT_ID);
+    await broadcastBotMessage({
+      type: MSG.REPORT_STATUS_CHANGED,
+      botId: userBotId,
+      payload: { reportId, newStatus: STATUS.UNDER_REVIEW },
+    });
+  } catch (error) {
+    D.log({
+      message:
+        "A-F8: X5 MSG_REPORT_STATUS_CHANGED broadcast failed (non-fatal)",
+      data: { reportId, error: String(error) },
+    });
+  }
 
   D.log({
     message: "A-F8: report taken into review",

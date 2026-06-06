@@ -48,9 +48,13 @@ import { transitionNoteField } from "../sections/transition-note-popup";
 import { appendStatusHistoryRow } from "./status-history-writer";
 import { notifyAssignees } from "./admin-notify";
 import { resolveAdminRole } from "../../../lib/access";
-import { canTransition } from "../../../lib/ticket-status";
+import { canTransition, STATUS } from "../../../lib/ticket-status";
 import { sanitiseText } from "../../../lib/validation";
-import { ERROR_CODES } from "../../../lib/constants";
+import { ERROR_CODES, MSG, STATIC_DATA_KEYS } from "../../../lib/constants";
+import {
+  broadcastBotMessage,
+  resolvePeerBotId,
+} from "../../../lib/notifications";
 import { STATE_KEYS } from "../constants";
 
 // Command registry: targetStatus -> { successMessage(reportId), applyExtra(doc, role) }.
@@ -245,13 +249,42 @@ noteCaptureDoc.onSubmit = async (self) => {
     }
   }
 
-  // 13. Reporter cross-app notify — the relevant MSG depends on the TARGET status:
-  //         · ESCALATED        -> MSG_REPORT_STATUS_CHANGED = X5 (cross-app)
-  //         · CLOSED_REJECTED  -> MSG_REPORT_CLOSED         = X6 (cross-app)
-  //       The admin app cannot address the reporter (rule 30 — it holds no reporterId);
-  //       X5 / X6 each own identity-free delivery. Both carry { reportId, newStatus: target }
-  //       ONLY — never any identity / actorId. Both are deferred to their own cross-app
-  //       tasks; nothing is sent here.
+  // 13. Reporter cross-app notify (rule 16) — keyed on the TARGET status the popup armed:
+  //         · ESCALATED        -> X5 MSG_REPORT_STATUS_CHANGED, payload { reportId, newStatus: ESCALATED }
+  //         · CLOSED_REJECTED  -> X6 MSG_REPORT_CLOSED,         payload { reportId, closeType: CLOSED_REJECTED }
+  //       The admin app holds NO reporterId (rule 30) so it CANNOT address the reporter:
+  //       we BROADCAST identity-free to the entire user bot; the user-side receiver loads
+  //       by reportId and notifies ONLY its owning reporter (ownership filter). AFTER save(),
+  //       best-effort — a broadcast failure NEVER rolls back the (already-persisted)
+  //       transition. A target with no cross-app mapping (none today) simply sends nothing.
+  const crossApp =
+    target === STATUS.ESCALATED
+      ? {
+          type: MSG.REPORT_STATUS_CHANGED,
+          payload: { reportId, newStatus: STATUS.ESCALATED },
+        }
+      : target === STATUS.CLOSED_REJECTED
+        ? {
+            type: MSG.REPORT_CLOSED,
+            payload: { reportId, closeType: STATUS.CLOSED_REJECTED },
+          }
+        : null;
+  if (crossApp) {
+    try {
+      const userBotId = await resolvePeerBotId(STATIC_DATA_KEYS.USER_BOT_ID);
+      await broadcastBotMessage({
+        type: crossApp.type,
+        botId: userBotId,
+        payload: crossApp.payload,
+      });
+    } catch (error) {
+      D.log({
+        message:
+          "A-F10/F11: X5/X6 reporter broadcast failed after note transition (non-fatal)",
+        data: { reportId, target, error: String(error) },
+      });
+    }
+  }
 
   D.log({
     message: "A-F10/F11: report note transition applied",

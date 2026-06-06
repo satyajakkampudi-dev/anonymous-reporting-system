@@ -59,6 +59,13 @@ import "./frames/call-timeout";
 // call-queue section Field exports above.
 import "./frames/call-end";
 
+// --- Cross-app receivers (side-effect: register the inbound bot-to-bot intents).
+//     Admin -> user contracts; each loads the report by id and notifies ONLY the
+//     owning reporter (ownership filter — the anonymity linchpin). X4/X5/X6. ---
+import "./frames/contracts/report-resolved";
+import "./frames/contracts/report-status-changed";
+import "./frames/contracts/report-closed";
+
 import { appStart } from "./frames/app-start";
 
 // Shell UI flags — mirror of BRD §8.1 (rule 23). The ONLY non-default row for

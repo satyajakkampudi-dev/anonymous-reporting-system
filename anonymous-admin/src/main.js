@@ -81,9 +81,12 @@ import "./frames/export-report";
 //   X1 new-report      — notify assignees (A-F15) + arm auto-escalate (A-F16).
 //   X2 report-reopened — notify assignees (A-F15).
 //   X3 incoming-call   — load callQueueDoc + render the in-app ring banner.
+//   X7 call-stop-ring  — load callQueueDoc + re-render to dismiss the ring banner
+//                        (another admin claimed the call; admin -> admin).
 import "./frames/contracts/new-report";
 import "./frames/contracts/report-reopened";
 import "./frames/contracts/incoming-call";
+import "./frames/contracts/call-stop-ring";
 
 import { appStart } from "./frames/app-start";
 
