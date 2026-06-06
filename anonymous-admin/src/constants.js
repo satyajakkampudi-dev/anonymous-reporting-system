@@ -150,6 +150,29 @@ export const STATE_KEYS = {
   NOTIFICATION_FAILURES: "NOTIFICATION_FAILURES",
 };
 
+// DURABLE cross-admin shared keys (state.setSharedField — Redis, cross-user, TTL).
+// Distinct from STATE_KEYS (per-conversation state.setField): these survive ACROSS
+// admins' invocations, which is mandatory for data PRODUCED in one admin's Lambda
+// and CONSUMED in another's.
+export const SHARED_KEYS = {
+  // The durable producer behind STATE_KEYS.NOTIFICATION_FAILURES. The notification
+  // dispatcher (frames/admin-notify.js, A-F15) APPENDS { reportId, failedOn } here on
+  // any best-effort email/push failure — failures happen in whichever admin's context
+  // the transition/job fired in, so a per-conversation field cannot carry them across
+  // admins. The alerts nav frame (A-D-alerts producer, not yet built) reads THIS durable
+  // list and writes the synchronous render stash STATE_KEYS.NOTIFICATION_FAILURES that
+  // the alerts onResponse consumes (the onResponse is not awaited and so cannot read the
+  // async sharedField directly — same constraint/solution as CURRENT_REPORT_EVIDENCE).
+  // Shape MUST match the alerts consumer: an ARRAY of [{ reportId, failedOn }] (reportId
+  // only — never a recipient address or reporter id; rule 30).
+  NOTIFICATION_FAILURES: "SHARED_NOTIFICATION_FAILURES",
+};
+
+// TTL (seconds) for the durable notification-failure list. Generous so a failure is
+// not silently dropped before the daily SLA digest / alerts banner can surface it
+// (ER-D15) — 14 days, well beyond the daily digest cadence (TIMING.SLA_DIGEST_INTERVAL_MS).
+export const NOTIFICATION_FAILURE_TTL_SECONDS = 14 * 24 * 60 * 60;
+
 // Navigation payload contract. The Priority/Escalated dashboard card AND the
 // queue's own quick-filter chips emit openQueue carrying { filter: QUEUE_FILTER.* };
 // the role-filter/priority tasks (A-F4/A-F5) read the same value back from the

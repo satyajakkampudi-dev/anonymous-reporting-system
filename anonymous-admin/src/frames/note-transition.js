@@ -37,9 +37,16 @@ import {
   statusField,
   versionField,
   updatedOnField,
+  severityField,
+  categoryField,
+  urgencyField,
+  assignedToField,
+  againstAdminField,
+  createdOnField,
 } from "../sections/manual-log";
 import { transitionNoteField } from "../sections/transition-note-popup";
 import { appendStatusHistoryRow } from "./status-history-writer";
+import { notifyAssignees } from "./admin-notify";
 import { resolveAdminRole } from "../../../lib/access";
 import { canTransition } from "../../../lib/ticket-status";
 import { sanitiseText } from "../../../lib/validation";
@@ -56,6 +63,11 @@ const NOTE_TRANSITIONS = {};
 //   successMessage(reportId): string   — the confirmation shown after a successful save.
 //   applyExtra(adminReportDoc, role): void — transition-specific field writes (e.g.
 //                                            escalate sets assignedTo = SECONDARY_ADMIN).
+//   notifyEvent?: NOTIFY_EVENT          — OPTIONAL. When set, the dispatcher fires the
+//                                         admin-notify dispatch (A-F15) AFTER a clean save
+//                                         (rule 16). escalate registers NOTIFY_EVENT.ESCALATED
+//                                         (notify the secondary admins); closeRejected does
+//                                         NOT set it (closing-as-rejected does not notify admins).
 export const registerNoteTransition = (targetStatus, config) => {
   NOTE_TRANSITIONS[targetStatus] = config;
 };
@@ -202,13 +214,38 @@ noteCaptureDoc.onSubmit = async (self) => {
     return;
   }
 
-  // 12. Deferred post-save hooks (rule 16) — comments only, mirroring resolve-report.js /
-  //     take-review.js. Built by their own cross-app tasks; do NOT invent the orchestration:
-  //     - Notify the assignee admins = A-F15 (admin notification dispatch). It will call
-  //       resolveAssignees(report) (lib/access — the SINGLE routing chokepoint, NOT a
-  //       hardcoded role query) and sendAdminEmail / sendAdminWebPush. For escalate this
-  //       fans out to the secondary compliance admins.
-  //     - Reporter cross-app notify — the relevant MSG depends on the TARGET status:
+  // 12. Post-save admin-notify dispatch (A-F15, rule 16 — ONLY on a clean save, never on
+  //     the abort path above). escalate registers notifyEvent = NOTIFY_EVENT.ESCALATED so the
+  //     SECONDARY admins it just routed to are notified; closeRejected does not set notifyEvent
+  //     (closing-as-rejected does not notify admins). Best-effort — notifyAssignees never
+  //     throws, but wrap anyway so a notification fault can NEVER fail/roll back the (already
+  //     persisted) transition. The descriptor is IDENTITY-FREE, built from the just-saved
+  //     adminReportDoc bound fields (rule 30 — no reporter identity is bound here).
+  if (cfg.notifyEvent) {
+    try {
+      await notifyAssignees(
+        {
+          reportId,
+          status: target,
+          severity: adminReportDoc.f[severityField.id]?.value,
+          category: adminReportDoc.f[categoryField.id]?.value,
+          urgency: adminReportDoc.f[urgencyField.id]?.value,
+          assignedTo: adminReportDoc.f[assignedToField.id]?.value,
+          againstAdmin: !!adminReportDoc.f[againstAdminField.id]?.value,
+          createdOn: adminReportDoc.f[createdOnField.id]?.value,
+        },
+        { event: cfg.notifyEvent }
+      );
+    } catch (error) {
+      D.log({
+        message:
+          "A-F15: notifyAssignees errored after note transition (ignored)",
+        data: { reportId, target, error: String(error) },
+      });
+    }
+  }
+
+  // 13. Reporter cross-app notify — the relevant MSG depends on the TARGET status:
   //         · ESCALATED        -> MSG_REPORT_STATUS_CHANGED = X5 (cross-app)
   //         · CLOSED_REJECTED  -> MSG_REPORT_CLOSED         = X6 (cross-app)
   //       The admin app cannot address the reporter (rule 30 — it holds no reporterId);

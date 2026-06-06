@@ -43,6 +43,7 @@ import { D, state } from "@frontmltd/frontmjs/core/State";
 import { adminReportDoc, noteCaptureDoc } from "../docs/admin-report-doc";
 import { statusField, assignedToField } from "../sections/manual-log";
 import { registerNoteTransition } from "./note-transition";
+import { NOTIFY_EVENT } from "./admin-notify";
 import { resolveAdminRole } from "../../../lib/access";
 import { canTransition, STATUS, statusLabel } from "../../../lib/ticket-status";
 import { ERROR_CODES, ROLE } from "../../../lib/constants";
@@ -61,6 +62,11 @@ registerNoteTransition(STATUS.ESCALATED, {
   applyExtra: (doc) => {
     doc.f[assignedToField.id].value = ROLE.SECONDARY_ADMIN;
   },
+  // A-F15: after a clean save the dispatcher notifies the SECONDARY admins this report
+  // was just routed to (resolveAssignees honours the live assignedTo = SECONDARY_ADMIN).
+  // closeRejected (A-F11) deliberately omits notifyEvent — closing-as-rejected does not
+  // notify admins.
+  notifyEvent: NOTIFY_EVENT.ESCALATED,
 });
 
 export const escalateReport = Intent.Create({

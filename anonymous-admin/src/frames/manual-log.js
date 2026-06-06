@@ -67,6 +67,7 @@ import {
   getStatusHistoryCollection,
   appendStatusHistoryRow,
 } from "./status-history-writer";
+import { notifyAssignees, NOTIFY_EVENT } from "./admin-notify";
 import { STATUS } from "../../../lib/ticket-status";
 import { assignedRoleFor, resolveAdminRole } from "../../../lib/access";
 import {
@@ -283,18 +284,39 @@ adminReportDoc.onSubmit = async (self) => {
     persisted = true;
   }
 
-  // 7. Post-save hook (DEFERRED — A-F15, NOT cross-app X1). A MANUAL report notifies the
-  //    ASSIGNED admins directly (resolveAssignees(report) → sendAdminEmail /
-  //    sendAdminWebPush) — there is NO reporter to address, so the X1 user→admin
-  //    cross-app send does not apply here. The sender is wired by A-F15 (depends on this
-  //    task). Do NOT invent the orchestration; do NOT add any identity to a payload.
-
-  // 8. Confirm to the admin with the generated reportId and where it was routed.
+  // 7. Confirm to the admin with the generated reportId and where it was routed.
   const reportId = self.f[reportIdField.id].value;
   const routedTo =
     self.f[assignedToField.id].value === ROLE.SECONDARY_ADMIN
       ? "secondary"
       : "primary";
+
+  // 7b. A-F15 admin-notify dispatch (rule 16 — only after the clean save above). A MANUAL
+  //     report notifies its ASSIGNED admins DIRECTLY (NOT via cross-app X1 — there is no
+  //     reporter to address). Best-effort — notifyAssignees never throws, but wrap anyway so
+  //     a notification fault cannot fail this (already persisted) report; a failed send is
+  //     recorded for the SLA digest / Alerts fallback (ER-D15). Descriptor IDENTITY-FREE
+  //     (rule 30 — adminReportDoc binds no reporter identity).
+  try {
+    await notifyAssignees(
+      {
+        reportId,
+        status: self.f[statusField.id].value,
+        severity: self.f[severityField.id].value,
+        category: self.f[categoryField.id].value,
+        urgency: self.f[urgencyField.id].value,
+        assignedTo: self.f[assignedToField.id].value,
+        againstAdmin: !!self.f[againstAdminField.id].value,
+        createdOn: self.f[createdOnField.id].value,
+      },
+      { event: NOTIFY_EVENT.NEW }
+    );
+  } catch (error) {
+    D.log({
+      message: "A-F15: notifyAssignees errored after manual-log (ignored)",
+      data: { reportId, error: String(error) },
+    });
+  }
   D.log({
     message: "A-E-manualLog: manual report logged",
     data: { reportId, source: SOURCE.MANUAL, routedTo, actorRole: adminRole },

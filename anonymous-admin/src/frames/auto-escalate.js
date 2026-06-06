@@ -72,8 +72,14 @@ import {
   versionField,
   updatedOnField,
   assignedToField,
+  severityField,
+  categoryField,
+  urgencyField,
+  againstAdminField,
+  createdOnField,
 } from "../sections/manual-log";
 import { appendStatusHistoryRow } from "./status-history-writer";
+import { notifyAssignees, NOTIFY_EVENT } from "./admin-notify";
 import { canTransition, STATUS } from "../../../lib/ticket-status";
 import { ACTOR_ROLE, TRANSITION_ACTOR, ROLE } from "../../../lib/constants";
 import { INTENT } from "../constants";
@@ -175,12 +181,36 @@ autoEscalate.onResolution = async () => {
     return; // save aborted via the error stack — do not claim success
   }
 
-  // 9. DEFERRED hooks (comments only — do NOT invent senders):
-  //    - A-F15 (notify the secondary admins): resolveAssignees(report) to find the
-  //      SECONDARY admin user(s), then sendAdminEmail / sendAdminWebPush. A-F15 owns the
-  //      senders; routing is resolveAssignees' job (rule 14). Payload identity-free.
-  //    - X5 (MSG_REPORT_STATUS_CHANGED): identity-free { reportId, newStatus: ESCALATED }
-  //      (NO identity, NO actorId — rule 16/30). X5 DEPENDS on A-F16 and owns the sender.
+  // 9. A-F15 admin-notify dispatch (rule 16 — ONLY after a clean save). Notify the
+  //    SECONDARY admins this report was just auto-routed to (resolveAssignees honours the
+  //    live assignedTo = SECONDARY_ADMIN we just stamped). Best-effort — notifyAssignees
+  //    never throws, but wrap anyway so a notification fault cannot fail this (already
+  //    persisted) system transition; a failed send is recorded for the SLA digest / Alerts
+  //    fallback (ER-D15). Descriptor is IDENTITY-FREE (rule 30 — no reporter identity bound).
+  try {
+    await notifyAssignees(
+      {
+        reportId,
+        status: STATUS.ESCALATED,
+        severity: adminReportDoc.f[severityField.id]?.value,
+        category: adminReportDoc.f[categoryField.id]?.value,
+        urgency: adminReportDoc.f[urgencyField.id]?.value,
+        assignedTo: adminReportDoc.f[assignedToField.id]?.value,
+        againstAdmin: !!adminReportDoc.f[againstAdminField.id]?.value,
+        createdOn: adminReportDoc.f[createdOnField.id]?.value,
+      },
+      { event: NOTIFY_EVENT.ESCALATED }
+    );
+  } catch (error) {
+    D.log({
+      message: "A-F15: notifyAssignees errored after auto-escalate (ignored)",
+      data: { reportId, error: String(error) },
+    });
+  }
+
+  // X5 (MSG_REPORT_STATUS_CHANGED): identity-free { reportId, newStatus: ESCALATED }
+  // (NO identity, NO actorId — rule 16/30). X5 DEPENDS on A-F16 and owns the sender —
+  // deferred to that cross-app task; nothing is sent here.
 
   D.log({
     message: "A-F16: report auto-escalated",
