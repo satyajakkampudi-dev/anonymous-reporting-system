@@ -53,3 +53,19 @@ export const MY_REPORTS_STATUS_GROUP = {
 // "All categories" sentinel for the category filter chip — distinct from every
 // CATEGORY token so an empty/absent filter never collides with a real value.
 export const MY_REPORTS_CATEGORY_ALL = "all";
+
+// Reporter-notification events (U-F14). The reusable dispatch helper
+// (src/frames/reporter-notify.js notifyReporter) keys its copy off one of
+// these. RECEIVED is the submit acknowledgement; the other three mirror the
+// inbound cross-app contracts the receivers translate into a notification:
+//   STATUS_CHANGED ← MSG_REPORT_STATUS_CHANGED (X5)
+//   RESOLVED       ← MSG_REPORT_RESOLVED        (X4)
+//   CLOSED         ← MSG_REPORT_CLOSED          (X6)
+// The actual status wording always comes from the freshly-loaded report's
+// status (statusLabel), so a stale/ambiguous event never misreports state.
+export const NOTIFY_EVENT = {
+  RECEIVED: "received",
+  STATUS_CHANGED: "status_changed",
+  RESOLVED: "resolved",
+  CLOSED: "closed",
+};
