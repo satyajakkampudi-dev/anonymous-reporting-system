@@ -85,6 +85,23 @@ export const STATE_KEYS = {
   // openQueue invoke_intent payload; READ by the queue renderer to highlight the
   // active chip. Absent → QUEUE_FILTER.ALL (no filter applied yet).
   QUEUE_ACTIVE_FILTER: "QUEUE_ACTIVE_FILTER",
+  // Notification-failure list for the Alerts / Digest fallback banner (A-D-alerts,
+  // ER-D15). A SYNCHRONOUS render stash consumed by the alerts onResponse (which is
+  // not awaited and so cannot read the durable sharedField directly — same constraint,
+  // same solution as CURRENT_REPORT_EVIDENCE: a Context-B frame reads the durable store
+  // and stashes it via state.setField BEFORE sendResponse).
+  // PRODUCER (NOT YET BUILT): the notification senders (A-F15/A-F17) record each
+  // best-effort email/push failure into a durable, cross-admin sharedField (failures
+  // occur in OTHER admins' invocations, so a per-conversation field cannot carry them);
+  // the alerts nav frame then reads that sharedField and writes this synchronous stash
+  // before adminDisplayDoc.sendResponse(). Until that lands, the stash is ABSENT and the
+  // banner is hidden (empty-safe) — flagged for a /frontm-fix-task. The SLA-breach list
+  // does NOT depend on this; it is computed live from the gateway-loaded rows.
+  // CONSUMER: the alerts display renderers (A-D-alerts). Shape (NOTIFICATION_FAILURES):
+  //   an ARRAY of identity-free descriptors → [{ reportId, failedOn }]
+  // (reportId only — never a recipient address or reporter id; rule 30). Absent/empty →
+  // no banner.
+  NOTIFICATION_FAILURES: "NOTIFICATION_FAILURES",
 };
 
 // Navigation payload contract. The Priority/Escalated dashboard card AND the
