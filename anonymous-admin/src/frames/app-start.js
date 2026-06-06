@@ -20,6 +20,7 @@
 import { Context } from "@frontmltd/frontmjs/core/Context";
 import { D, state } from "@frontmltd/frontmjs/core/State";
 import { resolveAdminRole, loadReportsForAdmin } from "../../../lib/access";
+import { buildDashboardStats } from "../../../lib/dashboard-stats";
 import { adminDisplayDoc } from "../docs/admin-display-doc";
 import { sendAccessRefusal } from "../sections/display/access-refusal";
 import { CONTEXT, STATE_KEYS } from "../constants";
@@ -86,7 +87,14 @@ export const appStart = async () => {
   await Context.CreateAndInit(CONTEXT.MAIN_APP, { state });
 
   // 4. Gateway load only (rule 15): identity-free, projection applied.
-  await loadReportsForAdmin({});
+  const reports = await loadReportsForAdmin({});
+
+  // 4a. Dashboard aggregation (A-F2) — compute counts + small-cell suppression over
+  //     the SAME gateway rows the consumer expects, and stash for the A-D-dashboard
+  //     renderer (rule 28, ER-A6). buildDashboardStats is pure + empty-safe; the
+  //     renderer NEVER aggregates raw rows itself (per-ship counts must arrive already
+  //     suppressed). DASHBOARD_STATS is the single contract between the two tasks.
+  state.setField(STATE_KEYS.DASHBOARD_STATS, buildDashboardStats(reports));
 
   // 5. Render the Display Doc. Single-tab app → hide the (empty) tab bar first.
   //    Dashboard (grid row 0) leads; adminReportDoc (Data Doc) is NEVER sent (rule 4/8).

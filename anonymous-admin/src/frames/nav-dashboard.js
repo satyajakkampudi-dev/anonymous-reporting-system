@@ -9,7 +9,8 @@ import { Intent } from "@frontmltd/frontmjs/core/Intent";
 import { Context } from "@frontmltd/frontmjs/core/Context";
 import { state } from "@frontmltd/frontmjs/core/State";
 import { loadReportsForAdmin } from "../../../lib/access";
-import { INTENT } from "../constants";
+import { buildDashboardStats } from "../../../lib/dashboard-stats";
+import { INTENT, STATE_KEYS } from "../constants";
 
 export const openDashboard = Intent.Create({
   intentId: INTENT.OPEN_DASHBOARD,
@@ -20,5 +21,16 @@ export const openDashboard = Intent.Create({
 openDashboard.onResolution = async () => {
   await Context.Create(state.currentTabId, { state });
   const reports = await loadReportsForAdmin({});
+
+  // A-F2: aggregate + small-cell suppress over the SAME gateway set and stash, so the
+  // dashboard is correct on nav as well as first paint (app-start), via ONE shared pure
+  // helper (no duplicated counting/suppression). The dashboard renderer reads
+  // STATE_KEYS.DASHBOARD_STATS (rule 28, ER-A6).
+  state.setField(STATE_KEYS.DASHBOARD_STATS, buildDashboardStats(reports));
+
+  // NOTE: the actual stat-card render still goes through adminDisplayDoc (A-DISPLAY-SHELL
+  // + A-D-dashboard onResponse). This scaffold still emits a text placeholder because the
+  // nav-display-routing fix (separate task) owns swapping that for adminDisplayDoc.
+  // sendResponse(); once it lands, this frame's stash above already feeds the dashboard.
   `Dashboard: ${reports.length} report(s) in scope. The stat cards are added in the display task.`.sendResponse();
 };
