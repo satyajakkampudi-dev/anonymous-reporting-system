@@ -27,6 +27,19 @@ export const STATE_KEYS = {
   ADMIN_ROLE: "ADMIN_ROLE",
   // reportId stashed by openManageReport's payload, read after the gateway load.
   CURRENT_REPORT_ID: "CURRENT_REPORT_ID",
+  // Evidence signed-URL stash for the opened report. PRODUCED by A-F7 in the
+  // openManageReport frame (Context B) — for each evidenceFile* S3 key it calls
+  // state.frontmlib.getS3SignedUrl(bucket, "${conversationId}/${key}", expiry)
+  // BEFORE sendResponse (signing cannot live in the non-awaited onResponse, rule 11/18).
+  // CONSUMED by the Manage-content display renderers (A-D-managecontent), which derive
+  // the attached-file list from the loaded projection row's media envelopes and overlay
+  // the URL by S3 key. Shape (CURRENT_REPORT_EVIDENCE): a map keyed by the raw S3 key →
+  //   { [s3Key]: signedUrl }
+  // Absent (pre-A-F7) / a key missing (signing failed or expired) → the renderer shows
+  // the filename marked "(link unavailable)", never the raw key. Keys are unique per
+  // report, so a stale stash from a previously-opened report cannot surface a wrong link
+  // (warm-container safe).
+  CURRENT_REPORT_EVIDENCE: "CURRENT_REPORT_EVIDENCE",
   // Dashboard aggregation stash. PRODUCED by A-F2 (aggregate + small-cell
   // suppression over the loadReportsForAdmin set), CONSUMED by the dashboard
   // display renderers (A-D-dashboard). The display NEVER aggregates raw rows
