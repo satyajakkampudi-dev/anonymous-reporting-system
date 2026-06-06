@@ -41,6 +41,12 @@ export const INTENT = {
   // `intent:answerCall` / `intent:dismissCall` sources verbatim.
   ANSWER_CALL: "answerCall",
   DISMISS_CALL: "dismissCall",
+  // System-scheduled auto-close. resolveReport (A-E-resolveReport) arms a
+  // jobScheduler message for resolvedOn + AUTO_CLOSE_DELAY_MS (D2) carrying
+  // payload { reportId } ONLY (no identity). The handler that registers this id
+  // is A-F17 (auto-close: RESOLVED -> CLOSED_BY_SYSTEM if still unaccepted).
+  // Defining the id here keeps the schedule + consume sides from drifting (rule 19).
+  AUTO_CLOSE_REPORT: "autoCloseReport",
 };
 
 // Context ids (CLAUDE.md "App Entry-Point Bootstrap").

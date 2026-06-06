@@ -26,6 +26,7 @@ import "./frames/nav-on-call";
 
 // --- Manage-detail transition intents (side-effect: register the intents) ---
 import "./frames/take-review";
+import "./frames/resolve-report";
 
 import { appStart } from "./frames/app-start";
 

@@ -27,3 +27,40 @@ export const amendmentDoc = new Doc("amendmentDoc", state, {});
 // Status-timeline sub-entity row schema — written by the transition path only,
 // display-only on the admin side.
 export const statusHistoryDoc = new Doc("statusHistoryDoc", state, {});
+
+// Per-action transition CAPTURE Doc for the "Resolve report" popup (framework-mapping
+// rule 29, MP-FIX-ADMIN-POPUP-CAPTURE-DOCS). A Doc has exactly ONE onSubmit slot — if
+// the resolve/escalate/closeRejected/overrideSeverity popups all bound to the shared
+// adminReportDoc, their onSubmit handlers would clobber each other and every popup
+// field would render together. So each per-action popup gets its OWN capture Doc.
+// NOT autoSave (transient — never persisted; its field value is sanitised and copied
+// onto adminReportDoc's hidden `resolution` column by frames/resolve-report.js).
+// confirm/cancel give the quick-form its buttons. Mirrors the user app's rejectReasonDoc.
+export const resolveCaptureDoc = new Doc("resolveCaptureDoc", state, {
+  title: "Resolve report",
+  autoSave: false,
+  confirm: "Resolve",
+  cancel: "Cancel",
+});
+
+// Per-action capture Doc for the "Override severity" popup (overrideSeverity, A-F12).
+// Same rationale as resolveCaptureDoc: an isolated onSubmit + a one-field form. The
+// transient capture field (sections/severity-popup.js) is validated and copied onto
+// adminReportDoc's hidden `severity` infra column (sections/manual-log.js).
+export const severityCaptureDoc = new Doc("severityCaptureDoc", state, {
+  title: "Override severity",
+  autoSave: false,
+  confirm: "Save",
+  cancel: "Cancel",
+});
+
+// Per-action capture Doc for the "Add a note" popup, SHARED by escalateReport (A-F10)
+// and closeRejected (A-F11). Its single transient field carries the optional transition
+// note — consumed into the appended statusHistory.note, NEVER persisted as a `reports`
+// column (the field has no dbName). Same one-onSubmit-per-Doc rationale as above.
+export const noteCaptureDoc = new Doc("noteCaptureDoc", state, {
+  title: "Add a note",
+  autoSave: false,
+  confirm: "Save",
+  cancel: "Cancel",
+});

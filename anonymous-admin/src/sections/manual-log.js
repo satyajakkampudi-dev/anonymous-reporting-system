@@ -24,6 +24,7 @@ import {
   CATEGORY_LABELS,
   URGENCY_LABELS,
   LOCATION_LABELS,
+  SEVERITY,
 } from "../../../lib/constants";
 import { adminReportDoc } from "../docs/admin-report-doc";
 
@@ -149,6 +150,24 @@ export const resolvedOnField = new Field("resolvedOnField", {
   state,
 });
 
+// Admin-written resolution text (A-E-resolveReport). Persisted `reports` column,
+// read by the Manage-resolution display renderer (sections/display/manage-resolution
+// reads report.resolution) — dbName MUST stay "resolution" for that read to work.
+// Captured in the resolve popup via the TRANSIENT resolutionInputField
+// (sections/resolve-popup.js); the resolve frame sanitises it and copies it HERE.
+// Hidden on the manual-log form, read-only (admins edit it only through the popup).
+export const resolutionField = new Field("resolutionField", {
+  title: "Resolution",
+  doc: adminReportDoc,
+  section: manualLogSection,
+  type: FormFieldTypes.TEXT_AREA,
+  mandatory: false,
+  hidden: true,
+  readOnly: true,
+  dbName: "resolution",
+  state,
+});
+
 export const withdrawnOnField = new Field("withdrawnOnField", {
   title: "Withdrawn on",
   doc: adminReportDoc,
@@ -157,6 +176,25 @@ export const withdrawnOnField = new Field("withdrawnOnField", {
   mandatory: false,
   hidden: true,
   dbName: "withdrawnOn",
+  state,
+});
+
+// Persisted `severity` report column — the SINGLE home of severity on adminReportDoc
+// (framework-mapping rule 29 / MP-FIX-ADMIN-POPUP-CAPTURE-DOCS). Initialised from
+// urgency on manual-log submit (A-F13, D6) and overwritten by overrideSeverity (A-F12,
+// which captures input through the TRANSIENT severityInputField on severityCaptureDoc
+// — sections/severity-popup.js — then copies the chosen value HERE). Hidden on this
+// form; the manage/queue views read report.severity from the loaded projection row, so
+// dbName MUST stay "severity". Options are the raw SEVERITY tokens (no label mapping).
+export const severityField = new Field("severityField", {
+  title: "Severity",
+  doc: adminReportDoc,
+  section: manualLogSection,
+  type: FormFieldTypes.DROPDOWN,
+  mandatory: false,
+  hidden: true,
+  options: Object.values(SEVERITY), // LOW · MEDIUM · HIGH · CRITICAL
+  dbName: "severity",
   state,
 });
 
