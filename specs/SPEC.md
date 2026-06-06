@@ -191,6 +191,14 @@ marked `busy` so they're skipped for other rings (OQ-12). No `audit`-style recor
 - **Email:** RFC-pragmatic regex; **Phone:** E.164-tolerant; **Cabin:** alphanumeric pattern.
 - **incidentDate:** parseable ISO date, not in the future.
 - **Evidence file:** allowed extensions **and** content type; size ≤ limit (OQ-1). Reject otherwise.
+  - **Runtime-enforcement note (U-F6).** The FrontM `FILE_FIELD` value envelope is exactly
+    `{ value:<s3-key>, fileName, fileScopeValue }` — it carries **no content type and no byte size** —
+    and `state.frontmlib` exposes no S3 HEAD/metadata call (only `getS3SignedUrl` /
+    `getS3UploadSignedUrl`). So from a Doc handler the server can enforce only **file count ≤ limit**
+    and the **extension allow-list** (atomic abort in `reportDoc.onSave`). Content-type and size checks
+    (and orphaned-S3 cleanup on rejection) are **deferred** — see task `MP-FIX-EVIDENCE-METADATA`.
+    `validateEvidenceFile` (full extension+type+size check) remains for any caller that DOES have the
+    metadata (e.g. a server-mediated upload pipeline).
 - **Sanitiser:** escape/strip HTML from all free-text fields before email/HTML-card rendering.
 
 ## Verification surface (runtime — FrontM has no unit-test files)

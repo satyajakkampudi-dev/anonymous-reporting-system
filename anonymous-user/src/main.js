@@ -14,6 +14,10 @@ import "./sections/evidence";
 import "./sections/amendments";
 import "./sections/status-history";
 
+// --- Validation handlers (side-effect: wire reportDoc.onSave + evidence field
+//     onValidation; needs the evidence Field exports above) ---
+import "./frames/report-validation";
+
 // --- Navigation intents (side-effect: register the intents) ---
 import "./frames/nav-submit-report";
 import "./frames/nav-my-reports";
