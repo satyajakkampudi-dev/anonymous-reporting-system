@@ -47,6 +47,15 @@ export const INTENT = {
   // is A-F17 (auto-close: RESOLVED -> CLOSED_BY_SYSTEM if still unaccepted).
   // Defining the id here keeps the schedule + consume sides from drifting (rule 19).
   AUTO_CLOSE_REPORT: "autoCloseReport",
+  // System-scheduled auto-escalate. The X1 receiver (admin app, on MSG_NEW_REPORT)
+  // arms a jobScheduler message on a NEW report for createdOn + the SLA timer, picking
+  // the delay by severity: CRITICAL -> TIMING.AUTO_ESCALATE_CRITICAL_MS (+1d, D2),
+  // else TIMING.AUTO_ESCALATE_DEFAULT_MS (+3d, D2). The scheduled message carries
+  // payload { reportId } ONLY (no identity — rule 30). The handler that registers
+  // this id is A-F16 (auto-escalate: OPEN -> ESCALATED if still unactioned). Defining
+  // the id here keeps the schedule + consume sides from drifting (rule 19). X1 DEPENDS
+  // on A-F16, so this handler is dormant until X1 arms it (correct dependency order).
+  AUTO_ESCALATE: "autoEscalate",
 };
 
 // Context ids (CLAUDE.md "App Entry-Point Bootstrap").

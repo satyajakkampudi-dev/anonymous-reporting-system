@@ -30,6 +30,10 @@ import "./frames/resolve-report";
 // auto-close is the +30d system job (A-F17) armed by resolve-report; importing it
 // registers the AUTO_CLOSE_REPORT receiving intent so the scheduled message resolves.
 import "./frames/auto-close";
+// auto-escalate is the SLA system job (A-F16): OPEN -> ESCALATED if still unactioned.
+// Importing it registers the AUTO_ESCALATE receiving intent so the scheduled message
+// resolves. It is dormant until the X1 receiver (on MSG_NEW_REPORT) arms the timer.
+import "./frames/auto-escalate";
 // manualLog owns adminReportDoc.onSubmit (the ONLY owner of that slot — the transition
 // popups bind their own capture Docs). Importing it binds the submit handler so the
 // manual-log form's "Log report" confirm fires it. nav-manual-log registers the
