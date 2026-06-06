@@ -34,6 +34,9 @@ import "./frames/resolve-report";
 import "./frames/note-transition";
 import "./frames/escalate-report";
 import "./frames/close-rejected";
+// overrideSeverity owns severityCaptureDoc.onSubmit DIRECTLY (single-owner capture Doc —
+// no shared dispatcher). Importing it binds both the trigger intent and the submit slot.
+import "./frames/override-severity";
 
 import { appStart } from "./frames/app-start";
 
