@@ -27,6 +27,11 @@ import "./frames/nav-on-call";
 // --- Manage-detail transition intents (side-effect: register the intents) ---
 import "./frames/take-review";
 import "./frames/resolve-report";
+// manualLog owns adminReportDoc.onSubmit (the ONLY owner of that slot — the transition
+// popups bind their own capture Docs). Importing it binds the submit handler so the
+// manual-log form's "Log report" confirm fires it. nav-manual-log registers the
+// openManualLog trigger intent.
+import "./frames/manual-log";
 // note-transition owns the SINGLE noteCaptureDoc.onSubmit (shared dispatcher); it MUST
 // be imported so the slot binds. escalate-report registers its ESCALATED entry into that
 // dispatcher's registry at module load. Import order is immaterial — registration happens
