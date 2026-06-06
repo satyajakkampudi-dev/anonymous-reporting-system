@@ -27,3 +27,17 @@ export const amendmentDoc = new Doc("amendmentDoc", state, {
 // Status-timeline sub-entity row. Written by the transition path only (never a
 // popup) — no confirm/cancel needed; display-only on the user side.
 export const statusHistoryDoc = new Doc("statusHistoryDoc", state, {});
+
+// Reject-reason capture popup (U-F11). STANDALONE — deliberately NOT a sub-collection
+// row of reportDoc and NOT reportDoc itself: reportDoc.onSubmit is already owned by
+// U-F8 (submit-time transforms), so the reject transition cannot reuse it. This Doc is
+// never save()d — it only captures the reporter's free-text reason via
+// sendQuickFormResponse(); on confirm rejectReasonDoc.onSubmit (frames/reject-resolution.js)
+// copies the sanitised reason onto reportDoc.rejectReason (persisted) + statusHistory.note,
+// then drives the RESOLVED -> REOPENED transition on the freshly re-read reportDoc.
+// confirm/cancel give the quick-form its buttons (rule: a popup Doc needs them).
+export const rejectReasonDoc = new Doc("rejectReasonDoc", state, {
+  title: "Reopen report",
+  confirm: "Reopen report",
+  cancel: "Cancel",
+});

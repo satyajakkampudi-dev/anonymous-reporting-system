@@ -13,6 +13,10 @@ import "./sections/contact";
 import "./sections/evidence";
 import "./sections/amendments";
 import "./sections/status-history";
+// Reject-reason capture popup section (U-F11) — registers rejectReasonInputField on
+// the standalone rejectReasonDoc. Imported before the reject-resolution frame, which
+// reads the field reference.
+import "./sections/reject-reason";
 
 // --- Validation handlers (side-effect: wire reportDoc.onSave + evidence field
 //     onValidation; needs the evidence Field exports above) ---
@@ -33,6 +37,7 @@ import "./frames/edit-add-amendment";
 
 // --- Reporter transition intents (side-effect: register the intent) ---
 import "./frames/accept-resolution";
+import "./frames/reject-resolution";
 
 import { appStart } from "./frames/app-start";
 
