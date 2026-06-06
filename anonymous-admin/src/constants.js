@@ -13,6 +13,19 @@ export const INTENT = {
   OPEN_MANAGE_REPORT: "openManageReport",
   OPEN_MANUAL_LOG: "openManualLog",
   OPEN_ON_CALL: "openOnCall",
+  // Manage-detail action intents. The buttons in the Manage actions card
+  // (A-D-manageactions) emit these data-intent-id values NOW; the handlers that
+  // register them are added by their own EDIT/custom tasks (A-E-takeReview,
+  // A-E-resolveReport, A-E-escalateReport, A-E-closeRejected, A-E-overrideSeverity,
+  // A-F14 export). Defining the ids here keeps the emit + consume sides from
+  // drifting (rule 19) — same convention as the user app's action intents. The id
+  // strings match the input-schema display_elements `intent:*` sources verbatim.
+  TAKE_REVIEW: "takeReview",
+  OVERRIDE_SEVERITY: "overrideSeverity",
+  RESOLVE_REPORT: "resolveReport",
+  ESCALATE_REPORT: "escalateReport",
+  CLOSE_REJECTED: "closeRejected",
+  EXPORT_REPORT: "exportReport",
 };
 
 // Context ids (CLAUDE.md "App Entry-Point Bootstrap").
