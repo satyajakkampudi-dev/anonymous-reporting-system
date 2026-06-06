@@ -1,0 +1,22 @@
+{
+  "userDomain": "onship",
+  "conversational": false,
+  "authorisedAccess": false,
+  "inactivityDuration": 0,
+  "botName": "QuitelineReportSubmission",
+  "description": "Anonymous reporting for crew — submit and track complaints safely.",
+  "userRoles": ["enduser", "admin"],
+  "category": ["Developer"],
+  "developer": "FrontM",
+  "botClients": {
+    "web": true,
+    "mobile": true
+  },
+  "systemId": "test",
+  "featured": true,
+  "systemBot": false,
+  "buildType": "Dev",
+  "botId": "cb35185f1c67335f73e92",
+  "iconPath": "",
+  "repositoryLocation": "git@github.com:frontmltd/anonymous-reporting-user-app.git"
+}
