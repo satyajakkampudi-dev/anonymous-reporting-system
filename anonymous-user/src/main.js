@@ -31,6 +31,9 @@ import "./frames/nav-report-detail";
 // --- Edit intents (side-effect: register the intent + its sub-entity onSubmit) ---
 import "./frames/edit-add-amendment";
 
+// --- Reporter transition intents (side-effect: register the intent) ---
+import "./frames/accept-resolution";
+
 import { appStart } from "./frames/app-start";
 
 // Shell UI flags — mirror of BRD §8.1 (rule 23). The ONLY non-default row for
