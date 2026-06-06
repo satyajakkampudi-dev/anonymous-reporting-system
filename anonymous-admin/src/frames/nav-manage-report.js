@@ -15,6 +15,8 @@ import {
   STATIC_DATA_KEYS,
   SIGNED_URL_EXPIRY_SECONDS,
 } from "../../../lib/constants";
+import { adminDisplayDoc } from "../docs/admin-display-doc";
+import { showScreen, SCREEN } from "./display-nav";
 import { INTENT, STATE_KEYS } from "../constants";
 
 export const openManageReport = Intent.Create({
@@ -155,5 +157,11 @@ openManageReport.onResolution = async () => {
     });
   }
 
-  `Managing report ${reportId}. The manage view is added in the display task.`.sendResponse();
+  // Route to the Manage (report-detail) screen — the six detail sections (header,
+  // content, resolution, actions, status-history, amendments) visible; all other
+  // exclusive sections hidden — and render the Display Doc (rule 4/8). The
+  // CURRENT_REPORT_ID / CURRENT_REPORT_EVIDENCE stashes above feed the A-D-manage*
+  // onResponse handlers fired by this sendResponse.
+  showScreen(SCREEN.MANAGE);
+  adminDisplayDoc.sendResponse();
 };

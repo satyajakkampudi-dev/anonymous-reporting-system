@@ -23,6 +23,7 @@ import { resolveAdminRole, loadReportsForAdmin } from "../../../lib/access";
 import { buildDashboardStats } from "../../../lib/dashboard-stats";
 import { adminDisplayDoc } from "../docs/admin-display-doc";
 import { sendAccessRefusal } from "../sections/display/access-refusal";
+import { showScreen, SCREEN } from "./display-nav";
 import { CONTEXT, STATE_KEYS } from "../constants";
 
 // Side-effect imports: register every Section + Field on adminReportDoc, the two
@@ -96,8 +97,12 @@ export const appStart = async () => {
   //     suppressed). DASHBOARD_STATS is the single contract between the two tasks.
   state.setField(STATE_KEYS.DASHBOARD_STATS, buildDashboardStats(reports));
 
-  // 5. Render the Display Doc. Single-tab app → hide the (empty) tab bar first.
-  //    Dashboard (grid row 0) leads; adminReportDoc (Data Doc) is NEVER sent (rule 4/8).
+  // 5. Render the Display Doc. Single-tab app → hide the (empty) tab bar first. Open on
+  //    the DASHBOARD screen (dashboard + alerts/digest visible; all other exclusive
+  //    sections hidden) via showScreen — NOT all sections stacked. incoming-call is the
+  //    overlay (never hidden, self-gates on RINGING). adminReportDoc (Data Doc) is NEVER
+  //    sent (rule 4/8).
+  showScreen(SCREEN.DASHBOARD);
   adminDisplayDoc.tabBarHidden = true;
   adminDisplayDoc.sendResponse();
 };

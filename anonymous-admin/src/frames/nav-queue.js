@@ -28,6 +28,8 @@ import {
   resolveAdminIdentity,
 } from "../../../lib/access";
 import { buildQueueReports } from "../../../lib/queue";
+import { adminDisplayDoc } from "../docs/admin-display-doc";
+import { showScreen, SCREEN } from "./display-nav";
 import { INTENT, STATE_KEYS, QUEUE_FILTER } from "../constants";
 
 export const openQueue = Intent.Create({
@@ -83,6 +85,9 @@ openQueue.onResolution = async () => {
     },
   });
 
-  // Placeholder render preserved — the Display-Doc swap is the separate routing fix.
-  `Queue: ${queueReports.length} report(s). The list view is added in the display task.`.sendResponse();
+  // Route to the Queue screen (only the report-queue section visible) and render the
+  // Display Doc (rule 4/8). The QUEUE_REPORTS / QUEUE_ACTIVE_FILTER stashes above feed
+  // the A-D-queue onResponse fired by this sendResponse.
+  showScreen(SCREEN.QUEUE);
+  adminDisplayDoc.sendResponse();
 };

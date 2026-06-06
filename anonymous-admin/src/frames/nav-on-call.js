@@ -9,6 +9,8 @@ import { Intent } from "@frontmltd/frontmjs/core/Intent";
 import { Context } from "@frontmltd/frontmjs/core/Context";
 import { state } from "@frontmltd/frontmjs/core/State";
 import { adminUserDoc } from "../docs/admin-user-doc";
+import { adminDisplayDoc } from "../docs/admin-display-doc";
+import { showScreen, SCREEN } from "./display-nav";
 import { INTENT } from "../constants";
 
 export const openOnCall = Intent.Create({
@@ -20,5 +22,10 @@ export const openOnCall = Intent.Create({
 openOnCall.onResolution = async () => {
   await Context.Create(state.currentTabId, { state });
   await adminUserDoc.loadDocument({ adminUserId: state.user?.userId });
-  "On-call status. The availability controls are added in the on-call task.".sendResponse();
+
+  // Route to the On-call screen (only the on-call section visible) and render the
+  // Display Doc (rule 4/8). The on-call card reads the freshly-loaded adminUserDoc row
+  // in its onResponse fired by this sendResponse.
+  showScreen(SCREEN.ON_CALL);
+  adminDisplayDoc.sendResponse();
 };

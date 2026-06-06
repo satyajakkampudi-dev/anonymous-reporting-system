@@ -10,6 +10,8 @@ import { Context } from "@frontmltd/frontmjs/core/Context";
 import { state } from "@frontmltd/frontmjs/core/State";
 import { loadReportsForAdmin } from "../../../lib/access";
 import { buildDashboardStats } from "../../../lib/dashboard-stats";
+import { adminDisplayDoc } from "../docs/admin-display-doc";
+import { showScreen, SCREEN } from "./display-nav";
 import { INTENT, STATE_KEYS } from "../constants";
 
 export const openDashboard = Intent.Create({
@@ -28,9 +30,9 @@ openDashboard.onResolution = async () => {
   // STATE_KEYS.DASHBOARD_STATS (rule 28, ER-A6).
   state.setField(STATE_KEYS.DASHBOARD_STATS, buildDashboardStats(reports));
 
-  // NOTE: the actual stat-card render still goes through adminDisplayDoc (A-DISPLAY-SHELL
-  // + A-D-dashboard onResponse). This scaffold still emits a text placeholder because the
-  // nav-display-routing fix (separate task) owns swapping that for adminDisplayDoc.
-  // sendResponse(); once it lands, this frame's stash above already feeds the dashboard.
-  `Dashboard: ${reports.length} report(s) in scope. The stat cards are added in the display task.`.sendResponse();
+  // Route to the Dashboard screen (dashboard + alerts/digest visible; all other
+  // exclusive sections hidden) and render the Display Doc (rule 4/8). The DASHBOARD_STATS
+  // stash above feeds the A-D-dashboard onResponse fired by this sendResponse.
+  showScreen(SCREEN.DASHBOARD);
+  adminDisplayDoc.sendResponse();
 };
