@@ -23,6 +23,12 @@
 // back to createdOn). Thresholds are the shared TIMING.SLA_* constants (rule 19), so the
 // in-app twin and the email digest job (A-F18) breach on the SAME rule.
 //
+// The breach predicate itself (slaForReport + buildBreaches) now lives in the shared
+// lib/sla.js — extracted (A-F18) so the email digest backstop and this in-app twin use
+// ONE identical rule and cannot drift. This section imports buildBreaches and computes
+// the breach set over the gateway-loaded rows; behaviour is unchanged from when the
+// predicate lived inline here.
+//
 // NOTIFICATION-FAILURE BANNER (ER-D15). The durable, cross-admin failure store does NOT
 // exist yet — lib/notifications.js currently only D.log's best-effort failures, and the
 // senders (A-F15/A-F17) are unbuilt. A failure occurs in ANOTHER admin's invocation, so
@@ -52,8 +58,7 @@ import { adminDisplayDoc } from "../../../docs/admin-display-doc";
 import { reportsCollection } from "../../../docs/admin-report-doc";
 import { applyAdminProjection } from "../../../../../lib/access";
 import { renderForPlatform } from "../../../../../lib/utils/platform";
-import { STATUS } from "../../../../../lib/ticket-status";
-import { TIMING } from "../../../../../lib/constants";
+import { buildBreaches } from "../../../../../lib/sla";
 import { INTENT, STATE_KEYS } from "../../../constants";
 import { renderWeb } from "./web";
 import { renderMobile } from "./mobile";
@@ -112,39 +117,9 @@ const readReports = () =>
     .map(toPlainReport)
     .filter((r) => r && r.reportId);
 
-// The SLA-breach reference timestamp + threshold for a report, or null if its status is
-// not SLA-tracked. OPEN ages from createdOn; ESCALATED ages from the last write
-// (updatedOn — escalation time for an untouched report; createdOn fallback). D11.
-const slaForReport = (r) => {
-  if (r.status === STATUS.OPEN) {
-    return { since: Number(r.createdOn) || 0, thresholdMs: TIMING.SLA_OPEN_MS };
-  }
-  if (r.status === STATUS.ESCALATED) {
-    const since = Number(r.updatedOn) || Number(r.createdOn) || 0;
-    return { since, thresholdMs: TIMING.SLA_ESCALATED_MS };
-  }
-  return null;
-};
-
-// Build the breach list: SLA-tracked reports whose unactioned age has crossed the
-// threshold. Pure — `nowMs` injectable (defaults to now). Most overdue first.
-const buildBreaches = (reports, nowMs = Date.now()) =>
-  reports
-    .map((r) => {
-      const sla = slaForReport(r);
-      if (!sla || !sla.since) return null;
-      const overdue = nowMs - sla.since >= sla.thresholdMs;
-      return overdue
-        ? {
-            reportId: r.reportId,
-            status: r.status,
-            assignedTo: r.assignedTo || "",
-            sinceOn: sla.since, // age reference → formatRelative in the renderer
-          }
-        : null;
-    })
-    .filter(Boolean)
-    .sort((a, b) => (Number(a.sinceOn) || 0) - (Number(b.sinceOn) || 0));
+// The SLA-breach predicate (slaForReport + buildBreaches) now lives in the shared
+// lib/sla.js (imported above), so the email digest job (A-F18) and this in-app twin
+// breach on the SAME rule. buildBreaches is pure and identity-free.
 
 // Read the synchronous notification-failure stash (see header + STATE_KEYS doc). Absent
 // today (no producer) → empty → no banner. Defensive against a non-array value.

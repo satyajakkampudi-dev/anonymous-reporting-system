@@ -56,6 +56,14 @@ export const INTENT = {
   // the id here keeps the schedule + consume sides from drifting (rule 19). X1 DEPENDS
   // on A-F16, so this handler is dormant until X1 arms it (correct dependency order).
   AUTO_ESCALATE: "autoEscalate",
+  // System-scheduled SLA backstop digest (A-F18). A periodic job sweeps the
+  // gateway-loaded reports for OPEN>24h / ESCALATED>24h breaches (the SHARED
+  // lib/sla.js predicate, identical to the in-app A-D-alerts twin) and emails ALL
+  // admins an identity-free digest. SELF-REARMING: each run re-schedules the next
+  // sweep (TIMING.SLA_DIGEST_INTERVAL_MS later) under a deterministic jobId so the
+  // chain never duplicates. The FIRST arming is a deploy/ops bootstrap step — see
+  // frames/sla-digest.js header.
+  SLA_DIGEST: "slaDigest",
 };
 
 // Context ids (CLAUDE.md "App Entry-Point Bootstrap").

@@ -34,6 +34,12 @@ import "./frames/auto-close";
 // Importing it registers the AUTO_ESCALATE receiving intent so the scheduled message
 // resolves. It is dormant until the X1 receiver (on MSG_NEW_REPORT) arms the timer.
 import "./frames/auto-escalate";
+// sla-digest is the SLA backstop digest job (A-F18): emails ALL admins an identity-free
+// digest of OPEN>24h / ESCALATED>24h breaches (the SHARED lib/sla.js predicate, identical
+// to the in-app A-D-alerts twin). Importing it registers the SLA_DIGEST receiving intent
+// so the scheduled message resolves. Self-rearming; the FIRST arming is an ops/deploy step
+// (see frames/sla-digest.js header).
+import "./frames/sla-digest";
 // manualLog owns adminReportDoc.onSubmit (the ONLY owner of that slot — the transition
 // popups bind their own capture Docs). Importing it binds the submit handler so the
 // manual-log form's "Log report" confirm fires it. nav-manual-log registers the
