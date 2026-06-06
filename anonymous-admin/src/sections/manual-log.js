@@ -322,6 +322,11 @@ const makeEvidenceFileField = (index) =>
     section: manualLogSection,
     type: FormFieldTypes.FILE_FIELD,
     mandatory: false,
+    // DOMAIN scope (SPEC.md "Domain-scoped S3 key"): a MANUAL report's evidence must
+    // be retrievable by ANY admin (incl. a secondary in a different conversation on
+    // escalation) without a conversation prefix. Conversation scope would pin it to
+    // the logging admin's conversation and break A-F7 signing. MP-FIX-EVIDENCE-FILESCOPE.
+    fileScope: "domain",
     dbName: `evidenceFile${index}`,
     state,
   });

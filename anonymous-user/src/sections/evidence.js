@@ -32,6 +32,12 @@ const makeEvidenceFileField = (index) =>
     section: evidenceSection,
     type: FormFieldTypes.FILE_FIELD,
     mandatory: false,
+    // DOMAIN scope (SPEC.md "Domain-scoped S3 key"; mirror of voicemail.js): the
+    // file must be retrievable by an admin in a DIFFERENT conversation without
+    // exposing the reporter's conversation (anonymity). A conversation-scoped
+    // object would live under the reporter's conversationId and could never be
+    // signed admin-side (A-F7 omits + flags non-domain keys). MP-FIX-EVIDENCE-FILESCOPE.
+    fileScope: "domain",
     dbName: `evidenceFile${index}`,
     state,
   });
