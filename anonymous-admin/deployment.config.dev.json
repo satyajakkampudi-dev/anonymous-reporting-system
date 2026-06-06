@@ -1,0 +1,22 @@
+{
+  "userDomain": "onship",
+  "conversational": false,
+  "authorisedAccess": false,
+  "inactivityDuration": 0,
+  "botName": "QuitelineReportAdmin",
+  "description": "Compliance console to triage, investigate, resolve, and escalate anonymous reports — reporter identity is never revealed.",
+  "userRoles": ["enduser", "admin"],
+  "category": ["Developer"],
+  "developer": "FrontM",
+  "botClients": {
+    "web": true,
+    "mobile": true
+  },
+  "systemId": "test",
+  "featured": true,
+  "systemBot": false,
+  "buildType": "Dev",
+  "botId": "8d068c16b25f1ca38ac85",
+  "iconPath": "",
+  "repositoryLocation": "git@github.com:frontmltd/anonymous-reporting-user-app.git"
+}
