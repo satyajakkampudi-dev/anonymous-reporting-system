@@ -27,6 +27,10 @@ import "./frames/nav-on-call";
 // --- Manage-detail transition intents (side-effect: register the intents) ---
 import "./frames/take-review";
 import "./frames/resolve-report";
+// setAvailability (A-F20): the admin toggles THEIR OWN on-call presence (3-state value,
+// keyed by their own userId — only-own-row). Registers the SET_AVAILABILITY intent the
+// On-call display card's Available/Busy/Unavailable buttons emit.
+import "./frames/set-availability";
 // auto-close is the +30d system job (A-F17) armed by resolve-report; importing it
 // registers the AUTO_CLOSE_REPORT receiving intent so the scheduled message resolves.
 import "./frames/auto-close";
