@@ -38,6 +38,7 @@ import "./frames/edit-add-amendment";
 // --- Reporter transition intents (side-effect: register the intent) ---
 import "./frames/accept-resolution";
 import "./frames/reject-resolution";
+import "./frames/withdraw-report";
 
 import { appStart } from "./frames/app-start";
 
