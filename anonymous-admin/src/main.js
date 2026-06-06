@@ -69,6 +69,12 @@ import "./frames/close-rejected";
 // overrideSeverity owns severityCaptureDoc.onSubmit DIRECTLY (single-owner capture Doc —
 // no shared dispatcher). Importing it binds both the trigger intent and the submit slot.
 import "./frames/override-severity";
+// export-report (A-F14): registers EXPORT_REPORT — the Export button in the manage
+// actions card emits it with { reportId } (single-report case file). Builds the
+// CSV/PDF from the adminProjection set ONLY (no reporter identity, D15); PDF via the
+// HTML class toPDF, CSV via an HTML download page. Also supports a filtered-set export
+// (payload { filter }/{ scope:"queue" }) whose UI trigger is a flagged follow-up.
+import "./frames/export-report";
 
 import { appStart } from "./frames/app-start";
 
