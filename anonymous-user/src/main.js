@@ -21,6 +21,9 @@ import "./sections/reject-reason";
 // callQueueDoc so the start-anonymous-call frame can save the RINGING entry. Imported
 // before that frame, which reads the field references.
 import "./sections/call-queue";
+// Voicemail capture popup section (U-F16) — registers the audio FILE_FIELD on the
+// transient voicemailDoc. Imported before the call-timeout frame, which reads it.
+import "./sections/voicemail";
 
 // --- Validation handlers (side-effect: wire reportDoc.onSave + evidence field
 //     onValidation; needs the evidence Field exports above) ---
@@ -47,6 +50,10 @@ import "./frames/withdraw-report";
 // --- Anonymous call (side-effect: register the startAnonymousCall intent + export
 //     the VideoCall instance; U-F15) ---
 import "./frames/start-anonymous-call";
+// 30s no-answer -> MISSED -> voicemail -> auto-create source=CALL report (U-F16).
+// Registers the callTimeout intent + wires voicemailDoc.onSubmit; needs the voicemail
+// section + report-details/evidence/status-history Field exports above.
+import "./frames/call-timeout";
 
 import { appStart } from "./frames/app-start";
 

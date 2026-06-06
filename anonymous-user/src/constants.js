@@ -12,6 +12,10 @@ export const INTENT = {
   // Voice path — the handler is built in U-F15; the Home CTA emits it now so the
   // navigation contract (input-schema display_elements) is complete.
   START_ANONYMOUS_CALL: "startAnonymousCall",
+  // 30s no-answer timeout target (U-F16). NOT a button/navigation intent — it is
+  // fired by the jobScheduler message armed at ring-start (start-anonymous-call.js),
+  // so the string value is the scheduled-message intentId contract, not a public CTA.
+  CALL_TIMEOUT: "callTimeout",
   // Reporter detail-actions (input-schema detailActions / U-F10–F13). Handlers are
   // built later; the detail-actions card emits these data-intent-id values now, so
   // the string values ARE the public navigation contract and must match the schema.
@@ -38,6 +42,10 @@ export const VIDEO_CALL = {
 export const STATE_KEYS = {
   // reportId stashed by openReportDetail's payload, read after loadDocument.
   CURRENT_REPORT_ID: "CURRENT_REPORT_ID",
+  // callRef stashed by the callTimeout intent (U-F16) so the voicemail-capture
+  // popup's onSubmit (a separate Lambda invocation) knows which call-queue row to
+  // stamp voicemailKey + linkedReportId onto after the report is auto-created.
+  CURRENT_CALL_REF: "CURRENT_CALL_REF",
   // Active My Reports filter — { statusGroup, category, search }. The list
   // renderer (U-D-myreports) reads this to highlight the active chip and to
   // filter the rendered rows. The openMyReports loader stashes the chip's
@@ -76,4 +84,17 @@ export const NOTIFY_EVENT = {
   STATUS_CHANGED: "status_changed",
   RESOLVED: "resolved",
   CLOSED: "closed",
+};
+
+// Voicemail / no-answer auto-create copy + job naming (U-F16). The two strings are
+// the seed values for the auto-created source=CALL report (which has no reporter-
+// entered content — see lib CATEGORY.OTHER / URGENCY.MEDIUM defaults in the frame).
+// JOB_ID_PREFIX builds a deterministic, per-call jobScheduler jobId so a re-armed
+// timer (e.g. a retried U-F15) overwrites rather than stacks a second timeout.
+export const VOICEMAIL = {
+  DEFAULT_REPORT_DESCRIPTION:
+    "Anonymous voicemail received — please listen to the attached audio recording. This report was created automatically because no compliance officer was available to take the call.",
+  STATUS_HISTORY_NOTE:
+    "Auto-created from an anonymous voicemail (no compliance officer answered within the ring window).",
+  JOB_ID_PREFIX: "call-timeout-",
 };

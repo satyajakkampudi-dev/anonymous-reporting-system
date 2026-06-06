@@ -35,8 +35,8 @@ import {
 } from "../sections/call-queue";
 import { initiateAnonymousCall, generateCallRef } from "../../../lib/calling";
 import { isDuplicateKeyError } from "../../../lib/id-generator";
-import { CALL_STATUS, ERROR_CODES } from "../../../lib/constants";
-import { INTENT, VIDEO_CALL } from "../constants";
+import { CALL_STATUS, ERROR_CODES, TIMING } from "../../../lib/constants";
+import { INTENT, VIDEO_CALL, VOICEMAIL } from "../constants";
 
 // VideoCall instance — MUST be exported so the framework can route JOIN_MEETING and
 // the call-lifecycle responses (docs: "the VideoCall instance must be exported").
@@ -135,6 +135,31 @@ startAnonymousCall.onResolution = async () => {
       return;
     }
     persisted = true;
+  }
+
+  // 3b. [U-F16] Arm the 30s no-answer timeout. The jobScheduler delivers a message to
+  //    the reporter's OWN conversation after CALL_RING_TIMEOUT_MS that fires
+  //    INTENT.CALL_TIMEOUT (frames/call-timeout.js). That handler re-reads THIS
+  //    call-queue row and, ONLY if it is still unclaimed-RINGING, transitions it to
+  //    MISSED and offers a voicemail. If an admin answers first (A-F21 sets ACTIVE /
+  //    attendedBy) the timeout is a guarded no-op — no cancellation needed. The jobId
+  //    is deterministic per call so a re-armed timer overwrites rather than stacks.
+  //    Best-effort: if scheduling fails, the reporter still joins the meeting; only the
+  //    voicemail fallback is lost, which is logged.
+  try {
+    await state.jobScheduler.scheduleMessage({
+      toUser: state.user.userId,
+      jobId: `${VOICEMAIL.JOB_ID_PREFIX}${callRef}`,
+      schedule: Date.now() + TIMING.CALL_RING_TIMEOUT_MS,
+      messages: [
+        { intentId: INTENT.CALL_TIMEOUT, data: { callRef, meetingId } },
+      ],
+    });
+  } catch (error) {
+    D.log({
+      message: "U-F15/16: failed to arm the no-answer timeout",
+      data: { callRef, error: String(error) },
+    });
   }
 
   // 4. [X3 hook — rule 16] AFTER save(): ring all available admins via the
