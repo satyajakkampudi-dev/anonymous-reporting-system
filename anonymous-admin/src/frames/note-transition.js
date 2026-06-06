@@ -208,9 +208,13 @@ noteCaptureDoc.onSubmit = async (self) => {
   //       resolveAssignees(report) (lib/access — the SINGLE routing chokepoint, NOT a
   //       hardcoded role query) and sendAdminEmail / sendAdminWebPush. For escalate this
   //       fans out to the secondary compliance admins.
-  //     - MSG_REPORT_STATUS_CHANGED = X5 (cross-app). The admin app cannot address the
-  //       reporter (rule 30 — it holds no reporterId); X5 owns identity-free delivery.
-  //       Payload { reportId, newStatus: target } ONLY — never any identity / actorId.
+  //     - Reporter cross-app notify — the relevant MSG depends on the TARGET status:
+  //         · ESCALATED        -> MSG_REPORT_STATUS_CHANGED = X5 (cross-app)
+  //         · CLOSED_REJECTED  -> MSG_REPORT_CLOSED         = X6 (cross-app)
+  //       The admin app cannot address the reporter (rule 30 — it holds no reporterId);
+  //       X5 / X6 each own identity-free delivery. Both carry { reportId, newStatus: target }
+  //       ONLY — never any identity / actorId. Both are deferred to their own cross-app
+  //       tasks; nothing is sent here.
 
   D.log({
     message: "A-F10/F11: report note transition applied",

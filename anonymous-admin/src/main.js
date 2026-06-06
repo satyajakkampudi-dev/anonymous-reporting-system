@@ -33,6 +33,7 @@ import "./frames/resolve-report";
 // at module load, dispatch at runtime, so both are loaded before any popup submits.
 import "./frames/note-transition";
 import "./frames/escalate-report";
+import "./frames/close-rejected";
 
 import { appStart } from "./frames/app-start";
 
