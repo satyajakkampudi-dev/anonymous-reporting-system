@@ -17,6 +17,7 @@ import { reporterIdField } from "../sections/report-details";
 import { amendmentsCollection } from "../sections/amendments";
 import { statusHistoryCollection } from "../sections/status-history";
 import { prepareDetailContentEvidence } from "../sections/display/detail-content";
+import { prepareAmendmentsEvidence } from "../sections/display/amendments";
 import { INTENT } from "../constants";
 
 export const openReportDetail = Intent.Create({
@@ -52,6 +53,9 @@ openReportDetail.onResolution = async () => {
   // content render handler) is synchronous and NOT awaited, so the signing must
   // complete here (S3 guide "Signed URLs before sendResponse", rule 11/18).
   await prepareDetailContentEvidence();
+  // Sign each amendment's evidence S3 key (same constraint — onResponse is sync,
+  // not awaited). The sub-collection is already loaded above.
+  await prepareAmendmentsEvidence();
 
   reportDoc.sendResponse();
 };
