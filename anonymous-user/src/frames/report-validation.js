@@ -1,4 +1,6 @@
 // U-F6 — Evidence upload validation + atomicity.
+// U-F7 — Contact-method conditional require/validate (added below the evidence
+//        layers; shares the same authoritative reportDoc.onSave gate).
 //
 // Context A (framework events on reportDoc / its evidence Fields — object graph is
 // live; rule 6 puts handlers in frames/, not docs/). Two layers:
@@ -25,8 +27,8 @@
 // field that does not appear in ./docs/ is forbidden (CLAUDE.md "Do Not Hallucinate
 // APIs"), hence the deferral.
 //
-// EXTENSION POINT: U-F7 (contact-method conditional validation) adds its
-// per-method checks to this same reportDoc.onSave handler.
+// U-F7 (contact-method conditional validation) adds its per-method checks to
+// this same reportDoc.onSave handler (see the "U-F7" block below).
 
 import { state } from "@frontmltd/frontmjs/core/State";
 import { reportDoc } from "../collections/reports";
@@ -37,11 +39,19 @@ import {
   evidenceFile4Field,
   evidenceFile5Field,
 } from "../sections/evidence";
+import { contactMethodField, contactValueField } from "../sections/contact";
 import {
   validateEvidenceEnvelope,
   isWithinEvidenceFileCount,
+  isValidContactValue,
+  contactValueRequired,
 } from "../../../lib/validation";
-import { ERROR_CODES, EVIDENCE_LIMITS } from "../../../lib/constants";
+import {
+  ERROR_CODES,
+  EVIDENCE_LIMITS,
+  CONTACT_METHOD,
+  contactMethodFromLabel,
+} from "../../../lib/constants";
 
 const evidenceFields = [
   evidenceFile1Field,
@@ -63,6 +73,65 @@ for (const field of evidenceFields) {
   };
 }
 
+// ── U-F7: contact-method conditional require/validate ──────────────────────
+//
+// "Show/require-by-method" is CODE, not a declarative show-if (rule 24). The
+// contactMethod DROPDOWN stores LABELS, so map label → token before delegating
+// the per-method check to lib/validation.js. Pure evaluator shared by the
+// field-level feedback handler and the authoritative onSave gate.
+
+const CONTACT_INVALID_MESSAGE = {
+  [CONTACT_METHOD.EMAIL]: "Please enter a valid email address.",
+  [CONTACT_METHOD.PHONE]:
+    "Please enter a valid phone number (7–15 digits, optional ‘+’).",
+  [CONTACT_METHOD.CABIN]:
+    "Please enter a valid cabin number (letters and numbers, max 20 characters).",
+};
+
+const CONTACT_INVALID_CODE = {
+  [CONTACT_METHOD.EMAIL]: ERROR_CODES.INVALID_EMAIL,
+  [CONTACT_METHOD.PHONE]: ERROR_CODES.INVALID_PHONE,
+  [CONTACT_METHOD.CABIN]: ERROR_CODES.INVALID_CABIN,
+};
+
+// Returns { ok, code, message }. ok:true ⇒ nothing to report (None / unset /
+// valid). None and legacy-empty methods require no value and never fail here.
+const evaluateContact = (methodLabel, rawValue) => {
+  const method = contactMethodFromLabel(methodLabel);
+  if (!contactValueRequired(method)) return { ok: true };
+
+  const trimmed = typeof rawValue === "string" ? rawValue.trim() : "";
+  if (!trimmed) {
+    return {
+      ok: false,
+      code: ERROR_CODES.INVALID_CONTACT_VALUE,
+      message: `Please provide your ${String(
+        methodLabel
+      ).toLowerCase()} details so we can reach you, or set Contact method to “None”.`,
+    };
+  }
+  if (!isValidContactValue(method, trimmed)) {
+    return {
+      ok: false,
+      code: CONTACT_INVALID_CODE[method] || ERROR_CODES.INVALID_CONTACT_VALUE,
+      message:
+        CONTACT_INVALID_MESSAGE[method] ||
+        "Please enter valid contact details.",
+    };
+  }
+  return { ok: true };
+};
+
+// Layer 1 (contact) — on-edit feedback. Read the sibling method via self.doc
+// (cross-field access in a Field handler; CLAUDE.md "Field Access Patterns").
+contactValueField.onValidation = async (self) => {
+  const methodLabel = self.doc.f[contactMethodField.id].value;
+  const { ok, message } = evaluateContact(methodLabel, self.value);
+  if (!ok) {
+    self.sendValidationResponse({ result: false, message });
+  }
+};
+
 // Layer 2 — authoritative atomic gate (before persist).
 reportDoc.onSave = async (self) => {
   // Collect populated evidence envelopes (envelope present AND has an S3 key).
@@ -83,6 +152,31 @@ reportDoc.onSave = async (self) => {
     if (!valid) {
       state.addErrorToStack(ERROR_CODES.INVALID_EVIDENCE_FILE, reason);
       return;
+    }
+  }
+
+  // U-F7 — contact channel. Require + validate by method; abort on failure so
+  // nothing partial persists (same atomic-gate contract as evidence above).
+  const contactMethodLabel = self.f[contactMethodField.id].value;
+  const contact = evaluateContact(
+    contactMethodLabel,
+    self.f[contactValueField.id].value
+  );
+  if (!contact.ok) {
+    state.addErrorToStack(contact.code, contact.message);
+    return;
+  }
+
+  // "None" (or unset) hides the value — clear any stray entry so nothing
+  // reporter-private persists; otherwise persist the trimmed form. contactValue
+  // is encrypted + excluded from adminProjection, so clearing also guarantees a
+  // method-switch to None leaves no leaked detail behind.
+  if (contactMethodFromLabel(contactMethodLabel) === CONTACT_METHOD.NONE) {
+    self.f[contactValueField.id].value = null;
+  } else {
+    const v = self.f[contactValueField.id].value;
+    if (typeof v === "string") {
+      self.f[contactValueField.id].value = v.trim();
     }
   }
 };
