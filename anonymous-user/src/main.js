@@ -17,6 +17,10 @@ import "./sections/status-history";
 // the standalone rejectReasonDoc. Imported before the reject-resolution frame, which
 // reads the field reference.
 import "./sections/reject-reason";
+// Call-queue field schema (U-F15) — attaches the identity-free fields to the shared
+// callQueueDoc so the start-anonymous-call frame can save the RINGING entry. Imported
+// before that frame, which reads the field references.
+import "./sections/call-queue";
 
 // --- Validation handlers (side-effect: wire reportDoc.onSave + evidence field
 //     onValidation; needs the evidence Field exports above) ---
@@ -39,6 +43,10 @@ import "./frames/edit-add-amendment";
 import "./frames/accept-resolution";
 import "./frames/reject-resolution";
 import "./frames/withdraw-report";
+
+// --- Anonymous call (side-effect: register the startAnonymousCall intent + export
+//     the VideoCall instance; U-F15) ---
+import "./frames/start-anonymous-call";
 
 import { appStart } from "./frames/app-start";
 

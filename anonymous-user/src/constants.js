@@ -26,6 +26,14 @@ export const CONTEXT = {
   MAIN_APP: "mainApp",
 };
 
+// VideoCall control id (U-F15). The VideoCall instance is an Intent subclass and
+// needs its own opaque control id, distinct from the START_ANONYMOUS_CALL
+// navigation intent that triggers it. The framework keys the JOIN_MEETING response
+// (state.messageFromUser.controlId) off this value, so it must be stable.
+export const VIDEO_CALL = {
+  CONTROL_ID: "anonymousVideoCall",
+};
+
 // state.setField keys used to pass data between independent intents (Context B).
 export const STATE_KEYS = {
   // reportId stashed by openReportDetail's payload, read after loadDocument.
