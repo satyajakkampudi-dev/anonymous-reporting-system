@@ -20,6 +20,7 @@
 import { Context } from "@frontmltd/frontmjs/core/Context";
 import { D, state } from "@frontmltd/frontmjs/core/State";
 import { resolveAdminRole, loadReportsForAdmin } from "../../../lib/access";
+import { APP_ROLES, ROLE, userHasRole } from "../../../lib/constants";
 import { buildDashboardStats } from "../../../lib/dashboard-stats";
 import { adminDisplayDoc } from "../docs/admin-display-doc";
 import { sendAccessRefusal } from "../sections/display/access-refusal";
@@ -61,27 +62,50 @@ export const appStart = async () => {
   //    must never accuse a legitimate admin, and (rule 27) must never fall through to
   //    the bootstrap. So: catch it, show a neutral retry message, and STOP — same
   //    no-bootstrap / no-gateway-read outcome as a deny, different copy.
-  let role;
+  // PRIMARY entitlement: the FrontM `admin` role in state.user.roles (granted via the
+  // bot's userRoles / license key) — the sailors-cart admin access-gate pattern
+  // (sailors-admin/src/frames/access-gate.js). The admin-users registry (D3) is the
+  // SECONDARY source: it supplies the PRIMARY/SECONDARY routing role and also acts as a
+  // fallback gate so a curated admin works even before the role grant. So the gate
+  // opens if EITHER holds; a non-admin (neither) hits the refusal wall.
+  const isAdminByRole = userHasRole(state, APP_ROLES.ADMIN);
+
+  let registryRole;
   try {
-    role = await resolveAdminRole();
+    registryRole = await resolveAdminRole();
   } catch (error) {
-    D.log({
-      message: "A-F1: access-gate role resolution failed",
+    // A thrown registry read (poor maritime link) is NOT a deny — never accuse a
+    // legitimate admin, and never fall through to the bootstrap (rule 27). Neutral retry.
+    D.warning({
+      message: "A-F1: admin-users lookup failed",
       data: { error: String(error) },
     });
     "We couldn't verify your access just now. Please try opening the console again in a moment.".sendResponse();
     return;
   }
 
-  if (!role) {
-    // DENY (caller not in the admin-users registry): clear refusal card, then STOP.
+  // Always-visible decision trace (run-profile independent) — confirms the actual
+  // state.client (cloud vs edge) and the role codes present, for diagnosis.
+  D.warning({
+    message: "A-F1: access gate decision",
+    data: {
+      client: state.client,
+      roles: state.user && state.user.roles,
+      isAdminByRole,
+      registryRole,
+    },
+  });
+
+  if (!isAdminByRole && !registryRole) {
+    // DENY (neither the FrontM admin role nor a curated registry row): refusal, STOP.
     // No Context.CreateAndInit, no gateway read — nothing is loaded behind the wall.
-    D.log({ message: "A-F1: access denied (caller not an admin)" });
     sendAccessRefusal();
     return;
   }
 
-  // 2. Stash the resolved role for the queue role-filter (A-F4).
+  // 2. Effective in-app routing role: the registry value when present, else default
+  //    PRIMARY for a FrontM-admin not yet curated in admin-users. Stash for A-F4.
+  const role = registryRole || ROLE.PRIMARY_ADMIN;
   state.setField(STATE_KEYS.ADMIN_ROLE, role);
 
   // 3. Context bootstrap — BEFORE any loadDocument / buffer write.
