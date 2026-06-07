@@ -20,7 +20,7 @@
 import { Context } from "@frontmltd/frontmjs/core/Context";
 import { D, state } from "@frontmltd/frontmjs/core/State";
 import { resolveAdminRole, loadReportsForAdmin } from "../../../lib/access";
-import { APP_ROLES, ROLE, userHasRole } from "../../../lib/constants";
+import { frontmAdminRole } from "../../../lib/constants";
 import { buildDashboardStats } from "../../../lib/dashboard-stats";
 import { adminDisplayDoc } from "../docs/admin-display-doc";
 import { sendAccessRefusal } from "../sections/display/access-refusal";
@@ -62,13 +62,13 @@ export const appStart = async () => {
   //    must never accuse a legitimate admin, and (rule 27) must never fall through to
   //    the bootstrap. So: catch it, show a neutral retry message, and STOP — same
   //    no-bootstrap / no-gateway-read outcome as a deny, different copy.
-  // PRIMARY entitlement: the FrontM `admin` role in state.user.roles (granted via the
-  // bot's userRoles / license key) — the sailors-cart admin access-gate pattern
-  // (sailors-admin/src/frames/access-gate.js). The admin-users registry (D3) is the
-  // SECONDARY source: it supplies the PRIMARY/SECONDARY routing role and also acts as a
-  // fallback gate so a curated admin works even before the role grant. So the gate
-  // opens if EITHER holds; a non-admin (neither) hits the refusal wall.
-  const isAdminByRole = userHasRole(state, APP_ROLES.ADMIN);
+  // PRIMARY entitlement: the FrontM admin role in state.user.roles (quitelineprimaryadmin
+  // → PRIMARY, quitelinesecondaryadmin → SECONDARY; sailorscartadmin → PRIMARY as a
+  // TEMPORARY dev-test role — see APP_ROLES/frontmAdminRole, remove before prod). The
+  // sailors-cart admin access-gate pattern. The admin-users registry (D3) is the
+  // SECONDARY source: it supplies PRIMARY/SECONDARY for curated admins and acts as a
+  // fallback gate. The gate opens if EITHER yields a role; a non-admin hits the wall.
+  const frontmRole = frontmAdminRole(state);
 
   let registryRole;
   try {
@@ -91,21 +91,21 @@ export const appStart = async () => {
     data: {
       client: state.client,
       roles: state.user && state.user.roles,
-      isAdminByRole,
+      frontmRole,
       registryRole,
     },
   });
 
-  if (!isAdminByRole && !registryRole) {
-    // DENY (neither the FrontM admin role nor a curated registry row): refusal, STOP.
+  if (!frontmRole && !registryRole) {
+    // DENY (neither a FrontM admin role nor a curated registry row): refusal, STOP.
     // No Context.CreateAndInit, no gateway read — nothing is loaded behind the wall.
     sendAccessRefusal();
     return;
   }
 
-  // 2. Effective in-app routing role: the registry value when present, else default
-  //    PRIMARY for a FrontM-admin not yet curated in admin-users. Stash for A-F4.
-  const role = registryRole || ROLE.PRIMARY_ADMIN;
+  // 2. Effective in-app routing role: the FrontM-role level takes precedence (the
+  //    provisioned entitlement), else the curated registry value. Stash for A-F4.
+  const role = frontmRole || registryRole;
   state.setField(STATE_KEYS.ADMIN_ROLE, role);
 
   // 3. Context bootstrap — BEFORE any loadDocument / buffer write.
