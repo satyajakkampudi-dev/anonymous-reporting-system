@@ -121,12 +121,14 @@ export const appStart = async () => {
   //     suppressed). DASHBOARD_STATS is the single contract between the two tasks.
   state.setField(STATE_KEYS.DASHBOARD_STATS, buildDashboardStats(reports));
 
-  // 5. Render the Display Doc. Single-tab app → hide the (empty) tab bar first. Open on
-  //    the DASHBOARD screen (dashboard + alerts/digest visible; all other exclusive
-  //    sections hidden) via showScreen — NOT all sections stacked. incoming-call is the
-  //    overlay (never hidden, self-gates on RINGING). adminReportDoc (Data Doc) is NEVER
-  //    sent (rule 4/8).
+  // 5. Render the Display Doc. Open on the DASHBOARD screen (dashboard + alerts/digest
+  //    visible; all other exclusive sections hidden) via showScreen — NOT all sections
+  //    stacked. incoming-call is the overlay (never hidden, self-gates on RINGING).
+  //    adminReportDoc (Data Doc) is NEVER sent (rule 4/8).
+  //    NOTE: do NOT set tabBarHidden = true — it leaves no active tab, so the framework
+  //    never sets state.currentTabId, and every subsequent invoke_intent nav
+  //    (Context.Create(state.currentTabId)) crashes ("Cannot set properties of undefined
+  //    (setting 'currentTabId')"). Sailors-cart keeps the tab bar visible for this reason.
   showScreen(SCREEN.DASHBOARD);
-  adminDisplayDoc.tabBarHidden = true;
   adminDisplayDoc.sendResponse();
 };

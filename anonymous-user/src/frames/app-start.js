@@ -48,8 +48,11 @@ export const appStart = async () => {
   });
 
   // 3. Render the Display Doc on the Home screen (not all 8 sections stacked).
-  //    Single-tab app → hide the (empty) tab bar first.
+  //    NOTE: do NOT set tabBarHidden = true. It leaves the conversation with no active
+  //    tab, so the framework never sets state.currentTabId — and every subsequent
+  //    invoke_intent nav (Context.Create(state.currentTabId)) then crashes with "Cannot
+  //    set properties of undefined (setting 'currentTabId')". Sailors-cart keeps the tab
+  //    bar visible for exactly this reason; leave it at the framework default.
   showScreen(SCREEN.HOME);
-  reportDisplayDoc.tabBarHidden = true;
   reportDisplayDoc.sendResponse();
 };
