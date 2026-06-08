@@ -47,6 +47,8 @@ import { Intent } from "@frontmltd/frontmjs/core/Intent";
 import { D, state } from "@frontmltd/frontmjs/core/State";
 import { AVAILABILITY } from "../../../lib/constants";
 import { setOwnAvailability } from "./availability-writer";
+import { adminDisplayDoc } from "../docs/admin-display-doc";
+import { showScreen, SCREEN } from "./display-nav";
 import { INTENT } from "../constants";
 
 // The closed set of writable presence states (rule 19) — anything outside it is rejected.
@@ -114,11 +116,17 @@ setAvailability.onResolution = async () => {
     return;
   }
 
-  // 8. Confirm. The value now persists; the On-call display reflects it on next render.
+  // 8. Re-render the On-call card NOW so the "Current" pill + the active button reflect
+  //    the new value immediately. setOwnAvailability set it on the live adminUserDoc in
+  //    this invocation, so the on-call onResponse reads the updated value. Without this
+  //    the card kept its stale content ("Not set"). showScreen keeps us on the On-call
+  //    screen; a brief toast accompanies the visual update.
   D.log({
     message: "A-F20: availability updated",
     data: { availability },
   });
 
-  `Your on-call status is now **${availability}**.`.sendResponse();
+  showScreen(SCREEN.ON_CALL);
+  adminDisplayDoc.sendResponse();
+  `You are now ${availability}.`.sendResponse();
 };
