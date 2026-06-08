@@ -16,6 +16,7 @@ import { statusHistoryDisplaySection } from "../sections/display/status-history"
 import { detailResolutionSection } from "../sections/display/detail-resolution";
 import { amendmentsDisplaySection } from "../sections/display/amendments";
 import { detailActionsSection } from "../sections/display/detail-actions";
+import { reportDisplayDoc } from "../docs/report-display-doc";
 import { D } from "@frontmltd/frontmjs/core/State";
 
 // Screen identifiers — SCREAMING_SNAKE_CASE constants (rule 19).
@@ -23,6 +24,14 @@ export const SCREEN = {
   HOME: "HOME",
   MY_REPORTS: "MY_REPORTS",
   DETAIL: "DETAIL",
+};
+
+// Per-screen tab title (shown on the FrontM tab strip; set on the Display Doc before
+// sendResponse — the sailors-cart pattern, e.g. dashboardDisplayDoc.title = "Dashboard").
+const SCREEN_TITLES = {
+  [SCREEN.HOME]: "Anonymous Reporting",
+  [SCREEN.MY_REPORTS]: "My Reports",
+  [SCREEN.DETAIL]: "Report",
 };
 
 // All 8 display sections, in grid order.
@@ -65,5 +74,9 @@ export const showScreen = (screen) => {
   const visibleSet = new Set(visible || []);
   for (const section of ALL_DISPLAY_SECTIONS) {
     section.hidden = !visibleSet.has(section);
+  }
+  // Tab title for this screen (sailors-cart sets <displayDoc>.title before sendResponse).
+  if (SCREEN_TITLES[screen]) {
+    reportDisplayDoc.title = SCREEN_TITLES[screen];
   }
 };

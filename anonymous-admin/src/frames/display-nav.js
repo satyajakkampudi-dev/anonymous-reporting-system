@@ -48,6 +48,7 @@ import { statusHistoryDisplaySection } from "../sections/display/status-history"
 import { amendmentsDisplaySection } from "../sections/display/amendments";
 import { alertsDigestDisplaySection } from "../sections/display/alerts";
 import { onCallDisplaySection } from "../sections/display/on-call";
+import { adminDisplayDoc } from "../docs/admin-display-doc";
 
 // Screen identifiers — SCREAMING_SNAKE_CASE constants (rule 19; no magic strings).
 export const SCREEN = {
@@ -55,6 +56,15 @@ export const SCREEN = {
   QUEUE: "QUEUE",
   MANAGE: "MANAGE",
   ON_CALL: "ON_CALL",
+};
+
+// Per-screen tab title (FrontM tab strip; set on the Display Doc before sendResponse —
+// the sailors-cart pattern, e.g. dashboardDisplayDoc.title = "Dashboard").
+const SCREEN_TITLES = {
+  [SCREEN.DASHBOARD]: "Dashboard",
+  [SCREEN.QUEUE]: "Report Queue",
+  [SCREEN.MANAGE]: "Manage Report",
+  [SCREEN.ON_CALL]: "On-call",
 };
 
 // Every EXCLUSIVE display section showScreen governs (incoming-call is the OVERLAY and
@@ -95,5 +105,9 @@ export function showScreen(screen) {
   const visible = SCREEN_SECTIONS[screen] || [];
   for (const section of EXCLUSIVE_SECTIONS) {
     section.hidden = !visible.includes(section);
+  }
+  // Tab title for this screen (sailors-cart sets <displayDoc>.title before sendResponse).
+  if (SCREEN_TITLES[screen]) {
+    adminDisplayDoc.title = SCREEN_TITLES[screen];
   }
 }
