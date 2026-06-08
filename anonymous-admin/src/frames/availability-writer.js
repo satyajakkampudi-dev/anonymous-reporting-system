@@ -4,11 +4,12 @@
 // frames reuse the EXACT same load-own-row + guarded-save discipline rather than
 // duplicating it (rule 14 — single chokepoint).
 //
-// Context-B safe: the caller MUST already be in an attached context (Context.Create) —
-// this helper loads the caller's own row fresh by their userId, applies the validated
-// availability, and saves with abort detection. It NEVER creates a row (the registry is
-// seeded out-of-band, D3) and NEVER addresses any row but the caller's own (structural
-// "own row only" — the key is always state.user.userId, never a payload field).
+// Context-B safe: the helper loads the caller's own row fresh by their userId, applies
+// the validated availability, and saves with abort detection. If no curated row exists
+// it SELF-SEEDS the caller's OWN row from their FrontM entitlement (so on-call / notify
+// / ring work without the out-of-band D3 seed — dev convenience; gate before prod if
+// strict seeding is enforced). It NEVER addresses any row but the caller's own (the key
+// is always state.user.userId, never a payload field).
 //
 // ANONYMITY (rule 30): the only identity touched is the CALLER'S OWN, which is theirs to
 // read/write — never a reporter's. No reporter-identity field exists on adminUserDoc.
@@ -18,10 +19,18 @@ import { D, state } from "@frontmltd/frontmjs/core/State";
 import { adminUserDoc } from "../docs/admin-user-doc";
 import {
   adminUserIdField,
+  adminEmailField,
+  adminRoleField,
+  adminScopeField,
   availabilityField,
   adminUpdatedOnField,
 } from "../sections/admin-user";
-import { AVAILABILITY } from "../../../lib/constants";
+import {
+  AVAILABILITY,
+  SCOPE,
+  roleToAdminRole,
+  frontmAdminRole,
+} from "../../../lib/constants";
 
 // The closed set of writable presence states (rule 19) — anything outside it is rejected.
 const VALID_AVAILABILITY = Object.values(AVAILABILITY);
@@ -58,14 +67,32 @@ export const setOwnAvailability = async (
   }
   await adminUserDoc.loadDocument({ adminUserId: userId });
 
-  // Existence — a hydrated row carries its primary key. Not hydrated → caller is not in
-  // the seeded registry; do NOT create a row (D3 — seeded only).
+  // Existence — a hydrated row carries its primary key. If the caller has NO curated
+  // registry row, SELF-SEED their OWN row from their FrontM entitlement so on-call
+  // presence (and, via the seeded row, notifications / on-call ring / call answering)
+  // works without the out-of-band D3 seed. Only the caller's OWN identity is written
+  // (adminUserId = state.user.userId, their own email, the role from their FrontM grant)
+  // — anonymity-safe (never a reporter). NOTE (dev): if strict out-of-band seeding is
+  // enforced later, gate or remove this self-seed.
   if (!adminUserDoc.f[adminUserIdField.id]?.value) {
+    const frontmRole = frontmAdminRole(state);
+    if (!frontmRole) {
+      D.log({
+        message:
+          "setOwnAvailability — no registry row and caller is not an admin",
+        data: { availability },
+      });
+      return { ok: false, reason: "not-admin" };
+    }
+    adminUserDoc.docId = userId; // PK = adminUserId → save() inserts this row
+    adminUserDoc.f[adminUserIdField.id].value = userId;
+    adminUserDoc.f[adminEmailField.id].value = state.user?.userEmail || "";
+    adminUserDoc.f[adminRoleField.id].value = roleToAdminRole(frontmRole);
+    adminUserDoc.f[adminScopeField.id].value = SCOPE.GLOBAL;
     D.log({
-      message: "setOwnAvailability — caller's admin-users row not found",
-      data: { availability },
+      message: "setOwnAvailability — self-seeding caller's admin-users row",
+      data: { role: roleToAdminRole(frontmRole) },
     });
-    return { ok: false, reason: "not-found" };
   }
 
   // Apply. Presence is last-write-wins (no version/CAS — not a report transition).
