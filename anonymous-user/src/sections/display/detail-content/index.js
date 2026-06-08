@@ -121,7 +121,16 @@ export const prepareDetailContentEvidence = async () => {
     const envelope = reportDoc.f[field.id]?.value;
     const key = envelope?.value;
     if (key) {
-      attached.push({ key, fileName: envelope?.fileName || "" });
+      attached.push({
+        key,
+        fileName: envelope?.fileName || "",
+        // The S3 path PREFIX is the resolved scope identifier the file was stored
+        // under (fileScopeValue): the DOMAIN NAME for a domain-scoped upload (our
+        // evidence is fileScope:"domain"), NOT the literal "domain". Signing at
+        // `${conversationId}/${key}` 404s because the object lives at
+        // `${domain}/${key}` (mirrors healthMarinerCommonLib/crewApi.js).
+        scopeValue: envelope?.fileScopeValue || null,
+      });
     }
   }
   if (!attached.length) return;
@@ -131,8 +140,41 @@ export const prepareDetailContentEvidence = async () => {
   );
   if (!bucket) {
     // No bucket configured — render the count without broken links (never embed keys).
+    D.log({
+      message: "detailContent: no conversations bucket configured",
+      data: { reportId, attachedCount: attached.length },
+    });
     signedEvidence = attached.map((a) => ({ fileName: a.fileName, url: "" }));
     return;
+  }
+
+  // DIAGNOSTIC PROBE (temporary) — FILE_FIELD upload prefix is unknown (sailors/myProfile
+  // only download IMAGE_FIELD). Try candidate S3 paths for the first key via getS3Object
+  // and log which one actually exists, so we can match the signing exactly. Remove after.
+  if (attached[0]) {
+    const k = attached[0].key;
+    const candidates = {
+      bare: k,
+      conversation: `${state.conversationId}/${k}`,
+      domain: `${state.currentUserDomain}/${k}`,
+      user: `${state.user?.userId}/${k}`,
+      bot: `${state.botId}/${k}`,
+    };
+    for (const [label, key] of Object.entries(candidates)) {
+      try {
+        const res = await state.frontmlib.getS3Object({ bucket, key });
+        const ok = !!res && (res.statusCode === 200 || res.Body || res.body);
+        D.log({
+          message: "detailContent: S3 probe",
+          data: { label, key, exists: ok, statusCode: res?.statusCode },
+        });
+      } catch (e) {
+        D.log({
+          message: "detailContent: S3 probe miss",
+          data: { label, key, error: String(e?.message || e).slice(0, 80) },
+        });
+      }
+    }
   }
 
   for (const item of attached) {
@@ -142,6 +184,15 @@ export const prepareDetailContentEvidence = async () => {
         `${state.conversationId}/${item.key}`,
         SIGNED_URL_EXPIRY_SECONDS
       );
+      D.log({
+        message: "detailContent: evidence signing attempt",
+        data: {
+          reportId,
+          fileName: item.fileName,
+          keyPath: `${state.conversationId}/${item.key}`,
+          signed: !!url,
+        },
+      });
       signedEvidence.push({ fileName: item.fileName, url: url || "" });
     } catch {
       // Best-effort (NFR-4): log and degrade this link to a non-clickable entry.

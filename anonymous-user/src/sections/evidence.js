@@ -13,6 +13,7 @@
 import { Section } from "@frontmltd/frontmjs/core/Section";
 import { Field } from "@frontmltd/frontmjs/core/Field";
 import { FormFieldTypes } from "@frontmltd/frontmjs/core/FormFieldTypes";
+import { Buttons } from "@frontmltd/frontmjs/core/fields/Buttons";
 import { state } from "@frontmltd/frontmjs/core/State";
 import { reportDoc } from "../docs/report-doc";
 
@@ -25,28 +26,71 @@ export const evidenceSection = new Section("evidenceSection", {
   state,
 });
 
-const makeEvidenceFileField = (index) =>
+// Progressive disclosure (mirror of the reference user-app evidenceFields.js): only
+// slot 1 is visible initially; slots 2–5 start hidden and are revealed one at a time
+// by the "+ Add another file" button (frames/evidence-slots.js). The `hidden` flag is
+// a module-level mutable that resets on a Lambda cold start, so the live count is
+// persisted in conversation state (STATE_KEYS.EVIDENCE_SLOTS_VISIBLE) and re-applied
+// by restoreEvidenceSlotVisibility. The onClick handler lives in frames/ (AGENTS.md —
+// handlers belong in frames, not in sections), so this file holds definitions only.
+const makeEvidenceFileField = (index, hidden) =>
   new Field(`evidenceFile${index}Field`, {
     title: `Evidence file ${index}`,
     doc: reportDoc,
     section: evidenceSection,
     type: FormFieldTypes.FILE_FIELD,
     mandatory: false,
-    // DOMAIN scope (SPEC.md "Domain-scoped S3 key"; mirror of voicemail.js): the
-    // file must be retrievable by an admin in a DIFFERENT conversation without
-    // exposing the reporter's conversation (anonymity). A conversation-scoped
-    // object would live under the reporter's conversationId and could never be
-    // signed admin-side (A-F7 omits + flags non-domain keys). MP-FIX-EVIDENCE-FILESCOPE.
-    fileScope: "domain",
+    // CONVERSATION scope — the FrontM default for user-uploaded media and the ONLY
+    // scope proven to round-trip (myProfile profilePhoto, sailors-cart product photos:
+    // both fileScope "conversation", signed at `${conversationId}/${key}`). A
+    // "domain"-scoped FILE_FIELD uploads to a non-standard location our signing cannot
+    // reach (verified live: NoSuchKey at BOTH `${domain}/${key}` and
+    // `${conversationId}/${key}`), which broke the reporter's OWN download. The earlier
+    // "domain" choice (MP-FIX-EVIDENCE-FILESCOPE) aimed to let admins read evidence
+    // cross-conversation, but that goal needs a custom domain-path upload on submit
+    // (healthMariner pattern), NOT a FILE_FIELD scope flag. Reverted to conversation so
+    // the reporter can download their own evidence; admin cross-access is a separate task.
+    fileScope: "conversation",
     dbName: `evidenceFile${index}`,
+    hidden,
     state,
   });
 
-export const evidenceFile1Field = makeEvidenceFileField(1);
-export const evidenceFile2Field = makeEvidenceFileField(2);
-export const evidenceFile3Field = makeEvidenceFileField(3);
-export const evidenceFile4Field = makeEvidenceFileField(4);
-export const evidenceFile5Field = makeEvidenceFileField(5);
+export const evidenceFile1Field = makeEvidenceFileField(1, false);
+export const evidenceFile2Field = makeEvidenceFileField(2, true);
+export const evidenceFile3Field = makeEvidenceFileField(3, true);
+export const evidenceFile4Field = makeEvidenceFileField(4, true);
+export const evidenceFile5Field = makeEvidenceFileField(5, true);
+
+// All five slots in display order — used by resetEvidenceSlots (frames/evidence-slots).
+export const ATTACHMENT_FIELDS = [
+  evidenceFile1Field,
+  evidenceFile2Field,
+  evidenceFile3Field,
+  evidenceFile4Field,
+  evidenceFile5Field,
+];
+
+// The four progressively-revealed slots (2–5) — used by restoreEvidenceSlotVisibility
+// and revealNextEvidenceSlot to find the next hidden slot.
+export const EXTRA_ATTACHMENT_FIELDS = [
+  evidenceFile2Field,
+  evidenceFile3Field,
+  evidenceFile4Field,
+  evidenceFile5Field,
+];
+
+// "+ Add another file" — reveals the next hidden slot; hidden once all five are
+// visible. onClick is wired in frames/evidence-slots.js (handlers live in frames).
+export const addEvidenceSlotButtons = Buttons.Create({
+  intentId: "addEvidenceSlotButtons",
+  title: "Add evidence files",
+  doc: reportDoc,
+  section: evidenceSection,
+  hiddenInTables: true,
+  state,
+});
+addEvidenceSlotButtons.addButton({ label: "+ Add another file" });
 
 export const evidenceNotesField = new Field("evidenceNotesField", {
   title: "Evidence notes",

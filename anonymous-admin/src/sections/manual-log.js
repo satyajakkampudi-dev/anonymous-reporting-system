@@ -19,6 +19,7 @@
 import { Section } from "@frontmltd/frontmjs/core/Section";
 import { Field } from "@frontmltd/frontmjs/core/Field";
 import { FormFieldTypes } from "@frontmltd/frontmjs/core/FormFieldTypes";
+import { Buttons } from "@frontmltd/frontmjs/core/fields/Buttons";
 import { state } from "@frontmltd/frontmjs/core/State";
 import {
   CATEGORY_LABELS,
@@ -315,7 +316,15 @@ export const accusedPartyField = new Field("accusedPartyField", {
 // Up to 5 files, ≤ 25 MB each (D1). FILE_FIELD = upload control + S3. Same allow-list
 // + size validation as the reporter form (A-F13, lib/validation.js). The .value is an
 // envelope { value: <s3-key>, fileName, fileScopeValue } — display signs the key (rule 18).
-const makeEvidenceFileField = (index) =>
+//
+// Progressive disclosure (mirror of the user-app evidence.js): only slot 1 is visible
+// initially; slots 2–5 start hidden and are revealed one at a time by the "+ Add another
+// file" button (frames/evidence-slots.js). The `hidden` flag is a module-level mutable
+// that resets on a Lambda cold start, so the live count is persisted in conversation
+// state (STATE_KEYS.EVIDENCE_SLOTS_VISIBLE) and re-applied by restoreEvidenceSlotVisibility.
+// The onClick handler lives in frames/ (AGENTS.md — handlers belong in frames, not in
+// sections), so this file holds definitions only.
+const makeEvidenceFileField = (index, hidden) =>
   new Field(`evidenceFile${index}Field`, {
     title: `Evidence file ${index}`,
     doc: adminReportDoc,
@@ -328,14 +337,45 @@ const makeEvidenceFileField = (index) =>
     // the logging admin's conversation and break A-F7 signing. MP-FIX-EVIDENCE-FILESCOPE.
     fileScope: "domain",
     dbName: `evidenceFile${index}`,
+    hidden,
     state,
   });
 
-export const evidenceFile1Field = makeEvidenceFileField(1);
-export const evidenceFile2Field = makeEvidenceFileField(2);
-export const evidenceFile3Field = makeEvidenceFileField(3);
-export const evidenceFile4Field = makeEvidenceFileField(4);
-export const evidenceFile5Field = makeEvidenceFileField(5);
+export const evidenceFile1Field = makeEvidenceFileField(1, false);
+export const evidenceFile2Field = makeEvidenceFileField(2, true);
+export const evidenceFile3Field = makeEvidenceFileField(3, true);
+export const evidenceFile4Field = makeEvidenceFileField(4, true);
+export const evidenceFile5Field = makeEvidenceFileField(5, true);
+
+// All five slots in display order — used by resetEvidenceSlots (frames/evidence-slots).
+export const ATTACHMENT_FIELDS = [
+  evidenceFile1Field,
+  evidenceFile2Field,
+  evidenceFile3Field,
+  evidenceFile4Field,
+  evidenceFile5Field,
+];
+
+// The four progressively-revealed slots (2–5) — used by restoreEvidenceSlotVisibility
+// and revealNextEvidenceSlot to find the next hidden slot.
+export const EXTRA_ATTACHMENT_FIELDS = [
+  evidenceFile2Field,
+  evidenceFile3Field,
+  evidenceFile4Field,
+  evidenceFile5Field,
+];
+
+// "+ Add another file" — reveals the next hidden slot; hidden once all five are
+// visible. onClick is wired in frames/evidence-slots.js (handlers live in frames).
+export const addEvidenceSlotButtons = Buttons.Create({
+  intentId: "addEvidenceSlotButtons",
+  title: "Add evidence files",
+  doc: adminReportDoc,
+  section: manualLogSection,
+  hiddenInTables: true,
+  state,
+});
+addEvidenceSlotButtons.addButton({ label: "+ Add another file" });
 
 export const evidenceNotesField = new Field("evidenceNotesField", {
   title: "Evidence notes",

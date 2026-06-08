@@ -36,20 +36,14 @@ const EVIDENCE_KEYS = [
   "evidenceFile5",
 ];
 
-// Resolved media-scope tokens (envelope.fileScopeValue — field-class guide
-// § "Media Field Value Shape"). Only DOMAIN-scoped objects are signable from
-// the admin app: they carry NO conversation prefix, so the admin can sign the
-// raw key. CONVERSATION-scoped (or unset → default conversation) objects live
-// under the REPORTER's conversationId, which the admin does NOT have (and must
-// not have — anonymity); the admin cannot construct that path with any
-// documented API, so such a key is OMITTED (consumer shows "(link unavailable)")
-// and FLAGGED — never signed under the admin's own conversationId (that would
-// 404 and leak a meaningless path). See deliverable note (c).
-const FILE_SCOPE = {
-  DOMAIN: "domain",
-  CONVERSATION: "conversation",
-  BOT: "bot",
-};
+// Media-scope handling (envelope.fileScopeValue — field-class guide § "Media Field
+// Value Shape"). Only DOMAIN-scoped objects are signable from the admin app: their
+// fileScopeValue equals the DOMAIN NAME, the object lives at `${domain}/${key}`, and
+// any admin in the domain may read it (no reporter conversation → anonymity-safe).
+// CONVERSATION-scoped (fileScopeValue = the REPORTER's conversationId) or BOT-scoped
+// objects are OMITTED (consumer shows "(link unavailable)") — the admin must not sign
+// under, or even depend on, the reporter's conversation (anonymity). The detection +
+// `${domain}/${key}` path live inline in buildEvidenceSignedUrls below.
 
 // Build the { [rawS3Key]: signedUrl } stash the A-D-managecontent renderer
 // consumes (admin/src/constants.js STATE_KEYS.CURRENT_REPORT_EVIDENCE — keyed by
@@ -79,43 +73,26 @@ const buildEvidenceSignedUrls = async (report) => {
 
     const scope = envelope?.fileScopeValue;
 
-    // DOMAIN-scoped (e.g. voicemail-as-evidence, call-timeout.js) → signable by the
-    // admin: raw key, no conversation prefix. This is the ONLY cross-conversation
-    // path the documented API supports.
-    if (scope === FILE_SCOPE.DOMAIN) {
-      try {
-        const url = await state.frontmlib.getS3SignedUrl(
-          bucket,
-          s3Key,
-          SIGNED_URL_EXPIRY_SECONDS
-        );
-        if (url) stash[s3Key] = url;
-      } catch (signErr) {
-        // Best-effort (NFR-4): omit this one link; consumer shows "(link unavailable)".
-        D.log({
-          message: "openManageReport: domain-scoped evidence signing failed",
-          data: { fieldKey, scope, error: signErr?.message },
-        });
-      }
-      continue;
-    }
-
-    // CONVERSATION-scoped (or unset → conversation default): the key is under the
-    // REPORTER's conversation. The admin's state.conversationId is a DIFFERENT
-    // conversation, so the documented "${conversationId}/${key}" path would point
-    // at the wrong object (404) and embed a meaningless prefix. There is NO
-    // documented admin-side API to sign a foreign conversation's object, so this
-    // key is OMITTED and FLAGGED — never a wrong-conversation URL.
-    // ANONYMITY/ACCESS FINDING (for a /frontm-fix-task): reporter evidence
-    // (anonymous-user/src/sections/evidence.js) uploads with the default
-    // "conversation" scope, so admins cannot retrieve those files. To make
-    // reporter evidence admin-accessible WITHOUT leaking the reporter's
-    // conversation, the reporter FILE_FIELDs must use fileScope:"domain" (as
-    // voicemail already does) — a reporter-app schema change, out of scope here.
+    // ARCHITECTURE LIMITATION (verified live — NoSuchKey on `${domain}/${key}`):
+    // setting fileScope:"domain" on a FILE_FIELD records fileScopeValue = the domain
+    // name ("onship") as METADATA, but the super-app still uploads the bytes to the
+    // UPLOADER's conversation path — `${reporterConversationId}/${key}` (same path
+    // myProfile signs for its photo field). It does NOT relocate the object to
+    // `${domain}/${key}`. So the admin — a DIFFERENT conversation, with no access to
+    // (and, by anonymity, no right to) the reporter's conversationId — literally
+    // cannot construct a working key for reporter evidence. Every reporter-uploaded
+    // file is therefore OMITTED here → the consumer shows "(link unavailable)".
+    //
+    // The only proven cross-conversation pattern (healthMarinerCommonLib/crewApi.js)
+    // is a CUSTOM server-side `state.frontmlib.uploadToS3Bucket` to `${domain}/${key}`
+    // at write time, NOT FILE_FIELD scope. Making admin evidence access work requires
+    // copying each evidence object to a domain-shared path on report submit and
+    // storing that domain key — a deliberate change (see the open MP-FIX for evidence
+    // S3 access). Until then, omit + flag; NEVER emit a 404 link.
     D.log({
       message:
-        "openManageReport: evidence not signable from admin (non-domain scope)",
-      data: { fieldKey, scope: scope || "unset(conversation)" },
+        "openManageReport: reporter evidence not admin-accessible (stored under reporter conversation, not a domain path)",
+      data: { fieldKey, scope: scope || "unset" },
     });
   }
 

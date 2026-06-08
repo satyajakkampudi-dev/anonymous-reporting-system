@@ -56,7 +56,10 @@ import { CARD_TYPES } from "@frontmltd/frontmjs/core/ALLConstants";
 import { state } from "@frontmltd/frontmjs/core/State";
 import { adminDisplayDoc } from "../../../docs/admin-display-doc";
 import { reportsCollection } from "../../../docs/admin-report-doc";
-import { applyAdminProjection } from "../../../../../lib/access";
+import {
+  applyAdminProjection,
+  extractRowData,
+} from "../../../../../lib/access";
 import { renderForPlatform } from "../../../../../lib/utils/platform";
 import { buildBreaches } from "../../../../../lib/sla";
 import { INTENT, STATE_KEYS } from "../../../constants";
@@ -95,20 +98,11 @@ export const alertsDigestDisplayPlaceholderCard = new Card(
   }
 );
 
-// Normalise a loaded collection row into a plain, identity-free object. Mirrors
-// lib/access.js's defensive extraction (the framework row shape is not part of the
-// documented surface) and re-applies applyAdminProjection as a second layer (same
+// Normalise a loaded collection row into a plain, identity-free object using the
+// shared lib/access.extractRowData (reads field values by dbName) and re-applies
+// applyAdminProjection as a second anonymity layer (same
 // approach as the queue / manage-content / amendments display sections).
-const toPlainReport = (row) => {
-  if (!row || typeof row !== "object") return {};
-  const data =
-    typeof row.getData === "function"
-      ? row.getData()
-      : row.data && typeof row.data === "object"
-        ? row.data
-        : row;
-  return applyAdminProjection(data && typeof data === "object" ? data : {});
-};
+const toPlainReport = (row) => applyAdminProjection(extractRowData(row));
 
 // Read the gateway-loaded report set (app-start's loadReportsForAdmin), stripped again.
 // NEVER queries `reports` directly (ER-A3). Empty when nothing is loaded (empty-safe).

@@ -39,7 +39,10 @@ import { CARD_TYPES } from "@frontmltd/frontmjs/core/ALLConstants";
 import { state } from "@frontmltd/frontmjs/core/State";
 import { adminDisplayDoc } from "../../../docs/admin-display-doc";
 import { reportsCollection } from "../../../docs/admin-report-doc";
-import { applyAdminProjection } from "../../../../../lib/access";
+import {
+  applyAdminProjection,
+  extractRowData,
+} from "../../../../../lib/access";
 import { renderForPlatform } from "../../../../../lib/utils/platform";
 import { formatDate, formatIsoDate } from "../../../../../lib/utils/format";
 import { LOCATION_LABELS } from "../../../../../lib/constants";
@@ -88,20 +91,11 @@ const EVIDENCE_KEYS = [
   "evidenceFile5",
 ];
 
-// Normalise a loaded collection row into a plain, identity-free object. Mirrors
-// lib/access.js's defensive extraction (the framework row shape is not part of the
-// documented surface) and re-applies applyAdminProjection as a second layer
+// Normalise a loaded collection row into a plain, identity-free object using the
+// shared lib/access.extractRowData (reads field values by dbName) and re-applies
+// applyAdminProjection as a second anonymity layer
 // (same approach as manage-header/index.js).
-const toPlainReport = (row) => {
-  if (!row || typeof row !== "object") return {};
-  const data =
-    typeof row.getData === "function"
-      ? row.getData()
-      : row.data && typeof row.data === "object"
-        ? row.data
-        : row;
-  return applyAdminProjection(data && typeof data === "object" ? data : {});
-};
+const toPlainReport = (row) => applyAdminProjection(extractRowData(row));
 
 // Resolve the opened report: the gateway-loaded row whose reportId matches the
 // CURRENT_REPORT_ID stash. Returns null when no report is open or none matches

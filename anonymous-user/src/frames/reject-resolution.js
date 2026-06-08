@@ -46,6 +46,7 @@ import {
 } from "../sections/report-details";
 import { rejectReasonInputField } from "../sections/reject-reason";
 import { appendStatusHistoryRow } from "./status-history-writer";
+import { saveDocWithSubCollections } from "../../../lib/persist";
 import { ownsReport, resolveAssignees } from "../../../lib/access";
 import { sendBotMessage, resolvePeerBotId } from "../../../lib/notifications";
 import { canTransition, STATUS } from "../../../lib/ticket-status";
@@ -190,6 +191,8 @@ rejectReasonDoc.onSubmit = async (self) => {
     return;
   }
 
+  D.log({ message: "U-F11 reject: start", data: { reportId } });
+
   // 3. Re-read the report FRESH (the concurrency guard).
   await reportDoc.loadDocument({ reportId });
 
@@ -203,6 +206,7 @@ rejectReasonDoc.onSubmit = async (self) => {
   // 5. Concurrency + legality against the CURRENT (just-read) status. Catches an admin
   //    moving the report off RESOLVED and a double-confirm — rejected, not overwritten.
   const current = reportDoc.f[statusField.id]?.value || "";
+  D.log({ message: "U-F11 reject: status read", data: { reportId, current } });
   if (!canTransition(current, STATUS.REOPENED, ACTOR_ROLE.REPORTER)) {
     state.addErrorToStack(ERROR_CODES.ILLEGAL_TRANSITION, ILLEGAL_MSG);
     D.log({
@@ -223,6 +227,11 @@ rejectReasonDoc.onSubmit = async (self) => {
     });
     return;
   }
+
+  D.log({
+    message: "U-F11 reject: transition legal",
+    data: { reportId, current, to: STATUS.REOPENED, reopenCount },
+  });
 
   // 7. Apply. version advances monotonically (read -> read+1); reopenCount 0 -> 1 once.
   const now = Date.now();
@@ -248,7 +257,7 @@ rejectReasonDoc.onSubmit = async (self) => {
   //    throwing — detect it the way U-F8/U-F10 do and do not claim success.
   const errorsBefore = (state.errorStack || []).length;
   try {
-    await reportDoc.save();
+    await saveDocWithSubCollections(reportDoc);
   } catch (error) {
     state.addSystemErrorToStack(
       500,
@@ -263,6 +272,10 @@ rejectReasonDoc.onSubmit = async (self) => {
   if ((state.errorStack || []).length > errorsBefore) {
     return;
   }
+  D.log({
+    message: "U-F11 reject: save success",
+    data: { reportId, status: STATUS.REOPENED },
+  });
 
   // 10. Post-save (rule 16): emit the identity-free MSG_REPORT_REOPENED to the report's
   //     assigned admins in the admin app (X2). Payload carries ONLY { reportId,

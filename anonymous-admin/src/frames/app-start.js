@@ -114,6 +114,22 @@ export const appStart = async () => {
   // 4. Gateway load only (rule 15): identity-free, projection applied.
   const reports = await loadReportsForAdmin({});
 
+  // DIAGNOSTIC — confirm the shared reports_<systemId> read returns the user-submitted
+  // reports to the admin bot. D.warning → always visible on logz.io regardless of run
+  // profile. If count is 0 here but rows exist in MongoDB, the shared-collection read
+  // (systemId/domain) is the issue; if count ≥ 1, it is a render/role-filter concern.
+  D.warning({
+    message: "ADMIN app-start — loadReportsForAdmin result",
+    data: {
+      count: reports.length,
+      ids: reports.map((r) => r.reportId),
+      statuses: reports.map((r) => r.status),
+      assignedTo: reports.map((r) => r.assignedTo),
+      systemId: state.systemId,
+      domain: state.currentUserDomain,
+    },
+  });
+
   // 4a. Dashboard aggregation (A-F2) — compute counts + small-cell suppression over
   //     the SAME gateway rows the consumer expects, and stash for the A-D-dashboard
   //     renderer (rule 28, ER-A6). buildDashboardStats is pure + empty-safe; the

@@ -59,6 +59,12 @@ export const STATE_KEYS = {
   // data-payload here (loader wiring + search box are deferred to the follow-up
   // fix task — see specs/4 MP-FIX-MYREPORTS-FILTERS).
   MY_REPORTS_FILTER: "MY_REPORTS_FILTER",
+  // Number of evidence file slots currently revealed on the submit form (1–5).
+  // The progressive "+ Add another file" pattern hides slots 2–5 by default; the
+  // count is persisted in conversation state because the Field `hidden` flags are
+  // module-level mutables that reset on a Lambda cold start (Context B). Read by
+  // restoreEvidenceSlotVisibility / revealNextEvidenceSlot in frames/evidence-slots.
+  EVIDENCE_SLOTS_VISIBLE: "EVIDENCE_SLOTS_VISIBLE",
 };
 
 // My Reports list — coarse status-group filter chips (wireframe §3:

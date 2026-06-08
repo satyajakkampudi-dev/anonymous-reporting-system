@@ -34,6 +34,10 @@ import "./frames/report-validation";
 //     exports above) ---
 import "./frames/submit-report";
 
+// --- Evidence slot progressive disclosure (side-effect: bind
+//     addEvidenceSlotButtons.onClick — "+ Add another file" reveals slots 2–5). ---
+import "./frames/evidence-slots";
+
 // --- Navigation intents (side-effect: register the intents) ---
 import "./frames/nav-submit-report";
 import "./frames/nav-my-reports";

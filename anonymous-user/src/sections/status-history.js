@@ -23,6 +23,11 @@ export const statusHistorySection = new Section("statusHistorySection", {
   columns: 1,
   collapsable: false,
   forCollection: true,
+  // Hidden on the Data-Doc SUBMIT form — a report being created has no timeline yet, so
+  // showing an empty "Status timeline" section there is noise. This is only the embedded
+  // sub-collection HOST (data binding/persistence is unaffected by hidden); the reporter
+  // sees the timeline in the DETAIL view via the Display Doc's own status-history card.
+  hidden: true,
   grid: { row: 4, column: 0 },
   state,
 });

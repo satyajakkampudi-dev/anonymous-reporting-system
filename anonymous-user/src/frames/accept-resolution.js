@@ -49,6 +49,7 @@ import { appendStatusHistoryRow } from "./status-history-writer";
 import { ownsReport } from "../../../lib/access";
 import { canTransition, STATUS } from "../../../lib/ticket-status";
 import { ACTOR_ROLE, ERROR_CODES } from "../../../lib/constants";
+import { saveDocWithSubCollections } from "../../../lib/persist";
 import { INTENT } from "../constants";
 
 export const acceptResolution = Intent.Create({
@@ -64,6 +65,7 @@ acceptResolution.onResolution = async () => {
     state.addErrorToStack(400, "Missing reportId for acceptResolution");
     return;
   }
+  D.log({ message: "U-F10 accept: start", data: { reportId } });
 
   // 2. Fresh context for this dispatch, then re-read the report fresh (rule 12).
   await Context.CreateAndInit(`user_${state.getUniqueId()}`, { state });
@@ -83,6 +85,7 @@ acceptResolution.onResolution = async () => {
   //    status. Catches both an admin moving the report off RESOLVED and a double-
   //    click that already closed it — rejected and surfaced, not overwritten.
   const current = reportDoc.f[statusField.id]?.value || "";
+  D.log({ message: "U-F10 accept: status read", data: { reportId, current } });
   if (!canTransition(current, STATUS.CLOSED_BY_USER, ACTOR_ROLE.REPORTER)) {
     state.addErrorToStack(
       ERROR_CODES.ILLEGAL_TRANSITION,
@@ -94,6 +97,11 @@ acceptResolution.onResolution = async () => {
     });
     return;
   }
+
+  D.log({
+    message: "U-F10 accept: transition legal",
+    data: { reportId, current, to: STATUS.CLOSED_BY_USER },
+  });
 
   // 5. Apply the transition. version advances monotonically (read → read+1).
   const now = Date.now();
@@ -114,7 +122,7 @@ acceptResolution.onResolution = async () => {
   //    throwing — detect it the same way U-F8 does and do not claim success.
   const errorsBefore = (state.errorStack || []).length;
   try {
-    await reportDoc.save();
+    await saveDocWithSubCollections(reportDoc);
   } catch (error) {
     state.addSystemErrorToStack(
       500,
@@ -129,6 +137,11 @@ acceptResolution.onResolution = async () => {
   if ((state.errorStack || []).length > errorsBefore) {
     return;
   }
+
+  D.log({
+    message: "U-F10 accept: save success",
+    data: { reportId, status: STATUS.CLOSED_BY_USER },
+  });
 
   // 7. Post-save (rule 16): the MSG_REPORT_CLOSED sender is the X-series contract
   //    task, wired HERE after save(). Not built in U-F10 — do NOT invent it now.

@@ -35,7 +35,10 @@ import { CARD_TYPES } from "@frontmltd/frontmjs/core/ALLConstants";
 import { state } from "@frontmltd/frontmjs/core/State";
 import { adminDisplayDoc } from "../../../docs/admin-display-doc";
 import { reportsCollection } from "../../../docs/admin-report-doc";
-import { applyAdminProjection } from "../../../../../lib/access";
+import {
+  applyAdminProjection,
+  extractRowData,
+} from "../../../../../lib/access";
 import { renderForPlatform } from "../../../../../lib/utils/platform";
 import { STATUS } from "../../../../../lib/ticket-status";
 import { SEVERITY, URGENCY } from "../../../../../lib/constants";
@@ -92,19 +95,10 @@ const isPriorityReport = (r) =>
   r.urgency === URGENCY.IMMEDIATE ||
   r.status === STATUS.ESCALATED;
 
-// Normalise a loaded collection row into a plain, identity-free object. Mirrors
-// lib/access.js's defensive extraction (the framework row shape is not part of the
-// documented surface) and re-applies applyAdminProjection as a second layer.
-const toPlainReport = (row) => {
-  if (!row || typeof row !== "object") return {};
-  const data =
-    typeof row.getData === "function"
-      ? row.getData()
-      : row.data && typeof row.data === "object"
-        ? row.data
-        : row;
-  return applyAdminProjection(data && typeof data === "object" ? data : {});
-};
+// Normalise a loaded collection row into a plain, identity-free object using the
+// shared lib/access.extractRowData (reads field values by dbName) and re-applies
+// applyAdminProjection as a second anonymity layer.
+const toPlainReport = (row) => applyAdminProjection(extractRowData(row));
 
 // Resolve the report set: prefer the A-F4/A-F5 stash; else fall back to the
 // gateway-loaded rows. Every row is stripped through applyAdminProjection.

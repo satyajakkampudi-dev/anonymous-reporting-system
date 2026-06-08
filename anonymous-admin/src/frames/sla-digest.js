@@ -53,7 +53,7 @@
 import { Intent } from "@frontmltd/frontmjs/core/Intent";
 import { D, state } from "@frontmltd/frontmjs/core/State";
 import { adminUsersCollection } from "../../../lib/collections/admin-users";
-import { loadReportsForAdmin } from "../../../lib/access";
+import { loadReportsForAdmin, extractRowData } from "../../../lib/access";
 import { sendAdminEmail } from "../../../lib/notifications";
 import { buildBreaches } from "../../../lib/sla";
 import { statusLabel } from "../../../lib/ticket-status";
@@ -65,18 +65,11 @@ import { INTENT } from "../constants";
 // pending one rather than stacking, so the daily chain can never duplicate (rule 19).
 const DIGEST_JOB_ID = `${INTENT.SLA_DIGEST}-sweep`;
 
-// Normalise a loaded admin-users row into a plain object. Mirrors lib/access.js's
-// defensive extraction across framework row shapes (the live row shape is not part of
-// the documented surface). The admin's OWN identity (adminEmail) is fine to read — it
-// is never a reporter's.
+// Normalise a loaded admin-users row into a plain object using the shared
+// lib/access.extractRowData (reads field values by dbName). The admin's OWN identity
+// (adminEmail) is fine to read — it is never a reporter's.
 const adminEmailOf = (row) => {
-  if (!row || typeof row !== "object") return "";
-  const data =
-    typeof row.getData === "function"
-      ? row.getData()
-      : row.data && typeof row.data === "object"
-        ? row.data
-        : row;
+  const data = extractRowData(row);
   return (data && data.adminEmail) || "";
 };
 

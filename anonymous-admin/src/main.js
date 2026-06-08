@@ -59,6 +59,10 @@ import "./frames/sla-digest";
 // manual-log form's "Log report" confirm fires it. nav-manual-log registers the
 // openManualLog trigger intent.
 import "./frames/manual-log";
+// evidence-slots owns the addEvidenceSlotButtons.onClick (progressive disclosure of the
+// manual-log evidence file inputs: slot 1 + "+ Add another file" reveals 2–5). Importing
+// it binds the onClick so the reveal button works; nav-manual-log calls resetEvidenceSlots.
+import "./frames/evidence-slots";
 // note-transition owns the SINGLE noteCaptureDoc.onSubmit (shared dispatcher); it MUST
 // be imported so the slot binds. escalate-report registers its ESCALATED entry into that
 // dispatcher's registry at module load. Import order is immaterial — registration happens

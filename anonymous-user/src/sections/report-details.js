@@ -176,16 +176,18 @@ export const resolvedOnField = new Field("resolvedOnField", {
   state,
 });
 
-// Admin-written. read_only on the user side; shown on the detail screen (Display
-// card reads .value). hidden: false per input-schema — the Display Doc, not this
-// form, is what reporters actually see in the final architecture.
+// Admin-written. HIDDEN on the reporter's submit form — the reporter never enters a
+// resolution and the report doesn't exist yet; showing an empty "Resolution" box on
+// the submit form was a bug. The reporter sees the resolution in the report DETAIL
+// view via the dedicated detail-resolution Display card (which reads .value), NOT via
+// this editable form field — so this field is purely the persisted/bound column.
 export const resolutionField = new Field("resolutionField", {
   title: "Resolution",
   doc: reportDoc,
   section: reportDetailsSection,
   type: FormFieldTypes.TEXT_AREA,
   mandatory: false,
-  hidden: false,
+  hidden: true,
   readOnly: true,
   dbName: "resolution",
   state,

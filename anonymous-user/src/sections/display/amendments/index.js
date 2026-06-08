@@ -104,6 +104,11 @@ const collectAttachments = () => {
         amendmentId: row.f[amendmentIdField.id]?.value || "",
         key,
         fileName: envelope?.fileName || "",
+        // S3 path prefix = resolved scope identifier (fileScopeValue): the
+        // conversationId for this (conversation-scoped) amendment field, the domain
+        // name for a domain-scoped field. Use it verbatim rather than assuming
+        // conversation scope. See detail-content/index.js.
+        scopeValue: envelope?.fileScopeValue || null,
       });
     }
   }
@@ -129,6 +134,10 @@ export const prepareAmendmentsEvidence = async () => {
   );
   if (!bucket) {
     // No bucket configured — keep the filename, never embed a key (broken link).
+    D.log({
+      message: "amendments: no conversations bucket configured",
+      data: { reportId, attachedCount: attached.length },
+    });
     for (const item of attached) {
       signedEvidenceById[item.amendmentId] = {
         fileName: item.fileName,
@@ -145,6 +154,15 @@ export const prepareAmendmentsEvidence = async () => {
         `${state.conversationId}/${item.key}`,
         SIGNED_URL_EXPIRY_SECONDS
       );
+      D.log({
+        message: "amendments: evidence signing attempt",
+        data: {
+          amendmentId: item.amendmentId,
+          fileName: item.fileName,
+          keyPath: `${state.conversationId}/${item.key}`,
+          signed: !!url,
+        },
+      });
       signedEvidenceById[item.amendmentId] = {
         fileName: item.fileName,
         url: url || "",

@@ -25,6 +25,11 @@ export const amendmentsSection = new Section("amendmentsSection", {
   columns: 1,
   collapsable: false,
   forCollection: true,
+  // Hidden on the Data-Doc SUBMIT form — a brand-new report has no amendments, and
+  // amendments are added only AFTER submission (from the detail view). This is only the
+  // embedded sub-collection HOST (persistence is unaffected by hidden); the reporter
+  // sees + adds amendments in the DETAIL view via the Display Doc's amendments card.
+  hidden: true,
   grid: { row: 3, column: 0 },
   state,
 });

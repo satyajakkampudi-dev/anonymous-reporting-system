@@ -55,6 +55,7 @@ import { appendStatusHistoryRow } from "./status-history-writer";
 import { ownsReport } from "../../../lib/access";
 import { canTransition, STATUS } from "../../../lib/ticket-status";
 import { ACTOR_ROLE, ERROR_CODES } from "../../../lib/constants";
+import { saveDocWithSubCollections } from "../../../lib/persist";
 import { INTENT } from "../constants";
 
 export const withdrawReport = Intent.Create({
@@ -70,6 +71,7 @@ withdrawReport.onResolution = async () => {
     state.addErrorToStack(400, "Missing reportId for withdrawReport");
     return;
   }
+  D.log({ message: "U-F12 withdraw: start", data: { reportId } });
 
   // 2. Fresh context for this dispatch, then re-read the report fresh (rule 12).
   await Context.CreateAndInit(`user_${state.getUniqueId()}`, { state });
@@ -90,6 +92,10 @@ withdrawReport.onResolution = async () => {
   //    REPORTER. Catches an admin moving the report on (resolved/escalated) and a
   //    double-click that already withdrew it — rejected and surfaced, not overwritten.
   const current = reportDoc.f[statusField.id]?.value || "";
+  D.log({
+    message: "U-F12 withdraw: status read",
+    data: { reportId, current },
+  });
   if (!canTransition(current, STATUS.WITHDRAWN, ACTOR_ROLE.REPORTER)) {
     state.addErrorToStack(
       ERROR_CODES.ILLEGAL_TRANSITION,
@@ -101,6 +107,11 @@ withdrawReport.onResolution = async () => {
     });
     return;
   }
+
+  D.log({
+    message: "U-F12 withdraw: transition legal",
+    data: { reportId, current, to: STATUS.WITHDRAWN },
+  });
 
   // 5. Apply the transition. version advances monotonically (read → read+1).
   const now = Date.now();
@@ -122,7 +133,7 @@ withdrawReport.onResolution = async () => {
   //    throwing — detect it the same way U-F8/U-F10 do and do not claim success.
   const errorsBefore = (state.errorStack || []).length;
   try {
-    await reportDoc.save();
+    await saveDocWithSubCollections(reportDoc);
   } catch (error) {
     state.addSystemErrorToStack(
       500,
@@ -137,6 +148,24 @@ withdrawReport.onResolution = async () => {
   if ((state.errorStack || []).length > errorsBefore) {
     return;
   }
+  D.log({
+    message: "U-F12 withdraw: save success",
+    data: { reportId, status: STATUS.WITHDRAWN },
+  });
 
   `Your report **${reportId}** has been withdrawn.\n\nIt will no longer be reviewed by the compliance team. Your identity has remained anonymous throughout, and the full timeline stays on record for you. If you change your mind, you are welcome to submit a new report at any time.`.sendResponse();
+
+  // Re-render the detail view so the UI reflects the new WITHDRAWN state: updated
+  // status pill, the appended timeline row, and the Withdraw button GONE (it is no
+  // longer a legal action from WITHDRAWN, so detail-actions won't render it). Chain to
+  // openReportDetail — it re-reads fresh, re-asserts ownership, reloads the
+  // sub-collections and re-signs evidence. continueWithIntentWithIdAndMessage carries
+  // the reportId as messageFromUser.payload.reportId (the shape openReportDetail reads).
+  D.log({
+    message: "U-F12 withdraw: re-rendering detail view",
+    data: { reportId },
+  });
+  state.continueWithIntentWithIdAndMessage(INTENT.OPEN_REPORT_DETAIL, {
+    payload: { reportId },
+  });
 };

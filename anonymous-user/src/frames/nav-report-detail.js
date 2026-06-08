@@ -9,13 +9,13 @@
 
 import { Intent } from "@frontmltd/frontmjs/core/Intent";
 import { Context } from "@frontmltd/frontmjs/core/Context";
-import { state } from "@frontmltd/frontmjs/core/State";
+import { D, state } from "@frontmltd/frontmjs/core/State";
 import { ownsReport } from "../../../lib/access";
 import { ERROR_CODES } from "../../../lib/constants";
 import { reportDoc } from "../collections/reports";
 import { reportDisplayDoc } from "../docs/report-display-doc";
 import { showScreen, SCREEN } from "./display-nav";
-import { reporterIdField } from "../sections/report-details";
+import { reporterIdField, statusField } from "../sections/report-details";
 import { amendmentsCollection } from "../sections/amendments";
 import { statusHistoryCollection } from "../sections/status-history";
 import { prepareDetailContentEvidence } from "../sections/display/detail-content";
@@ -35,6 +35,8 @@ openReportDetail.onResolution = async () => {
     return;
   }
 
+  D.log({ message: "openReportDetail: opening detail", data: { reportId } });
+
   await Context.CreateAndInit(`user_${state.getUniqueId()}`, { state });
   await reportDoc.loadDocument({ reportId });
 
@@ -50,6 +52,16 @@ openReportDetail.onResolution = async () => {
   // Sub-collections are not auto-populated by loadDocument.
   await amendmentsCollection.loadCollectionWithQuery({});
   await statusHistoryCollection.loadCollectionWithQuery({});
+
+  D.log({
+    message: "openReportDetail: report loaded",
+    data: {
+      reportId,
+      status: reportDoc.f[statusField.id]?.value || "",
+      amendmentCount: amendmentsCollection.rows?.length || 0,
+      statusHistoryCount: statusHistoryCollection.rows?.length || 0,
+    },
+  });
 
   // Sign the report's evidence S3 keys BEFORE rendering — onResponse (the detail
   // content render handler) is synchronous and NOT awaited, so the signing must

@@ -24,7 +24,7 @@
 // addRow(self) on the registered Doc). Across invocations the previously-saved rows
 // come back from MongoDB as their own instances, so the singleton is free again.
 
-import { state } from "@frontmltd/frontmjs/core/State";
+import { D, state } from "@frontmltd/frontmjs/core/State";
 import { statusHistoryDoc } from "../docs/report-doc";
 import {
   statusHistoryCollection,
@@ -66,5 +66,15 @@ export const appendStatusHistoryRow = (
   if (!collection.rows.some((r) => r === row)) {
     collection.addRow(row);
   }
+  // DIAGNOSTIC — confirm the row landed on the LIVE sub-collection that
+  // saveDocWithSubCollections serialises (parentDoc.subCollections). isLive=false means
+  // it went to the stale module singleton → the timeline row will NOT persist.
+  const isLive = (parentDoc?.subCollections || []).some(
+    (c) => c === collection
+  );
+  D.log({
+    message: "appendStatusHistoryRow: row appended",
+    data: { toStatus, actorRole, isLive, rows: collection.rows.length },
+  });
   return row;
 };

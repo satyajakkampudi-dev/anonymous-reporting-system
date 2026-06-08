@@ -108,6 +108,12 @@ export const STATE_KEYS = {
   ADMIN_ROLE: "ADMIN_ROLE",
   // reportId stashed by openManageReport's payload, read after the gateway load.
   CURRENT_REPORT_ID: "CURRENT_REPORT_ID",
+  // Count of currently-visible evidence file slots on the manual-log form (1–5).
+  // Progressive disclosure: slot 1 always visible; "+ Add another file" reveals the
+  // next. The `hidden` Field flags reset on a Lambda cold start (Context B), so the
+  // live count is persisted here and re-applied by restoreEvidenceSlotVisibility
+  // (frames/evidence-slots.js). Reset to 1 on each fresh manual-log open.
+  EVIDENCE_SLOTS_VISIBLE: "EVIDENCE_SLOTS_VISIBLE",
   // Target STATUS armed by a note-popup trigger intent (escalateReport A-F10 /
   // closeRejected A-F11). noteCaptureDoc is SHARED by both transitions and has
   // exactly ONE onSubmit slot, so a single shared dispatcher (frames/note-transition.js)

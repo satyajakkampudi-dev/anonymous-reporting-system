@@ -57,7 +57,7 @@ import {
   shipNameField,
   incidentDateField,
 } from "../sections/report-details";
-import { evidenceNotesField } from "../sections/evidence";
+import { evidenceNotesField, ATTACHMENT_FIELDS } from "../sections/evidence";
 import { toStatusField, actorRoleField } from "../sections/status-history";
 import {
   getStatusHistoryCollection,
@@ -71,6 +71,7 @@ import {
   generateReportId,
   isDuplicateKeyError,
 } from "../../../lib/id-generator";
+import { saveDocWithSubCollections } from "../../../lib/persist";
 import {
   severityFromUrgency,
   categoryFromLabel,
@@ -82,6 +83,7 @@ import {
   MSG,
   STATIC_DATA_KEYS,
 } from "../../../lib/constants";
+import { INTENT } from "../constants";
 
 // Free-text fields sanitised on submit (rule 10). category/urgency/location are
 // DROPDOWN tokens, contactValue is handled by the U-F7 onSave gate — not here.
@@ -157,6 +159,18 @@ const sendNewReportMessage = async (self) => {
 };
 
 reportDoc.onSubmit = async (self) => {
+  D.log({
+    message: "submit: report onSubmit start",
+    data: {
+      category: self.f[categoryField.id].value,
+      urgency: self.f[urgencyField.id].value,
+      status: self.f[statusField.id].value,
+    },
+  });
+  D.log({
+    message: "U-F8 submit: start",
+    data: { hasDescription: !!self.f[descriptionField.id].value },
+  });
   // 1. Sanitise free-text (idempotent — safe on a re-submit).
   for (const field of FREE_TEXT_FIELDS) {
     const raw = self.f[field.id].value;
@@ -246,13 +260,28 @@ reportDoc.onSubmit = async (self) => {
     });
   }
 
+  const evidenceCount = ATTACHMENT_FIELDS.reduce(
+    (count, field) => (self.f[field.id]?.value?.value ? count + 1 : count),
+    0
+  );
+  D.log({
+    message: "U-F8 submit: fields set",
+    data: {
+      reportId: self.f[reportIdField.id].value,
+      status: self.f[statusField.id].value,
+      severity: self.f[severityField.id].value,
+      assignedTo: self.f[assignedToField.id].value,
+      evidenceCount,
+    },
+  });
+
   // 6. Persist with retry-on-collision (ER-B9).
   const MAX_ATTEMPTS = 3;
   let persisted = false;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS && !persisted; attempt += 1) {
     const errorsBefore = (state.errorStack || []).length;
     try {
-      await self.save();
+      await saveDocWithSubCollections(self);
     } catch (error) {
       // A genuine random reportId collision against an existing row → new id + retry.
       if (isDuplicateKeyError(error) && attempt < MAX_ATTEMPTS) {
@@ -289,6 +318,21 @@ reportDoc.onSubmit = async (self) => {
   //    failure); a send fault must never fail the reporter's submit — the SLA digest
   //    / Alerts backstop catches an undelivered report. Sent here, AFTER save().
   const reportId = self.f[reportIdField.id].value;
+  D.log({
+    message: "submit: report submitted successfully",
+    data: {
+      reportId,
+      status: self.f[statusField.id].value,
+      assignedTo: self.f[assignedToField.id].value,
+    },
+  });
   await sendNewReportMessage(self);
   `Thank you. Your report has been submitted securely and anonymously.\n\nYour tracking ID is **${reportId}** — please keep it so you can follow up on this report. We will never reveal your identity.`.sendResponse();
+  D.log({ message: "U-F8 submit: report saved", data: { reportId } });
+  // After a successful submit, navigate the reporter to their My Reports list so
+  // they immediately see the report they just filed. continueWithIntent runs
+  // openMyReports AFTER this onSubmit completes (state preserved; messageFromUser
+  // dropped — openMyReports needs none, it loads by reporterId). openMyReports
+  // does its own Context.CreateAndInit + loadCollectionWithQuery (Context B).
+  state.continueWithIntent(INTENT.OPEN_MY_REPORTS);
 };

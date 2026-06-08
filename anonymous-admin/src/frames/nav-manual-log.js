@@ -37,6 +37,7 @@ import { adminReportDoc } from "../docs/admin-report-doc";
 import { resolveAdminRole } from "../../../lib/access";
 import { ERROR_CODES } from "../../../lib/constants";
 import { INTENT } from "../constants";
+import { resetEvidenceSlots } from "./evidence-slots";
 
 export const openManualLog = Intent.Create({
   intentId: INTENT.OPEN_MANUAL_LOG,
@@ -86,6 +87,11 @@ openManualLog.onResolution = async () => {
       subCollection.clearRows();
     }
   }
+
+  // Reset evidence-slot progressive disclosure to "only slot 1 + button" so the fresh
+  // draft opens with a single file input (frames/evidence-slots.js). MUST run before the
+  // sendResponse below so the first render reflects the reset visibility.
+  resetEvidenceSlots();
 
   // Render the FORM. A Data-Doc form render IS correct for data ENTRY (the "never
   // sendResponse the Data Doc" rule is about READ/display screens, which use the Display
