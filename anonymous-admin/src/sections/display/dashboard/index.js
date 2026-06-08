@@ -88,6 +88,15 @@ dashboardDisplaySection.onResponse = () => {
     // The priority card's click target + payload (consumed by A-F4/A-F5).
     priorityIntent: INTENT.OPEN_QUEUE,
     priorityPayload: { filter: QUEUE_FILTER.PRIORITY },
+    // Top nav bar (wireframes §1: [ Queue ] [ On-call ] [ Manual log ]) — the
+    // dashboard is the navigation hub; each opens the screen in its own tab (the
+    // visible tab strip then lets the admin switch back). Always rendered, even on
+    // the empty state, so navigation never depends on there being reports.
+    nav: {
+      queue: INTENT.OPEN_QUEUE,
+      onCall: INTENT.OPEN_ON_CALL,
+      manualLog: INTENT.OPEN_MANUAL_LOG,
+    },
   };
 
   dashboardDisplayPlaceholderCard.content = renderForPlatform(data, {

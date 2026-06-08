@@ -12,6 +12,7 @@ import {
   escapeHtml,
   emptyStateHtml,
   payloadAttr,
+  intentButtonHtml,
 } from "../../../../../lib/utils/format";
 import {
   COLORS,
@@ -83,12 +84,32 @@ const priorityCardHtml = (data) =>
   `</button>`;
 
 export const renderWeb = (data) => {
+  // Top navigation bar (wireframes §1) — the dashboard is the nav hub. Each button
+  // opens that screen (in its own tab; the tab strip lets the admin switch back).
+  // Rendered in EVERY shell state so navigation never depends on there being reports.
+  const navBtnStyle =
+    `background:${COLORS.SURFACE};border:1px solid ${COLORS.BORDER};` +
+    `border-radius:${TYPOGRAPHY.RADIUS}px;padding:${SPACING.SM}px ${SPACING.LG}px;` +
+    `font-family:${FONT};font-size:${TYPOGRAPHY.SIZE_SM}px;` +
+    `font-weight:${TYPOGRAPHY.WEIGHT_MEDIUM};color:${COLORS.TEXT};`;
+  const navBarHtml = (nav) =>
+    nav
+      ? `<div style="display:flex;gap:${SPACING.SM}px;flex-wrap:wrap;">` +
+        intentButtonHtml(nav.queue, "Queue", {}, navBtnStyle) +
+        intentButtonHtml(nav.onCall, "On-call", {}, navBtnStyle) +
+        intentButtonHtml(nav.manualLog, "Manual log", {}, navBtnStyle) +
+        `</div>`
+      : "";
+
   const shell = (inner) =>
     `<div style="font-family:${FONT};background:${COLORS.SURFACE};` +
     `border:1px solid ${COLORS.BORDER};border-radius:${TYPOGRAPHY.RADIUS}px;overflow:hidden;">` +
     `<div style="padding:${SPACING.LG}px ${SPACING.XL}px;border-bottom:1px solid ${COLORS.BORDER};` +
-    `font-size:${TYPOGRAPHY.SIZE_LG}px;font-weight:${TYPOGRAPHY.WEIGHT_BOLD};color:${COLORS.TEXT};">` +
-    `Anonymous Reporting — Admin</div>` +
+    `display:flex;align-items:center;justify-content:space-between;gap:${SPACING.LG}px;flex-wrap:wrap;">` +
+    `<span style="font-size:${TYPOGRAPHY.SIZE_LG}px;font-weight:${TYPOGRAPHY.WEIGHT_BOLD};` +
+    `color:${COLORS.TEXT};">Anonymous Reporting — Admin</span>` +
+    navBarHtml(data.nav) +
+    `</div>` +
     `<div style="padding:${SPACING.XL}px;">${inner}</div>` +
     `</div>`;
 

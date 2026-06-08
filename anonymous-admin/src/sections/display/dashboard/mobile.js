@@ -11,6 +11,7 @@ import {
   escapeHtml,
   emptyStateHtml,
   payloadAttr,
+  intentButtonHtml,
 } from "../../../../../lib/utils/format";
 import {
   COLORS,
@@ -76,13 +77,29 @@ const priorityCardHtml = (data) =>
   `</button>`;
 
 export const renderMobile = (data) => {
+  // Nav buttons (wireframes §1 mobile ☰) — full-width stacked row; each opens that
+  // screen in its own tab. Always rendered so navigation never depends on reports.
+  const navBtnStyle =
+    `flex:1 1 auto;background:${COLORS.SURFACE};border:1px solid ${COLORS.BORDER};` +
+    `border-radius:${TYPOGRAPHY.RADIUS}px;padding:${SPACING.SM}px ${SPACING.MD}px;` +
+    `font-family:${FONT};font-size:${TYPOGRAPHY.SIZE_SM}px;` +
+    `font-weight:${TYPOGRAPHY.WEIGHT_MEDIUM};color:${COLORS.TEXT};`;
+  const navBarHtml = (nav) =>
+    nav
+      ? `<div style="display:flex;gap:${SPACING.SM}px;margin-bottom:${SPACING.LG}px;flex-wrap:wrap;">` +
+        intentButtonHtml(nav.queue, "Queue", {}, navBtnStyle) +
+        intentButtonHtml(nav.onCall, "On-call", {}, navBtnStyle) +
+        intentButtonHtml(nav.manualLog, "Manual log", {}, navBtnStyle) +
+        `</div>`
+      : "";
+
   const shell = (inner) =>
     `<div style="font-family:${FONT};background:${COLORS.SURFACE};` +
     `border:1px solid ${COLORS.BORDER};border-radius:${TYPOGRAPHY.RADIUS}px;overflow:hidden;">` +
     `<div style="padding:${SPACING.LG}px;border-bottom:1px solid ${COLORS.BORDER};` +
     `font-size:${TYPOGRAPHY.SIZE_LG}px;font-weight:${TYPOGRAPHY.WEIGHT_BOLD};color:${COLORS.TEXT};">` +
     `Admin · Dashboard</div>` +
-    `<div style="padding:${SPACING.LG}px;">${inner}</div>` +
+    `<div style="padding:${SPACING.LG}px;">${navBarHtml(data.nav)}${inner}</div>` +
     `</div>`;
 
   if (!data.hasStash) {
