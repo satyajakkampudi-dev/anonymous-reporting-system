@@ -44,7 +44,7 @@ import { CARD_TYPES } from "@frontmltd/frontmjs/core/ALLConstants";
 import { state } from "@frontmltd/frontmjs/core/State";
 import { adminDisplayDoc } from "../../../docs/admin-display-doc";
 import { adminUserDoc } from "../../../docs/admin-user-doc";
-import { availabilityField, adminUserIdField } from "../../admin-user";
+import { availabilityField } from "../../admin-user";
 import { AVAILABILITY } from "../../../../../lib/constants";
 import { renderForPlatform } from "../../../../../lib/utils/platform";
 import { INTENT } from "../../../constants";
@@ -90,18 +90,20 @@ const readAvailability = () => {
   return VALID_AVAILABILITY.includes(raw) ? raw : "";
 };
 
-// True only when the caller's own admin-users row is loaded — signalled by the primary
-// key (adminUserId) carrying a value. Distinguishes "On-call screen, row loaded" from
-// "some other screen, Doc unloaded" so the card shows only where it belongs.
-const isUserLoaded = () => !!adminUserDoc?.f?.[adminUserIdField.id]?.value;
-
-// Build the card content on every render. Screen-scoped + empty-safe: emits nothing
-// unless the caller's own row is loaded (On-call screen).
+// Build the card content on every render. Screen-scoping is handled by showScreen
+// (section.hidden); on the On-call screen the controls always render.
 onCallDisplaySection.onResponse = () => {
   const data = {
-    // false on non-On-call screens → renderers emit "" (no stray card, no misleading pill).
-    hasUser: isUserLoaded(),
-    // "" when the loaded row has no availability yet → "Not set" pill + all three buttons.
+    // Always render the On-call controls. Screen-scoping is now handled by showScreen
+    // (display-nav.js hides this section on every non-On-call screen via section.hidden),
+    // so the old isUserLoaded() gate is redundant — and was HARMFUL: a FrontM-admin with
+    // no admin_users row yet (fresh env, registry seeded out-of-band / self-seeded on
+    // first availability write) loaded an empty Doc → hasUser false → the whole card
+    // rendered blank, leaving no button to set availability (chicken-and-egg). The pill
+    // shows the current value or "Not set"; clicking a button (A-F20 setAvailability)
+    // self-seeds the row.
+    hasUser: true,
+    // "" when there is no availability yet → "Not set" pill + all three buttons.
     current: readAvailability(),
     // Per-button navigation contract consumed by the renderers' buttons (data-payload
     // {availability}). The handler that registers it is A-F20.
