@@ -66,7 +66,7 @@ callEnd.onResolution = async () => {
 
   // Attach to the existing context (Redis buffer, no MongoDB-clobbering reload of the
   // report graph — rule 22) and re-read THIS call-queue row fresh by callRef.
-  await Context.Create(state.currentTabId, { state });
+  await Context.CreateAndInit(`user_${state.getUniqueId()}`, { state });
   await callQueueDoc.loadDocument({ callRef });
 
   const loadedRef = callQueueDoc.f[callRefField.id]?.value || "";

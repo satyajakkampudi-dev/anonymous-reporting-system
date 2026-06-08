@@ -106,7 +106,8 @@ closeRejected.onResolution = async () => {
 
   // 3. Attach to the EXISTING context (Redis buffer) — NOT loadDocument (rule 22). The
   //    report the admin opened (openManageReport) is already hydrated in the buffer.
-  await Context.Create(state.currentTabId, { state });
+  await Context.CreateAndInit(`admin_${state.getUniqueId()}`, { state });
+  await adminReportDoc.loadDocument({ reportId });
 
   // 4. Cheap pre-popup guard (defence-in-depth beyond the hidden button). The
   //    AUTHORITATIVE re-read + guard happens on submit (in the shared dispatcher).

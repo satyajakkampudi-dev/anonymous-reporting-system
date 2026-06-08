@@ -54,7 +54,7 @@ export const setOwnAvailability = async (
 
   // Attach + load the caller's OWN row fresh (keyed by their own userId).
   if (attach) {
-    await Context.Create(state.currentTabId, { state });
+    await Context.CreateAndInit(`admin_${state.getUniqueId()}`, { state });
   }
   await adminUserDoc.loadDocument({ adminUserId: userId });
 

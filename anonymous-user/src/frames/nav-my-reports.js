@@ -21,7 +21,7 @@ export const openMyReports = Intent.Create({
 });
 
 openMyReports.onResolution = async () => {
-  await Context.Create(state.currentTabId, { state });
+  await Context.CreateAndInit(`user_${state.getUniqueId()}`, { state });
   await reportsCollection.loadCollectionWithQuery({
     query: { reporterId: state.user?.userId },
   });

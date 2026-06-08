@@ -66,8 +66,10 @@ openManualLog.onResolution = async () => {
     return;
   }
 
-  // Attach to the existing context (Redis-only; preserves the buffer, rule 22).
-  await Context.Create(state.currentTabId, { state });
+  // Fresh context for this dispatch (state.currentTabId does not persist across
+  // invocations — a fresh CreateAndInit is the correct entry; the blank-form reset
+  // below establishes the draft state, so no buffer carry-over is needed).
+  await Context.CreateAndInit(`admin_${state.getUniqueId()}`, { state });
 
   // FRESH-DRAFT RESET (rule 26 — in place, NEVER cloneAndInit).
   // 1. New docId FIRST so the new report is a new row (not an upsert of a loaded one).

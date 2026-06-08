@@ -129,7 +129,7 @@ openManageReport.onResolution = async () => {
     return;
   }
 
-  await Context.Create(state.currentTabId, { state });
+  await Context.CreateAndInit(`admin_${state.getUniqueId()}`, { state });
   const report = await loadReportForAdmin({ reportId });
   if (!report) {
     state.addErrorToStack(404, "Report not found.");

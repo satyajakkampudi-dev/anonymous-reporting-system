@@ -133,7 +133,8 @@ rejectResolution.onResolution = async () => {
 
   // Attach to the EXISTING context (Redis buffer) — NOT loadDocument (rule 22). The
   // report the reporter opened (openReportDetail) is already hydrated in the buffer.
-  await Context.Create(state.currentTabId, { state });
+  await Context.CreateAndInit(`user_${state.getUniqueId()}`, { state });
+  await reportDoc.loadDocument({ reportId });
 
   // Cheap pre-popup guard (defence-in-depth beyond the hidden button; the card already
   // withholds Reject off-RESOLVED / past the cap). The AUTHORITATIVE re-read happens on
@@ -189,8 +190,7 @@ rejectReasonDoc.onSubmit = async (self) => {
     return;
   }
 
-  // 3. Attach to the context, then re-read the report FRESH (the concurrency guard).
-  await Context.Create(state.currentTabId, { state });
+  // 3. Re-read the report FRESH (the concurrency guard).
   await reportDoc.loadDocument({ reportId });
 
   // 4. Ownership FIRST — a non-owned/non-existent report yields the SAME message (no

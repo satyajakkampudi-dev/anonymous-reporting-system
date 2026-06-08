@@ -69,7 +69,7 @@ answerCall.onResolution = async () => {
 
   // 2. Attach to the existing context (Redis buffer, no MongoDB-clobbering reload —
   //    rule 22) and re-read THIS call-queue row fresh by callRef.
-  await Context.Create(state.currentTabId, { state });
+  await Context.CreateAndInit(`admin_${state.getUniqueId()}`, { state });
   await callQueueDoc.loadDocument({ callRef });
 
   const loadedRef = callQueueDoc.f[callRefField.id]?.value || "";

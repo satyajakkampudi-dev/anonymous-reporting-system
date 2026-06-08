@@ -167,8 +167,8 @@ callTimeout.onResolution = async () => {
     return; // nothing to act on — silent (the reporter sees no spurious message)
   }
 
-  // Attach to the existing context (Redis buffer) and re-read the call-queue row.
-  await Context.Create(state.currentTabId, { state });
+  // Fresh context for this dispatch, then re-read the call-queue row.
+  await Context.CreateAndInit(`user_${state.getUniqueId()}`, { state });
   await callQueueDoc.loadDocument({ callRef });
 
   // Guard (rule 13). Proceed to MISSED ONLY if the call is still RINGING AND
@@ -258,9 +258,6 @@ voicemailDoc.onSubmit = async (self) => {
     );
     return;
   }
-
-  // Attach to the context to auto-create the report.
-  await Context.Create(state.currentTabId, { state });
 
   // Build the source=CALL report. reportDoc is the shared autoSave Data Doc — reset it
   // fully so no draft residue from the reporter's buffer leaks in, set the PK + docId

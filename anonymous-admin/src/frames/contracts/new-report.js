@@ -71,7 +71,7 @@ newReportReceiver.onResolution = async () => {
   // 2. Attach to the existing context (Redis buffer, in-memory in sandbox), then load
   //    FRESH through the single admin gateway (rule 21, ER-A3). Identity-free. Mirrors
   //    the job-receiver precedent (auto-close.js / auto-escalate.js).
-  await Context.Create(state.currentTabId, { state });
+  await Context.CreateAndInit(`admin_${state.getUniqueId()}`, { state });
   let report;
   try {
     report = await loadReportForAdmin({ reportId });

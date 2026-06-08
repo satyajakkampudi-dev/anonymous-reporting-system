@@ -130,7 +130,7 @@ takeReview.onResolution = async () => {
   }
 
   // 3. Attach to the existing context, then re-read the report fresh (rule 12).
-  await Context.Create(state.currentTabId, { state });
+  await Context.CreateAndInit(`admin_${state.getUniqueId()}`, { state });
   await adminReportDoc.loadDocument({ reportId });
 
   // 4. Existence — no hydrated reportId means the report was not found.

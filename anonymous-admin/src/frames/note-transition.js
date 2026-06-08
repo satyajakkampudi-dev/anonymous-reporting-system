@@ -29,7 +29,6 @@
 // column. adminReportDoc binds no reporter-identity field, so loadDocument/save touch no
 // identity. The deferred post-save hooks carry { reportId, newStatus } only.
 
-import { Context } from "@frontmltd/frontmjs/core/Context";
 import { D, state } from "@frontmltd/frontmjs/core/State";
 import { adminReportDoc, noteCaptureDoc } from "../docs/admin-report-doc";
 import {
@@ -146,8 +145,7 @@ noteCaptureDoc.onSubmit = async (self) => {
     return;
   }
 
-  // 6. Attach to the context, then re-read the report FRESH (the concurrency guard).
-  await Context.Create(state.currentTabId, { state });
+  // 6. Re-read the report FRESH (the concurrency guard).
   await adminReportDoc.loadDocument({ reportId });
 
   // 7. Existence — no hydrated reportId means the report was not found.

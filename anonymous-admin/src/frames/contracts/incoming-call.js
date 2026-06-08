@@ -62,7 +62,7 @@ incomingCallReceiver.onResolution = async () => {
   //    call-queue row FRESH by callRef (rule 21) so the SYNCHRONOUS incoming-call
   //    onResponse can read its callRef/status/meetingId when sendResponse fires below.
   //    Mirrors the job-receiver precedent (auto-close.js / auto-escalate.js).
-  await Context.Create(state.currentTabId, { state });
+  await Context.CreateAndInit(`admin_${state.getUniqueId()}`, { state });
   try {
     await callQueueDoc.loadDocument({ callRef });
   } catch (error) {

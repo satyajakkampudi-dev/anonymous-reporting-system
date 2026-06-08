@@ -27,7 +27,7 @@ export const openSubmitReport = Intent.Create({
 });
 
 openSubmitReport.onResolution = async () => {
-  await Context.Create(state.currentTabId, { state });
+  await Context.CreateAndInit(`user_${state.getUniqueId()}`, { state });
   sendSubmitGuard(); // U-F5 — anonymity guard, above the form
   reportDoc.sendResponse(); // editable submit form (Data Doc)
 };

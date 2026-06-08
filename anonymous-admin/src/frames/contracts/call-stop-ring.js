@@ -65,7 +65,7 @@ callStopRingReceiver.onResolution = async () => {
   // 2. Attach to the existing context (Redis buffer), then re-load the call-queue row
   //    FRESH by callRef (rule 21). It is now ACTIVE (claimed by another admin), so the
   //    incoming-call onResponse will read status !== RINGING and emit no banner.
-  await Context.Create(state.currentTabId, { state });
+  await Context.CreateAndInit(`admin_${state.getUniqueId()}`, { state });
   try {
     await callQueueDoc.loadDocument({ callRef });
   } catch (error) {

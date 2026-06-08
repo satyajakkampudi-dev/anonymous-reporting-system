@@ -35,7 +35,7 @@ openReportDetail.onResolution = async () => {
     return;
   }
 
-  await Context.Create(state.currentTabId, { state });
+  await Context.CreateAndInit(`user_${state.getUniqueId()}`, { state });
   await reportDoc.loadDocument({ reportId });
 
   // Ownership assertion — the report must belong to the caller.

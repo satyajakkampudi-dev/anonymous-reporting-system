@@ -20,7 +20,7 @@ export const openOnCall = Intent.Create({
 });
 
 openOnCall.onResolution = async () => {
-  await Context.Create(state.currentTabId, { state });
+  await Context.CreateAndInit(`admin_${state.getUniqueId()}`, { state });
   await adminUserDoc.loadDocument({ adminUserId: state.user?.userId });
 
   // Route to the On-call screen (only the on-call section visible) and render the

@@ -21,7 +21,7 @@ export const openDashboard = Intent.Create({
 });
 
 openDashboard.onResolution = async () => {
-  await Context.Create(state.currentTabId, { state });
+  await Context.CreateAndInit(`admin_${state.getUniqueId()}`, { state });
   const reports = await loadReportsForAdmin({});
 
   // A-F2: aggregate + small-cell suppress over the SAME gateway set and stash, so the

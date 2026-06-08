@@ -133,7 +133,8 @@ resolveReport.onResolution = async () => {
 
   // 3. Attach to the EXISTING context (Redis buffer) — NOT loadDocument (rule 22). The
   //    report the admin opened (openManageReport) is already hydrated in the buffer.
-  await Context.Create(state.currentTabId, { state });
+  await Context.CreateAndInit(`admin_${state.getUniqueId()}`, { state });
+  await adminReportDoc.loadDocument({ reportId });
 
   // 4. Cheap pre-popup guard (defence-in-depth beyond the hidden button). The
   //    AUTHORITATIVE re-read + guard happens on submit.
@@ -198,8 +199,7 @@ resolveCaptureDoc.onSubmit = async (self) => {
     return;
   }
 
-  // 4. Attach to the context, then re-read the report FRESH (the concurrency guard).
-  await Context.Create(state.currentTabId, { state });
+  // 4. Re-read the report FRESH (the concurrency guard).
   await adminReportDoc.loadDocument({ reportId });
 
   // 5. Existence — no hydrated reportId means the report was not found.

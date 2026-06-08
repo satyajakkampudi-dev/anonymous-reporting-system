@@ -106,7 +106,7 @@ exportReport.onResolution = async () => {
   const { reportId } = payload;
 
   // Attach to the existing context (Redis-only; no MongoDB re-read of the doc graph).
-  await Context.Create(state.currentTabId, { state });
+  await Context.CreateAndInit(`admin_${state.getUniqueId()}`, { state });
 
   const setQuery = setQueryFromPayload(payload);
 

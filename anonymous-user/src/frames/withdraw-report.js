@@ -71,8 +71,8 @@ withdrawReport.onResolution = async () => {
     return;
   }
 
-  // 2. Attach to the existing context, then re-read the report fresh (rule 12).
-  await Context.Create(state.currentTabId, { state });
+  // 2. Fresh context for this dispatch, then re-read the report fresh (rule 12).
+  await Context.CreateAndInit(`user_${state.getUniqueId()}`, { state });
   await reportDoc.loadDocument({ reportId });
 
   // 3. Ownership FIRST — a non-owned or non-existent report yields the SAME message

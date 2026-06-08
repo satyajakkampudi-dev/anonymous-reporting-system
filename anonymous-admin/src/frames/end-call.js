@@ -62,7 +62,7 @@ const endActiveCall = async (callRef, { attached = false } = {}) => {
 
   // Attach (Redis buffer, no MongoDB-clobbering reload — rule 22) and re-read fresh.
   if (!attached) {
-    await Context.Create(state.currentTabId, { state });
+    await Context.CreateAndInit(`admin_${state.getUniqueId()}`, { state });
   }
   await callQueueDoc.loadDocument({ callRef });
 

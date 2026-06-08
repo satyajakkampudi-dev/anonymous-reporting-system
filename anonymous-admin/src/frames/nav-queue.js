@@ -44,7 +44,7 @@ const normaliseFilter = (raw) =>
   Object.values(QUEUE_FILTER).includes(raw) ? raw : QUEUE_FILTER.ALL;
 
 openQueue.onResolution = async () => {
-  await Context.Create(state.currentTabId, { state });
+  await Context.CreateAndInit(`admin_${state.getUniqueId()}`, { state });
 
   // Active quick-filter from the chip / dashboard card click (Context-B payload is one
   // level deep under .payload — rule "Custom HTML Payloads").

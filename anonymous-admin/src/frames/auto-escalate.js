@@ -106,7 +106,7 @@ autoEscalate.onResolution = async () => {
 
   // 2. Attach to the existing context (Redis buffer) and re-read the report FRESH by
   //    reportId — independent of whose context this fired in.
-  await Context.Create(state.currentTabId, { state });
+  await Context.CreateAndInit(`admin_${state.getUniqueId()}`, { state });
   await adminReportDoc.loadDocument({ reportId });
 
   // 3. Existence — no hydrated reportId means the report was deleted / not found. Safe no-op.

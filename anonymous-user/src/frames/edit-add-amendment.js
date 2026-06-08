@@ -63,7 +63,8 @@ addAmendment.onResolution = async () => {
   // Attach to the EXISTING context (Redis buffer) — NOT loadDocument (rule 22). The
   // report the reporter opened (openReportDetail) is already hydrated in the buffer;
   // re-reading from MongoDB would waste a read and discard any in-flight buffer state.
-  await Context.Create(state.currentTabId, { state });
+  await Context.CreateAndInit(`user_${state.getUniqueId()}`, { state });
+  await reportDoc.loadDocument({ reportId });
 
   // Code-enforced non-terminal gate: Amend is legal only when the state machine lists
   // it for the reporter on the report's CURRENT status (the SAME single source of truth

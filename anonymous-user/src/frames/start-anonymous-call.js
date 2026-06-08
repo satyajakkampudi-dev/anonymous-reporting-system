@@ -66,7 +66,7 @@ export const startAnonymousCall = Intent.Create({
 
 startAnonymousCall.onResolution = async () => {
   // 1. Attach to the existing context (preserve the autoSaveBuffer — rule 22).
-  await Context.Create(state.currentTabId, { state });
+  await Context.CreateAndInit(`user_${state.getUniqueId()}`, { state });
 
   // 2. Create the masked voice-only meeting + mint the masked guest token. On a
   //    non-200 from the video-call capability, createMeeting pushes a system error

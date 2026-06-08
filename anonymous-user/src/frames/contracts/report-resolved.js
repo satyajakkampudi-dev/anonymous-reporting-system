@@ -59,7 +59,7 @@ reportResolvedReceiver.onResolution = async () => {
     return;
   }
 
-  await Context.Create(state.currentTabId, { state });
+  await Context.CreateAndInit(`user_${state.getUniqueId()}`, { state });
   await reportDoc.loadDocument({ reportId });
 
   // OWNERSHIP FILTER — the anonymity linchpin. Only the owning reporter's context
