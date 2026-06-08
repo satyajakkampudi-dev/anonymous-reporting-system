@@ -17,6 +17,6 @@
   "systemBot": false,
   "buildType": "Dev",
   "botId": "8d068c16b25f1ca38ac85",
-  "iconPath": "",
+  "iconPath": "resources/logo.png",
   "repositoryLocation": "git@github.com:frontmltd/anonymous-reporting-user-app.git"
 }
