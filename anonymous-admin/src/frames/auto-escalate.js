@@ -94,60 +94,54 @@ export const autoEscalate = Intent.Create({
   state,
 });
 
-autoEscalate.onResolution = async () => {
-  // 1. Payload. job-scheduler delivers the scheduled message under .data; .payload is the
-  //    defensive fallback (a manual invoke during testing). Missing reportId => nothing to
-  //    act on. Silent (no user-facing message — this is a system job).
-  const { reportId } =
-    state.messageFromUser?.data || state.messageFromUser?.payload || {};
-  if (!reportId) {
-    D.log({ message: "A-F16: autoEscalate fired without a reportId" });
-    return;
-  }
+// Shared OPEN -> ESCALATED transition (MP-FIX-ESCALATE-DECOUPLE, framework-mapping rule 34).
+// Called by BOTH the scheduled job (autoEscalate.onResolution, timely path) AND the A-F18
+// SLA-digest sweep (assignee-independent backstop) — so escalation no longer depends on the
+// X1 receiver having armed a timer (which is skipped when no admin is seeded). GUARDED +
+// idempotent (rule 13): re-reads the report FRESH and escalates ONLY if still OPEN, so a
+// double-fire (job + sweep, or duplicate delivery) is a safe no-op. Returns
+// { escalated, reason }. Never throws into the caller. Identity-free (rule 16/30).
+export const escalateOpenReport = async (reportId) => {
+  if (!reportId) return { escalated: false, reason: "no-reportId" };
 
-  // 2. Attach to the existing context (Redis buffer) and re-read the report FRESH by
-  //    reportId — independent of whose context this fired in.
+  // Attach to the existing context and re-read the report FRESH by reportId — independent
+  // of whose context this fired in (job, sweep, or manual invoke).
   await Context.CreateAndInit(`admin_${state.getUniqueId()}`, { state });
   await adminReportDoc.loadDocument({ reportId });
 
-  // 3. Existence — no hydrated reportId means the report was deleted / not found. Safe no-op.
+  // Existence — no hydrated reportId means the report was deleted / not found. Safe no-op.
   if (!adminReportDoc.f[reportIdField.id]?.value) {
     D.log({
       message: "A-F16: auto-escalate no-op (report not found)",
       data: { reportId },
     });
-    return;
+    return { escalated: false, reason: "not-found" };
   }
 
   const current = adminReportDoc.f[statusField.id]?.value || "";
 
-  // 4. GUARD A (rule 13 / ER-B8) — status must still be OPEN (still unactioned, nobody
-  //    took it into review). If an admin actioned it (UNDER_REVIEW — taking review IS the
-  //    action that defuses the SLA timer), it is already escalated (ESCALATED — duplicate
-  //    fire), or it moved on (RESOLVED / terminal / WITHDRAWN), this is a no-op. NEVER
-  //    overwrite a non-OPEN status.
+  // GUARD A (rule 13 / ER-B8) — status must still be OPEN. UNDER_REVIEW (an admin took it),
+  // ESCALATED (already escalated — duplicate fire), RESOLVED/terminal/WITHDRAWN (moved on)
+  // are all no-ops. NEVER overwrite a non-OPEN status.
   if (current !== STATUS.OPEN) {
     D.log({
       message: "A-F16: auto-escalate no-op (status no longer OPEN)",
       data: { reportId, current },
     });
-    return;
+    return { escalated: false, reason: "not-open" };
   }
 
-  // 5. GUARD B — belt-and-braces legality against the state machine for the SYSTEM actor.
-  //    OPEN --(SYSTEM, autoEscalate)--> ESCALATED (lib/ticket-status.js).
+  // GUARD B — belt-and-braces state-machine legality for the SYSTEM actor.
   if (!canTransition(current, STATUS.ESCALATED, TRANSITION_ACTOR.SYSTEM)) {
     D.log({
       message:
         "A-F16: auto-escalate no-op (transition not permitted for SYSTEM)",
       data: { reportId, current, to: STATUS.ESCALATED },
     });
-    return;
+    return { escalated: false, reason: "not-permitted" };
   }
 
-  // 6. Apply. Escalation re-routes to the SECONDARY admin (rule 14, same as manual
-  //    escalate). version advances monotonically (read -> read+1) so other writers'
-  //    guards and the audit trail stay coherent (same reasoning as auto-close.js).
+  // Apply. Re-route to SECONDARY (rule 14); version advances monotonically; stamp updatedOn.
   const now = Date.now();
   adminReportDoc.f[statusField.id].value = STATUS.ESCALATED;
   adminReportDoc.f[assignedToField.id].value = ROLE.SECONDARY_ADMIN;
@@ -155,8 +149,7 @@ autoEscalate.onResolution = async () => {
     Number(adminReportDoc.f[versionField.id]?.value || 0) + 1;
   adminReportDoc.f[updatedOnField.id].value = now;
 
-  // 7. One statusHistory row, atomic with the report write (rule 12). actorRole = SYSTEM —
-  //    NEVER an id (anonymity, rule 16).
+  // One statusHistory row, atomic with the report write (rule 12). actorRole = SYSTEM.
   appendStatusHistoryRow(adminReportDoc, {
     fromStatus: current,
     toStatus: STATUS.ESCALATED,
@@ -164,10 +157,7 @@ autoEscalate.onResolution = async () => {
     note: AUTO_ESCALATE_NOTE,
   });
 
-  // 8. Persist. save() (audit: true, NFR-3) re-runs the Doc/field onSave gates; a gate
-  //    abort adds to the error stack WITHOUT throwing — detect it the way auto-close.js
-  //    does and do not claim success. On failure log + return: the report stays OPEN and
-  //    the SLA digest backstop (A-F18) can catch it; the job may also re-fire harmlessly.
+  // Persist (gate-abort detection via the error stack, as auto-close.js does).
   const errorsBefore = (state.errorStack || []).length;
   try {
     await saveDocWithSubCollections(adminReportDoc);
@@ -176,18 +166,19 @@ autoEscalate.onResolution = async () => {
       message: "A-F16: report save failed on auto-escalate",
       data: { reportId, error: String(error) },
     });
-    return;
+    return { escalated: false, reason: "save-failed" };
   }
   if ((state.errorStack || []).length > errorsBefore) {
-    return; // save aborted via the error stack — do not claim success
+    return { escalated: false, reason: "save-aborted" };
   }
 
-  // 9. A-F15 admin-notify dispatch (rule 16 — ONLY after a clean save). Notify the
-  //    SECONDARY admins this report was just auto-routed to (resolveAssignees honours the
-  //    live assignedTo = SECONDARY_ADMIN we just stamped). Best-effort — dispatchAdminNotify
-  //    never throws, but wrap anyway so a notification fault cannot fail this (already
-  //    persisted) system transition; a failed send is recorded for the SLA digest / Alerts
-  //    fallback (ER-D15). Descriptor is IDENTITY-FREE (rule 30 — no reporter identity bound).
+  D.log({
+    message: "A-F16: auto-escalate APPLIED (OPEN -> ESCALATED)",
+    data: { reportId },
+  });
+
+  // A-F15 admin-notify dispatch (rule 16 — ONLY after a clean save). Notify the SECONDARY
+  // admins this report was just routed to. Best-effort — never fails the transition.
   try {
     await dispatchAdminNotify(
       {
@@ -210,12 +201,24 @@ autoEscalate.onResolution = async () => {
     });
   }
 
-  // X5 (MSG_REPORT_STATUS_CHANGED): identity-free { reportId, newStatus: ESCALATED }
-  // (NO identity, NO actorId — rule 16/30). X5 DEPENDS on A-F16 and owns the sender —
-  // deferred to that cross-app task; nothing is sent here.
+  // X5 (MSG_REPORT_STATUS_CHANGED) is owned by its cross-app task — nothing sent here.
 
   D.log({
     message: "A-F16: report auto-escalated",
     data: { reportId, from: current, to: STATUS.ESCALATED },
   });
+  return { escalated: true, reason: "ok" };
+};
+
+autoEscalate.onResolution = async () => {
+  // job-scheduler delivers the scheduled message under .data; .payload is the manual-invoke
+  // fallback. The shared escalateOpenReport does the guarded transition.
+  const { reportId } =
+    state.messageFromUser?.data || state.messageFromUser?.payload || {};
+  D.log({ message: "A-F16: autoEscalate INVOKED", data: { reportId } });
+  if (!reportId) {
+    D.log({ message: "A-F16: autoEscalate fired without a reportId" });
+    return;
+  }
+  await escalateOpenReport(reportId);
 };

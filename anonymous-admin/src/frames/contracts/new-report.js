@@ -58,6 +58,14 @@ newReportReceiver.onMatching = () =>
   state.messageTypeFromUser === MSG.NEW_REPORT;
 
 newReportReceiver.onResolution = async () => {
+  D.log({
+    message: "X1 receiver: MSG_NEW_REPORT received",
+    data: {
+      type: state.messageTypeFromUser,
+      reportId: state.messageFromUser?.reportId,
+    },
+  });
+
   // 1. Payload — { reportId, category, urgency, severity, assignedTo, createdOn },
   //    identity-free. reportId is the only field we trust as a key; the rest is re-read.
   const { reportId } = state.messageFromUser || {};

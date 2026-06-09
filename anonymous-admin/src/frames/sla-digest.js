@@ -55,10 +55,11 @@ import { D, state } from "@frontmltd/frontmjs/core/State";
 import { adminUsersCollection } from "../../../lib/collections/admin-users";
 import { loadReportsForAdmin, extractRowData } from "../../../lib/access";
 import { sendAdminEmail } from "../../../lib/notifications";
-import { buildBreaches } from "../../../lib/sla";
+import { buildBreaches, escalateDueReports } from "../../../lib/sla";
 import { statusLabel } from "../../../lib/ticket-status";
 import { TIMING } from "../../../lib/constants";
 import { escapeHtml, formatRelative } from "../../../lib/utils/format";
+import { escalateOpenReport } from "./auto-escalate";
 import { INTENT } from "../constants";
 
 // Deterministic jobId for the self-rearming chain — a second arming overwrites the
@@ -123,7 +124,36 @@ slaDigest.onResolution = async () => {
     return;
   }
 
+  // 1a. ESCALATION BACKSTOP (MP-FIX-ESCALATE-DECOUPLE, rule 34). The scheduled auto-escalate
+  //     timer is armed only in the X1 receiver, which is skipped when no admin is seeded — so
+  //     escalation can be silently disabled. This sweep runs regardless of assignees/cross-app
+  //     delivery, so it escalates any OPEN report past its escalate deadline that the job never
+  //     armed. escalateOpenReport is GUARDED (no-op if not OPEN), so a report the job already
+  //     escalated is skipped (no double-fire). Best-effort per report — one failure must not
+  //     abort the sweep, the digest, or the self-rearm.
+  const due = escalateDueReports(reports, nowMs);
+  let escalatedBySweep = 0;
+  for (const r of due) {
+    try {
+      const res = await escalateOpenReport(r.reportId);
+      if (res && res.escalated) escalatedBySweep += 1;
+    } catch (error) {
+      D.log({
+        message: "A-F18: sweep escalation errored (ignored)",
+        data: { reportId: r.reportId, error: String(error) },
+      });
+    }
+  }
+  if (due.length) {
+    D.log({
+      message: "A-F18: sweep escalation pass",
+      data: { dueCount: due.length, escalatedBySweep },
+    });
+  }
+
   // 2. The SHARED predicate (lib/sla.js) — identical rule to the in-app A-D-alerts twin.
+  //    Uses the pre-escalation snapshot; a just-escalated OPEN report listed as a breach
+  //    is still valid (it WAS overdue). The next sweep reflects its new ESCALATED state.
   const breaches = buildBreaches(reports, nowMs);
 
   // 3. Empty breaches ⇒ nothing to send (fine — ER-B7 only forbids SILENT LOSS of an
