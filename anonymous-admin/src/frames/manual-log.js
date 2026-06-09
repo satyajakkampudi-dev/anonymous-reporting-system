@@ -67,7 +67,7 @@ import {
   getStatusHistoryCollection,
   appendStatusHistoryRow,
 } from "./status-history-writer";
-import { notifyAssignees, NOTIFY_EVENT } from "./admin-notify";
+import { dispatchAdminNotify, NOTIFY_EVENT } from "./admin-notify";
 import { STATUS } from "../../../lib/ticket-status";
 import { assignedRoleFor, resolveAdminRole } from "../../../lib/access";
 import {
@@ -293,12 +293,12 @@ adminReportDoc.onSubmit = async (self) => {
 
   // 7b. A-F15 admin-notify dispatch (rule 16 — only after the clean save above). A MANUAL
   //     report notifies its ASSIGNED admins DIRECTLY (NOT via cross-app X1 — there is no
-  //     reporter to address). Best-effort — notifyAssignees never throws, but wrap anyway so
+  //     reporter to address). Best-effort — dispatchAdminNotify never throws, but wrap anyway so
   //     a notification fault cannot fail this (already persisted) report; a failed send is
   //     recorded for the SLA digest / Alerts fallback (ER-D15). Descriptor IDENTITY-FREE
   //     (rule 30 — adminReportDoc binds no reporter identity).
   try {
-    await notifyAssignees(
+    await dispatchAdminNotify(
       {
         reportId,
         status: self.f[statusField.id].value,
@@ -313,7 +313,7 @@ adminReportDoc.onSubmit = async (self) => {
     );
   } catch (error) {
     D.log({
-      message: "A-F15: notifyAssignees errored after manual-log (ignored)",
+      message: "A-F15: dispatchAdminNotify errored after manual-log (ignored)",
       data: { reportId, error: String(error) },
     });
   }

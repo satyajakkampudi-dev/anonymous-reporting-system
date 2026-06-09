@@ -51,8 +51,8 @@
 // assignedTo (rule 14). Escalation ALWAYS routes to the SECONDARY compliance admin —
 // identical to the manual escalate (escalate-report.js applyExtra). Stamp the ROLE
 // token directly onto assignedTo. That is NOT a "hardcoded role query" (resolving WHICH
-// USERS to notify is resolveAssignees' job, used by the deferred A-F15 hook below); it
-// is simply stamping the routing target onto the report.
+// USERS to notify is resolveAssignees' job, used by the A-F15 dispatchAdminNotify hook
+// below); it is simply stamping the routing target onto the report.
 //
 // ANONYMITY (rule 30). adminReportDoc binds NO reporterId / contactMethod / contactValue,
 // so nothing here can read or write a reporter identity. actorRole is the SYSTEM token
@@ -79,7 +79,8 @@ import {
   createdOnField,
 } from "../sections/manual-log";
 import { appendStatusHistoryRow } from "./status-history-writer";
-import { notifyAssignees, NOTIFY_EVENT } from "./admin-notify";
+import { saveDocWithSubCollections } from "../../../lib/persist";
+import { dispatchAdminNotify, NOTIFY_EVENT } from "./admin-notify";
 import { canTransition, STATUS } from "../../../lib/ticket-status";
 import { ACTOR_ROLE, TRANSITION_ACTOR, ROLE } from "../../../lib/constants";
 import { INTENT } from "../constants";
@@ -169,7 +170,7 @@ autoEscalate.onResolution = async () => {
   //    the SLA digest backstop (A-F18) can catch it; the job may also re-fire harmlessly.
   const errorsBefore = (state.errorStack || []).length;
   try {
-    await adminReportDoc.save();
+    await saveDocWithSubCollections(adminReportDoc);
   } catch (error) {
     D.log({
       message: "A-F16: report save failed on auto-escalate",
@@ -183,12 +184,12 @@ autoEscalate.onResolution = async () => {
 
   // 9. A-F15 admin-notify dispatch (rule 16 — ONLY after a clean save). Notify the
   //    SECONDARY admins this report was just auto-routed to (resolveAssignees honours the
-  //    live assignedTo = SECONDARY_ADMIN we just stamped). Best-effort — notifyAssignees
+  //    live assignedTo = SECONDARY_ADMIN we just stamped). Best-effort — dispatchAdminNotify
   //    never throws, but wrap anyway so a notification fault cannot fail this (already
   //    persisted) system transition; a failed send is recorded for the SLA digest / Alerts
   //    fallback (ER-D15). Descriptor is IDENTITY-FREE (rule 30 — no reporter identity bound).
   try {
-    await notifyAssignees(
+    await dispatchAdminNotify(
       {
         reportId,
         status: STATUS.ESCALATED,
@@ -203,7 +204,8 @@ autoEscalate.onResolution = async () => {
     );
   } catch (error) {
     D.log({
-      message: "A-F15: notifyAssignees errored after auto-escalate (ignored)",
+      message:
+        "A-F15: dispatchAdminNotify errored after auto-escalate (ignored)",
       data: { reportId, error: String(error) },
     });
   }

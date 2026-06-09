@@ -45,7 +45,8 @@ import {
 } from "../sections/manual-log";
 import { transitionNoteField } from "../sections/transition-note-popup";
 import { appendStatusHistoryRow } from "./status-history-writer";
-import { notifyAssignees } from "./admin-notify";
+import { saveDocWithSubCollections } from "../../../lib/persist";
+import { dispatchAdminNotify } from "./admin-notify";
 import { resolveAdminRole } from "../../../lib/access";
 import { canTransition, STATUS } from "../../../lib/ticket-status";
 import { sanitiseText } from "../../../lib/validation";
@@ -54,7 +55,7 @@ import {
   broadcastBotMessage,
   resolvePeerBotId,
 } from "../../../lib/notifications";
-import { STATE_KEYS } from "../constants";
+import { INTENT, STATE_KEYS } from "../constants";
 
 // Command registry: targetStatus -> { successMessage(reportId), applyExtra(doc, role) }.
 // Module-level: registration happens at module load (each transition frame calls
@@ -200,7 +201,7 @@ noteCaptureDoc.onSubmit = async (self) => {
   //     resolve-report.js does and do not claim success.
   const errorsBefore = (state.errorStack || []).length;
   try {
-    await adminReportDoc.save();
+    await saveDocWithSubCollections(adminReportDoc);
   } catch (error) {
     state.addSystemErrorToStack(
       500,
@@ -219,13 +220,13 @@ noteCaptureDoc.onSubmit = async (self) => {
   // 12. Post-save admin-notify dispatch (A-F15, rule 16 — ONLY on a clean save, never on
   //     the abort path above). escalate registers notifyEvent = NOTIFY_EVENT.ESCALATED so the
   //     SECONDARY admins it just routed to are notified; closeRejected does not set notifyEvent
-  //     (closing-as-rejected does not notify admins). Best-effort — notifyAssignees never
+  //     (closing-as-rejected does not notify admins). Best-effort — dispatchAdminNotify never
   //     throws, but wrap anyway so a notification fault can NEVER fail/roll back the (already
   //     persisted) transition. The descriptor is IDENTITY-FREE, built from the just-saved
   //     adminReportDoc bound fields (rule 30 — no reporter identity is bound here).
   if (cfg.notifyEvent) {
     try {
-      await notifyAssignees(
+      await dispatchAdminNotify(
         {
           reportId,
           status: target,
@@ -241,7 +242,7 @@ noteCaptureDoc.onSubmit = async (self) => {
     } catch (error) {
       D.log({
         message:
-          "A-F15: notifyAssignees errored after note transition (ignored)",
+          "A-F15: dispatchAdminNotify errored after note transition (ignored)",
         data: { reportId, target, error: String(error) },
       });
     }
@@ -290,4 +291,11 @@ noteCaptureDoc.onSubmit = async (self) => {
   });
 
   cfg.successMessage(reportId).sendResponse();
+
+  // Re-render the Manage view so the UI reflects the new status WITHOUT the admin
+  // closing/reopening the tab (updated status pill, new timeline row, re-gated actions).
+  // Shared by every user-triggered note transition (escalate A-F10, closeRejected A-F11).
+  state.continueWithIntentWithIdAndMessage(INTENT.OPEN_MANAGE_REPORT, {
+    payload: { reportId },
+  });
 };

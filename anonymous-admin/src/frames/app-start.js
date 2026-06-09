@@ -24,6 +24,7 @@ import { frontmAdminRole } from "../../../lib/constants";
 import { buildDashboardStats } from "../../../lib/dashboard-stats";
 import { adminDisplayDoc } from "../docs/admin-display-doc";
 import { sendAccessRefusal } from "../sections/display/access-refusal";
+import { hydrateNotificationFailureStash } from "./admin-notify";
 import { showScreen, SCREEN } from "./display-nav";
 import { CONTEXT, STATE_KEYS } from "../constants";
 
@@ -53,6 +54,7 @@ import "../sections/display/amendments";
 import "../sections/display/alerts";
 import "../sections/display/on-call";
 import "../sections/display/incoming-call";
+import { armSlaDigestSweep } from "./sla-digest";
 
 export const appStart = async () => {
   // 1. Access gate — Context B, before any bootstrap or gateway read (rule 27).
@@ -137,6 +139,12 @@ export const appStart = async () => {
   //     suppressed). DASHBOARD_STATS is the single contract between the two tasks.
   state.setField(STATE_KEYS.DASHBOARD_STATS, buildDashboardStats(reports));
 
+  // 4b. Notification-failure bridge (A-F19, MP-FIX-ALERTS-FAILURE-BRIDGE). Hydrate the
+  //     synchronous render stash (STATE_KEYS.NOTIFICATION_FAILURES) from the durable
+  //     cross-admin sharedField BEFORE sendResponse — the alerts onResponse is not
+  //     awaited and cannot read the async sharedField itself. Best-effort; never blocks.
+  await hydrateNotificationFailureStash();
+
   // 5. Render the Display Doc. Open on the DASHBOARD screen (dashboard + alerts/digest
   //    visible; all other exclusive sections hidden) via showScreen — NOT all sections
   //    stacked. incoming-call is the overlay (never hidden, self-gates on RINGING).
@@ -147,4 +155,9 @@ export const appStart = async () => {
   //    (setting 'currentTabId')"). Sailors-cart keeps the tab bar visible for this reason.
   showScreen(SCREEN.DASHBOARD);
   adminDisplayDoc.sendResponse();
+
+  // Kick off the self-rearming SLA-digest backstop sweep (A-F18). Idempotent
+  // (deterministic jobId), best-effort — never blocks the dashboard render. Done AFTER
+  // sendResponse so a scheduler hiccup can't delay the console opening.
+  await armSlaDigestSweep();
 };

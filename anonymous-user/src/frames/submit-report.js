@@ -72,6 +72,7 @@ import {
   isDuplicateKeyError,
 } from "../../../lib/id-generator";
 import { saveDocWithSubCollections } from "../../../lib/persist";
+import { notifyReporter } from "./reporter-notify";
 import {
   severityFromUrgency,
   categoryFromLabel,
@@ -83,7 +84,7 @@ import {
   MSG,
   STATIC_DATA_KEYS,
 } from "../../../lib/constants";
-import { INTENT } from "../constants";
+import { INTENT, NOTIFY_EVENT } from "../constants";
 
 // Free-text fields sanitised on submit (rule 10). category/urgency/location are
 // DROPDOWN tokens, contactValue is handled by the U-F7 onSave gate — not here.
@@ -327,6 +328,12 @@ reportDoc.onSubmit = async (self) => {
     },
   });
   await sendNewReportMessage(self);
+  // Reporter "received" acknowledgement (U-F14 RECEIVED, MP-FIX-REPORTER-RECEIVED-NOTIFY).
+  // Email (only if they chose contact = Email) + web push, built from the reporter's
+  // OWN live doc in their OWN session — the only context that legitimately holds
+  // reporterId. notifyReporter is best-effort (swallows + logs, NFR-4) and no-ops when
+  // reporterId is absent (MANUAL/CALL), so it never fails or delays the submit confirm.
+  await notifyReporter(self, { event: NOTIFY_EVENT.RECEIVED });
   `Thank you. Your report has been submitted securely and anonymously.\n\nYour tracking ID is **${reportId}** — please keep it so you can follow up on this report. We will never reveal your identity.`.sendResponse();
   D.log({ message: "U-F8 submit: report saved", data: { reportId } });
   // After a successful submit, navigate the reporter to their My Reports list so

@@ -29,16 +29,29 @@
 // the A-D-alerts consumer verbatim.
 
 import { D, state } from "@frontmltd/frontmjs/core/State";
-import { resolveAssignees } from "../../../lib/access";
-import { sendAdminEmail, sendAdminWebPush } from "../../../lib/notifications";
+import {
+  resolveAssignees,
+  loadReportForAdmin,
+  resolveAdminIdentity,
+} from "../../../lib/access";
+import {
+  sendAdminEmail,
+  sendPushToCurrentUser,
+  sendBotMessage,
+} from "../../../lib/notifications";
 import {
   SEVERITY_LABELS,
   CATEGORY_LABELS,
   URGENCY_LABELS,
+  MSG,
 } from "../../../lib/constants";
 import { statusLabel } from "../../../lib/ticket-status";
 import { escapeHtml, formatRelative } from "../../../lib/utils/format";
-import { SHARED_KEYS, NOTIFICATION_FAILURE_TTL_SECONDS } from "../constants";
+import {
+  SHARED_KEYS,
+  STATE_KEYS,
+  NOTIFICATION_FAILURE_TTL_SECONDS,
+} from "../constants";
 
 // The notify-worthy events this dispatch knows about — drives subject/body wording.
 // NEW: a freshly-created report reached its assigned admins (manual-log; later X1).
@@ -139,143 +152,177 @@ const recordFailure = async (reportId) => {
   });
 };
 
-// Notify the admins a report is assigned to. BEST-EFFORT — always resolves, NEVER throws.
+// A-F19 bridge (MP-FIX-ALERTS-FAILURE-BRIDGE). recordFailure (above) APPENDS to the
+// DURABLE cross-admin sharedField SHARED_KEYS.NOTIFICATION_FAILURES; the alerts
+// renderer reads the SYNCHRONOUS render stash STATE_KEYS.NOTIFICATION_FAILURES
+// (section.onResponse is not awaited, so it cannot read the async sharedField itself).
+// This helper bridges the two: read the shared list, drop entries older than the TTL
+// (defensive — Redis TTL covers whole-field expiry, not per-entry), and write the
+// render stash. MUST run in a Context-B handler (app-start) BEFORE
+// adminDisplayDoc.sendResponse(). Best-effort: a thrown read leaves the stash empty
+// and logs (NFR-4) — never blocks the dashboard render. Identity-free: { reportId,
+// failedOn } only (rule 30).
+export const hydrateNotificationFailureStash = async () => {
+  try {
+    const shared = await state.getSharedField(
+      SHARED_KEYS.NOTIFICATION_FAILURES
+    );
+    const list = Array.isArray(shared) ? shared : [];
+    const cutoff = Date.now() - NOTIFICATION_FAILURE_TTL_SECONDS * 1000;
+    const fresh = list.filter((f) => f && f.reportId && f.failedOn >= cutoff);
+    state.setField(STATE_KEYS.NOTIFICATION_FAILURES, fresh);
+  } catch (error) {
+    D.log({
+      message: "A-F19: hydrateNotificationFailureStash failed",
+      data: { error: String(error) },
+    });
+    state.setField(STATE_KEYS.NOTIFICATION_FAILURES, []);
+  }
+};
+
+// notifySelf — push (mobile+web) + email to the recipient admin whose session THIS
+// invocation runs as (framework-mapping rule 32). Used by the X1/X2 receivers (already
+// in the recipient's session) and by adminNotifyReceiver (the MSG_ADMIN_NOTIFY landing).
+// BEST-EFFORT — always resolves, NEVER throws.
 //
-//   report  — IDENTITY-FREE descriptor built by the caller from adminReportDoc bound
-//             fields: { reportId, status, severity, category, urgency, assignedTo,
-//             againstAdmin, createdOn }. NEVER reporterId / contact (rule 16/30).
-//   event   — one of NOTIFY_EVENT.* — drives subject/body wording.
+//   reportId — the report key. The descriptor is re-read FRESH through the single admin
+//              gateway (loadReportForAdmin — identity-free, adminProjection-stripped),
+//              NOT trusted from any payload (rule 21/ER-A3).
+//   event    — one of NOTIFY_EVENT.* — drives subject/body wording.
 //
-// Returns a small summary { recipients, emailFailures, pushFailures, anyFailure } so the
-// caller can log it. recipients = resolveAssignees(report) (the chokepoint; now honours
-// the LIVE assignedTo, so escalation notifies the secondary admins).
-export const notifyAssignees = async (report, { event } = {}) => {
-  const summary = {
-    recipients: 0,
-    emailFailures: 0,
-    pushFailures: 0,
-    anyFailure: false,
-  };
+// Push goes to the CURRENT user's own conversation (sendPushToCurrentUser → mobile+web).
+// Email goes to the caller's OWN seeded admin address (resolveAdminIdentity; fallback to
+// their account email). A send fault records ONE durable failure for the Alerts/digest
+// fallback (ER-D15). Identity-free throughout (push data { reportId } only — rule 16/30).
+export const notifySelf = async ({ reportId, event } = {}) => {
+  if (!reportId) {
+    D.log({
+      message: "A-F15: notifySelf called with no reportId",
+      data: { event },
+    });
+    return { ok: false };
+  }
+
+  const copy = EVENT_COPY[event] || EVENT_COPY[NOTIFY_EVENT.NEW];
 
   try {
-    const reportId = report && report.reportId;
-    const copy = EVENT_COPY[event] || EVENT_COPY[NOTIFY_EVENT.NEW];
-
-    if (!reportId) {
-      // Defensive — a descriptor with no reportId cannot be acted on. Loud log, no throw.
+    const report = await loadReportForAdmin({ reportId });
+    if (!report) {
       D.log({
-        message: "A-F15: notifyAssignees called with no reportId",
-        data: { event },
+        message: "A-F15: notifySelf — report not found on gateway load (no-op)",
+        data: { reportId, event },
       });
-      return summary;
+      return { ok: false };
     }
-
-    let recipients = [];
-    try {
-      recipients = await resolveAssignees(report);
-    } catch (error) {
-      // resolveAssignees does a MongoDB read — a thrown read (poor maritime link) is a
-      // notification failure, recorded so the fallback catches it. Never throw.
-      D.log({
-        message: "A-F15: resolveAssignees failed",
-        data: { reportId, event, error: String(error) },
-      });
-      await recordFailure(reportId);
-      summary.anyFailure = true;
-      return summary;
-    }
-
-    // EMPTY registry for a notify-worthy event → loud log, never silent (ER-B7). The SLA
-    // digest + in-app Alerts are the backstop. Do NOT throw, do NOT record a per-report
-    // failure (there is no send to fail — the absence is a configuration gap the digest
-    // surfaces). resolveAssignees already logs the "no GLOBAL admins" case; add the
-    // notify-context line so the gap is unmissable in operations logging.
-    if (!recipients.length) {
-      D.log({
-        message:
-          "A-F15: no assignees for a notify-worthy event — nothing sent (SLA digest + Alerts are the fallback, ER-B7)",
-        data: { reportId, event, assignedTo: report.assignedTo },
-      });
-      return summary;
-    }
-
-    summary.recipients = recipients.length;
 
     const subject = `${copy.subject} — ${reportId}`;
     const html = buildEmailHtml(report, copy);
     const title = copy.subject;
     const message = `Report ${reportId} has been ${copy.verb}.`;
 
-    // For EACH recipient: best-effort email AND push, each wrapped so one failure never
-    // aborts the rest. The lib senders already swallow + log; we read the { ok } result to
-    // record a durable failure for the Alerts/digest fallback (ER-D15).
-    for (const recipient of recipients) {
-      let recipientFailed = false;
+    // Mobile + web push to self (the recipient's own conversation).
+    const pushResult = await sendPushToCurrentUser({
+      title,
+      message,
+      data: { reportId },
+    });
 
-      try {
-        const emailResult = await sendAdminEmail({
-          to: recipient.adminEmail,
-          subject,
-          html,
-        });
-        if (!emailResult || !emailResult.ok) {
-          summary.emailFailures += 1;
-          recipientFailed = true;
-        }
-      } catch (error) {
-        // The lib sender should not throw, but guard anyway — best-effort.
-        summary.emailFailures += 1;
-        recipientFailed = true;
-        D.log({
-          message: "A-F15: sendAdminEmail threw unexpectedly",
-          data: { reportId, event, error: String(error) },
-        });
-      }
+    // Email to the recipient's OWN seeded admin address (their identity is permitted to
+    // read here — it is the caller's, never a reporter's; rule 30). Fallback: account email.
+    const self = await resolveAdminIdentity();
+    const to = (self && self.adminEmail) || state.user?.emailAddress || "";
+    const emailResult = await sendAdminEmail({ to, subject, html });
 
-      try {
-        const pushResult = await sendAdminWebPush({
-          userId: recipient.adminUserId,
-          title,
-          message,
-          data: { reportId },
-        });
-        if (!pushResult || !pushResult.ok) {
-          summary.pushFailures += 1;
-          recipientFailed = true;
-        }
-      } catch (error) {
-        summary.pushFailures += 1;
-        recipientFailed = true;
-        D.log({
-          message: "A-F15: sendAdminWebPush threw unexpectedly",
-          data: { reportId, event, error: String(error) },
-        });
-      }
-
-      if (recipientFailed) {
-        summary.anyFailure = true;
-      }
-    }
-
-    // Record ONE durable failure entry per report when any send for it failed — the
-    // Alerts banner counts reports that could not be fully notified, not individual sends
-    // (ER-D15). recordFailure is itself best-effort.
-    if (summary.anyFailure) {
+    const anyFailure = !pushResult?.ok || !emailResult?.ok;
+    if (anyFailure) {
       await recordFailure(reportId);
     }
-
     D.log({
-      message: "A-F15: notifyAssignees complete",
-      data: { reportId, event, ...summary },
+      message: "A-F15: notifySelf dispatched",
+      data: {
+        reportId,
+        event,
+        pushOk: !!pushResult?.ok,
+        emailOk: !!emailResult?.ok,
+      },
     });
-    return summary;
+    return { ok: !anyFailure };
   } catch (error) {
-    // Absolute backstop — notifyAssignees must NEVER throw into the transition (rule 16).
+    // Absolute backstop — notifySelf must NEVER throw into the receiver (rule 16).
     D.log({
-      message: "A-F15: notifyAssignees swallowed an unexpected error",
+      message: "A-F15: notifySelf swallowed an unexpected error",
+      data: { reportId, event, error: String(error) },
+    });
+    await recordFailure(reportId);
+    return { ok: false };
+  }
+};
+
+// dispatchAdminNotify — used by callers whose ACTING context is NOT the recipient's:
+// escalate (note-transition), auto-escalate (scheduled job, no user session), manual-log.
+// Resolves the report's assignees (chokepoint — honours the LIVE assignedTo) and sends an
+// intra-admin-bot MSG_ADMIN_NOTIFY { reportId, event } to their userIds. adminNotifyReceiver
+// then runs in EACH recipient's own session and notifySelf's (mobile+web push + email). This
+// is the ONLY way a session-less job can reach admins on mobile (framework-mapping rule 32).
+// BEST-EFFORT — never throws into the transition. Same (report, { event }) call shape as the
+// former notifyAssignees, so callers only change the function name.
+export const dispatchAdminNotify = async (report, { event } = {}) => {
+  try {
+    const reportId = report && report.reportId;
+    if (!reportId) {
+      D.log({
+        message: "A-F15: dispatchAdminNotify called with no reportId",
+        data: { event },
+      });
+      return;
+    }
+
+    let recipients = [];
+    try {
+      recipients = await resolveAssignees(report);
+    } catch (error) {
+      // resolveAssignees does a MongoDB read — a thrown read is a notification failure,
+      // recorded so the Alerts/digest fallback catches it. Never throw.
+      D.log({
+        message: "A-F15: dispatchAdminNotify — resolveAssignees failed",
+        data: { reportId, event, error: String(error) },
+      });
+      await recordFailure(reportId);
+      return;
+    }
+
+    const userIds = (recipients || [])
+      .map((r) => r.adminUserId)
+      .filter(Boolean);
+    if (!userIds.length) {
+      // EMPTY registry for a notify-worthy event → loud log, never silent (ER-B7). The SLA
+      // digest + Alerts are the backstop; no per-report failure (no send to fail).
+      D.log({
+        message:
+          "A-F15: dispatchAdminNotify — no assignees (SLA digest + Alerts are the fallback, ER-B7)",
+        data: { reportId, event, assignedTo: report.assignedTo },
+      });
+      return;
+    }
+
+    // Same-bot message: OMIT botId so sendMessageToUserInBot defaults to the CURRENT
+    // (admin) bot — the documented default and the proven X7 precedent (sendCallStopRing
+    // is called with no toBotId). This is reliable in the scheduled-job context too (no
+    // dependence on state.botId being set, no ADMIN_BOT_ID static-data dependency).
+    await sendBotMessage({
+      type: MSG.ADMIN_NOTIFY,
+      payload: { reportId, event },
+      userIds,
+      userDomain: state.currentUserDomain,
+    });
+    D.log({
+      message: "A-F15: dispatchAdminNotify sent MSG_ADMIN_NOTIFY",
+      data: { reportId, event, recipients: userIds.length },
+    });
+  } catch (error) {
+    D.log({
+      message: "A-F15: dispatchAdminNotify swallowed an unexpected error",
       data: { event, error: String(error) },
     });
-    summary.anyFailure = true;
-    return summary;
   }
 };

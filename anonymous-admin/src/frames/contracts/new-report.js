@@ -43,7 +43,7 @@ import { Context } from "@frontmltd/frontmjs/core/Context";
 import { D, state } from "@frontmltd/frontmjs/core/State";
 import { loadReportForAdmin } from "../../../../lib/access";
 import { MSG, SEVERITY, TIMING } from "../../../../lib/constants";
-import { notifyAssignees, NOTIFY_EVENT } from "../admin-notify";
+import { notifySelf, NOTIFY_EVENT } from "../admin-notify";
 import { INTENT } from "../../constants";
 
 export const newReportReceiver = Intent.Create({
@@ -90,24 +90,16 @@ newReportReceiver.onResolution = async () => {
     return;
   }
 
-  // 3a. Notify the assigned admins (A-F15). Best-effort — notifyAssignees never throws.
+  // 3a. Notify THIS admin (A-F15, rule 32). This receiver already runs in the recipient
+  //     admin's own session (MSG_NEW_REPORT was targeted to the assignees), so notifySelf
+  //     push-to-self (mobile+web) + emails self. Each assignee runs their own receiver, so
+  //     every admin is notified exactly once (no per-recipient fan-out duplication).
+  //     Best-effort — notifySelf never throws.
   try {
-    await notifyAssignees(
-      {
-        reportId: report.reportId,
-        status: report.status,
-        severity: report.severity,
-        category: report.category,
-        urgency: report.urgency,
-        assignedTo: report.assignedTo,
-        againstAdmin: !!report.againstAdmin,
-        createdOn: report.createdOn,
-      },
-      { event: NOTIFY_EVENT.NEW }
-    );
+    await notifySelf({ reportId: report.reportId, event: NOTIFY_EVENT.NEW });
   } catch (error) {
     D.log({
-      message: "X1 receiver: notifyAssignees errored (ignored)",
+      message: "X1 receiver: notifySelf errored (ignored)",
       data: { reportId, error: String(error) },
     });
   }

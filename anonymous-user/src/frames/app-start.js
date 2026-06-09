@@ -13,11 +13,13 @@
 //      owns the Fields + persistence; reportDisplayDoc owns the CardsSet screens.
 
 import { Context } from "@frontmltd/frontmjs/core/Context";
-import { state } from "@frontmltd/frontmjs/core/State";
+import { state, D } from "@frontmltd/frontmjs/core/State";
 import { reportsCollection } from "../collections/reports";
 import { reportDisplayDoc } from "../docs/report-display-doc";
 import { showScreen, SCREEN } from "./display-nav";
 import { CONTEXT } from "../constants";
+import { APP_ROLES, userHasRole } from "../../../lib/constants";
+import { sendAccessRefusal } from "../sections/display/access-refusal";
 
 // Side-effect imports: register every Section + Field on reportDoc and the two
 // embedded sub-collections so the Data Doc is fully populated.
@@ -39,6 +41,21 @@ import "../sections/display/amendments";
 import "../sections/display/detail-actions";
 
 export const appStart = async () => {
+  // 0. Access gate (U-F0a, framework-mapping rule 31) — Context B, BEFORE any
+  //    bootstrap or read. Pure licence-role check: the reporter app requires the
+  //    FrontM `quitelineenduser` role. No registry fallback (no reporter allow-list
+  //    collection exists). On DENY: render the standalone refusal CardsSet and STOP —
+  //    no Context.CreateAndInit, no reports load, no Display-Doc render (the deny path
+  //    must not touch the autoSave buffer or the Display Doc, mirroring admin A-F1).
+  D.warning({
+    message: "U-F0a: reporter access gate decision",
+    data: { client: state.client, roles: state.user && state.user.roles },
+  });
+  if (!userHasRole(state, APP_ROLES.END_USER)) {
+    sendAccessRefusal();
+    return;
+  }
+
   // 1. Context bootstrap — BEFORE any loadDocument / buffer write.
   await Context.CreateAndInit(CONTEXT.MAIN_APP, { state });
 

@@ -30,7 +30,7 @@ import { Context } from "@frontmltd/frontmjs/core/Context";
 import { D, state } from "@frontmltd/frontmjs/core/State";
 import { loadReportForAdmin } from "../../../../lib/access";
 import { MSG } from "../../../../lib/constants";
-import { notifyAssignees, NOTIFY_EVENT } from "../admin-notify";
+import { notifySelf, NOTIFY_EVENT } from "../admin-notify";
 
 export const reportReopenedReceiver = Intent.Create({
   intentId: "reportReopenedReceiver",
@@ -74,28 +74,21 @@ reportReopenedReceiver.onResolution = async () => {
     return;
   }
 
-  // 3. Notify the assigned admins (A-F15, REOPENED). Best-effort — never throws.
+  // 3. Notify THIS admin (A-F15, REOPENED, rule 32). This receiver runs in the recipient
+  //    admin's own session (MSG_REPORT_REOPENED targeted to the assignees), so notifySelf
+  //    push-to-self (mobile+web) + emails self. Best-effort — never throws.
   try {
-    await notifyAssignees(
-      {
-        reportId: report.reportId,
-        status: report.status,
-        severity: report.severity,
-        category: report.category,
-        urgency: report.urgency,
-        assignedTo: report.assignedTo,
-        againstAdmin: !!report.againstAdmin,
-        createdOn: report.createdOn,
-      },
-      { event: NOTIFY_EVENT.REOPENED }
-    );
+    await notifySelf({
+      reportId: report.reportId,
+      event: NOTIFY_EVENT.REOPENED,
+    });
     D.log({
       message: "X2 receiver: reopened report notified",
       data: { reportId },
     });
   } catch (error) {
     D.log({
-      message: "X2 receiver: notifyAssignees errored (ignored)",
+      message: "X2 receiver: notifySelf errored (ignored)",
       data: { reportId, error: String(error) },
     });
   }

@@ -38,7 +38,7 @@ import {
 import { contactMethodField, contactValueField } from "../sections/contact";
 import {
   sendReporterEmail,
-  sendReporterWebPush,
+  sendPushToCurrentUser,
 } from "../../../lib/notifications";
 import { statusLabel } from "../../../lib/ticket-status";
 import { CONTACT_METHOD, contactMethodFromLabel } from "../../../lib/constants";
@@ -127,10 +127,10 @@ export const notifyReporter = async (reportDoc, { event } = {}) => {
 
   const copy = buildCopy(event, reportId, statusLabel(status));
 
-  // 1. Web push — the in-app channel, addressed by the reporter's userId. Always
-  //    attempted when a reporterId exists; the `data` carries reportId only.
-  const pushResult = await sendReporterWebPush({
-    userId: reporterId,
+  // 1. Push — mobile + web (framework-mapping rule 32). notifyReporter ALWAYS runs in
+  //    the reporter's own session (submit onSubmit; X4/X5/X6 receivers), so push-to-self
+  //    reaches their device AND browser. `data` carries reportId only (identity-free).
+  const pushResult = await sendPushToCurrentUser({
     title: copy.title,
     message: copy.message,
     data: { reportId },
