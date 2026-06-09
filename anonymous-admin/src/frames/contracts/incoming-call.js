@@ -2,12 +2,12 @@
 //
 // The RECEIVING half of the MSG_INCOMING_CALL contract. The SENDER is the user app
 // (start-anonymous-call.js U-F15) which, AFTER save() of the RINGING call-queue row,
-// rings all CURRENTLY-AVAILABLE admins via lib/calling.ringAvailableAdmins — that helper
-// now sends ONLY the SILENT bot-to-bot MSG_INCOMING_CALL trigger (this receiver). The
-// actual ring is delivered PER-PLATFORM here (step 4), because only this receiver — in
-// the admin's own session — knows state.client. The reporter no longer fires a VoIP push
-// (a blind fan-out landed on WEB sessions as a stray browser toast with no CallKit). The
-// payload is identity-free { callRef, meetingId } (rule 16/30).
+// rings all CURRENTLY-AVAILABLE admins via lib/calling.ringAvailableAdmins, which sends TWO
+// channels: (1) the bot-to-bot MSG_INCOMING_CALL trigger (this receiver → web ring banner +
+// RING_START), and (2) a VoIP/CallKit push per admin (reaches MOBILE — confirmed working).
+// The VoIP push is fanned out reporter-side because THIS receiver runs server-side where
+// state.client is always "web" and cannot platform-gate. The payload is identity-free
+// { callRef, meetingId } (rule 16/30).
 //
 // INDEPENDENT INTENT (Context B — object graph EMPTY on entry). Matched by
 // onMatching === MSG.INCOMING_CALL. The payload arrives under state.messageFromUser.
@@ -42,8 +42,6 @@ import { callQueueDoc } from "../../docs/call-queue-doc";
 import { adminDisplayDoc } from "../../docs/admin-display-doc";
 import { adminVideoCall } from "../answer-call";
 import { showScreen, SCREEN } from "../display-nav";
-import { ringVoipSelf } from "../../../../lib/calling";
-import { isWeb } from "../../../../lib/utils/platform";
 import { MSG, userTab, CALL_STATUS } from "../../../../lib/constants";
 import { meetingIdField, callStatusField } from "../../sections/call-queue";
 import { CONTEXT } from "../../constants";
@@ -91,13 +89,8 @@ incomingCallReceiver.onResolution = async () => {
   showScreen(SCREEN.ON_CALL);
   adminDisplayDoc.sendResponse();
 
-  // 4. PER-PLATFORM ring (reference pattern; F2). The ring is delivered in THIS admin's
-  //    own session, where state.client is known — the reporter could not platform-gate.
-  //      web    → RING_START_ACTION: the framework's in-app web ring UI (NO browser/system
-  //               toast; a VoIP push on web has no CallKit to consume it and surfaces as a
-  //               stray toast — the bug being fixed).
-  //      mobile → VoIP/CallKit self-push (ringVoipSelf) to wake the device.
-  //    Banner (step 3) shows on both. Best-effort: a ring fault must not break delivery.
+  // 4. WEB ring (RING_START). MOBILE is rung by the reporter's VoIP/CallKit fan-out
+  //    (lib/calling.ringAvailableAdmins) — not here. Banner (step 3) shows on both.
   const meetingId = callQueueDoc.f[meetingIdField.id]?.value || "";
   const status = callQueueDoc.f[callStatusField.id]?.value || "";
   // ONLY ring a call that is still RINGING. A late/duplicate MSG_INCOMING_CALL that lands
@@ -111,28 +104,21 @@ incomingCallReceiver.onResolution = async () => {
     });
     return;
   }
+  // WEB ring only here: RING_START shows the in-app web ring UI. MOBILE rings via the
+  // reporter's VoIP/CallKit fan-out (lib/calling.ringAvailableAdmins) — this receiver runs
+  // server-side where state.client is always "web", so it can't gate per device; RING_START
+  // is harmless on mobile (the mobile client ignores web ring actions). Action value is
+  // RING_START ("ringStart") — there is no "RING_START_ACTION" key in VIDEO_CALL_ACTIONS.
   try {
-    if (isWeb()) {
-      adminVideoCall.meetingId = meetingId; // RING_START carries the meeting context
-      // NOTE: the action value is RING_START ("ringStart"). VIDEO_CALL_ACTIONS has NO
-      // "RING_START_ACTION" key (that is a static METHOD on VideoCall that returns
-      // RING_START) — passing the nonexistent key sends `undefined` and the web client
-      // never rings. This is the value SeaMedix uses via VideoCall.RING_START_ACTION().
-      adminVideoCall.sendResponse(ALL_CONSTANTS.VIDEO_CALL_ACTIONS.RING_START);
-      D.log({
-        message: "X3 receiver: web RING_START (ringStart)",
-        data: { callRef },
-      });
-    } else {
-      await ringVoipSelf({ meetingId });
-      D.log({
-        message: "X3 receiver: mobile VoIP self-push",
-        data: { callRef },
-      });
-    }
+    adminVideoCall.meetingId = meetingId; // RING_START carries the meeting context
+    adminVideoCall.sendResponse(ALL_CONSTANTS.VIDEO_CALL_ACTIONS.RING_START);
+    D.log({
+      message: "X3 receiver: web RING_START (ringStart)",
+      data: { callRef },
+    });
   } catch (error) {
     D.log({
-      message: "X3 receiver: per-platform ring failed (non-fatal)",
+      message: "X3 receiver: RING_START failed (non-fatal)",
       data: { callRef, error: String(error) },
     });
   }
