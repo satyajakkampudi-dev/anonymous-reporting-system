@@ -31,7 +31,7 @@ import { buildQueueReports } from "../../../lib/queue";
 import { LIST_PAGE_SIZE } from "../../../lib/constants";
 import { adminDisplayDoc } from "../docs/admin-display-doc";
 import { showScreen, SCREEN } from "./display-nav";
-import { INTENT, STATE_KEYS, QUEUE_FILTER } from "../constants";
+import { CONTEXT, INTENT, STATE_KEYS, QUEUE_FILTER } from "../constants";
 
 export const openQueue = Intent.Create({
   intentId: INTENT.OPEN_QUEUE,
@@ -45,17 +45,9 @@ const normaliseFilter = (raw) =>
   Object.values(QUEUE_FILTER).includes(raw) ? raw : QUEUE_FILTER.ALL;
 
 openQueue.onResolution = async () => {
-  // Stay in the SAME tab when this dispatch came from an already-open tab (framework-mapping
-  // rule 37; mirrors the user app's nav-my-reports). The quick-filter chips and the pagination
-  // prev/next are invoke_intent clicks that carry the originating tabId — Context.Create
-  // re-renders IN PLACE, whereas CreateAndInit always opens a NEW tab (per-click proliferation:
-  // "Report Queue" ×N). Fall back to a new tab only on a genuine cold open (no originating tab).
-  const incomingTabId = state.messageFromUser?.tabId;
-  if (incomingTabId) {
-    await Context.Create(incomingTabId, { state });
-  } else {
-    await Context.CreateAndInit(`admin_${state.getUniqueId()}`, { state });
-  }
+  // Stable per-screen tab (rule 37): reuse the SAME contextId so the queue
+  // re-renders IN PLACE on every quick-filter chip / pagination click — no new tab.
+  await Context.CreateAndInit(CONTEXT.QUEUE, { state });
 
   // Active quick-filter from the chip / dashboard card click (Context-B payload is one
   // level deep under .payload — rule "Custom HTML Payloads").

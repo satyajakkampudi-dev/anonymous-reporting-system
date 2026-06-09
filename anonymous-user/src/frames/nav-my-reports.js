@@ -13,6 +13,7 @@ import { reportsCollection } from "../collections/reports";
 import { reportDisplayDoc } from "../docs/report-display-doc";
 import { showScreen, SCREEN } from "./display-nav";
 import {
+  CONTEXT,
   INTENT,
   STATE_KEYS,
   MY_REPORTS_STATUS_GROUP,
@@ -28,19 +29,12 @@ export const openMyReports = Intent.Create({
 });
 
 openMyReports.onResolution = async () => {
-  // Stay in the SAME tab when this dispatch came from an already-open tab — the status
-  // /category filter chips (and the Home-nav button) are invoke_intent clicks that carry
-  // the originating tabId. Context.Create keys off messageFromUser.tabId and re-renders
-  // IN PLACE ("Create stays in the same tab"); CreateAndInit always opens a NEW tab, so
-  // using it per click is what spawned a fresh My Reports tab on every filter press.
-  // Fall back to a new tab only when there is no originating tab (e.g. the post-submit
-  // continueWithIntent drops messageFromUser → no tabId).
-  const incomingTabId = state.messageFromUser?.tabId;
-  if (incomingTabId) {
-    await Context.Create(incomingTabId, { state });
-  } else {
-    await Context.CreateAndInit(`user_${state.getUniqueId()}`, { state });
-  }
+  // Stable per-screen tab (rule 37): the framework keys each tab by the contextId
+  // STRING, and an invoke_intent click carries NO tabId (messageFromUser has only
+  // intentId + payload; state.currentTabId is null) — so Context.Create is unusable and
+  // a `user_${getUniqueId()}` id opens a new tab per click. Reusing the stable MY_REPORTS
+  // id re-renders the list IN PLACE on every filter chip.
+  await Context.CreateAndInit(CONTEXT.MY_REPORTS, { state });
   // MP-FIX-NAV — stash the active filter so the render handler (my-reports/index.js
   // onResponse) can apply it. The status/category chips are intent buttons that emit
   // openMyReports with a { statusGroup, category } data-payload — delivered ONE level

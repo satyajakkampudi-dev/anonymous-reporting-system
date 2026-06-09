@@ -58,7 +58,7 @@ import {
   STATIC_DATA_KEYS,
 } from "../../../lib/constants";
 import { sanitiseText } from "../../../lib/validation";
-import { INTENT, STATE_KEYS } from "../constants";
+import { CONTEXT, INTENT, STATE_KEYS } from "../constants";
 
 export const rejectResolution = Intent.Create({
   intentId: INTENT.REJECT_RESOLUTION,
@@ -134,7 +134,9 @@ rejectResolution.onResolution = async () => {
 
   // Attach to the EXISTING context (Redis buffer) — NOT loadDocument (rule 22). The
   // report the reporter opened (openReportDetail) is already hydrated in the buffer.
-  await Context.CreateAndInit(`user_${state.getUniqueId()}`, { state });
+  // Stable detail tab (rule 37): the reason popup overlays the detail tab and the
+  // re-render via openReportDetail lands in the same tab.
+  await Context.CreateAndInit(CONTEXT.REPORT_DETAIL, { state });
   await reportDoc.loadDocument({ reportId });
 
   // Cheap pre-popup guard (defence-in-depth beyond the hidden button; the card already

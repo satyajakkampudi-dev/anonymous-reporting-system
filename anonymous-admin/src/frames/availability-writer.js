@@ -31,6 +31,7 @@ import {
   roleToAdminRole,
   frontmAdminRole,
 } from "../../../lib/constants";
+import { CONTEXT } from "../constants";
 
 // The closed set of writable presence states (rule 19) — anything outside it is rejected.
 const VALID_AVAILABILITY = Object.values(AVAILABILITY);
@@ -63,7 +64,10 @@ export const setOwnAvailability = async (
 
   // Attach + load the caller's OWN row fresh (keyed by their own userId).
   if (attach) {
-    await Context.CreateAndInit(`admin_${state.getUniqueId()}`, { state });
+    // Stable On-call tab (rule 37): the only attach=true caller is setAvailability,
+    // which re-renders the On-call screen — so reuse its tab. (Call frames pass
+    // attach=false and attach their own context.)
+    await Context.CreateAndInit(CONTEXT.ON_CALL, { state });
   }
   await adminUserDoc.loadDocument({ adminUserId: userId });
 

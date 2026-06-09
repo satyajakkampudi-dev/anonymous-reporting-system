@@ -11,7 +11,7 @@ import { state } from "@frontmltd/frontmjs/core/State";
 import { adminUserDoc } from "../docs/admin-user-doc";
 import { adminDisplayDoc } from "../docs/admin-display-doc";
 import { showScreen, SCREEN } from "./display-nav";
-import { INTENT } from "../constants";
+import { CONTEXT, INTENT } from "../constants";
 
 export const openOnCall = Intent.Create({
   intentId: INTENT.OPEN_ON_CALL,
@@ -20,7 +20,7 @@ export const openOnCall = Intent.Create({
 });
 
 openOnCall.onResolution = async () => {
-  await Context.CreateAndInit(`admin_${state.getUniqueId()}`, { state });
+  await Context.CreateAndInit(CONTEXT.ON_CALL, { state }); // stable per-screen tab (rule 37)
   await adminUserDoc.loadDocument({ adminUserId: state.user?.userId });
 
   // Route to the On-call screen (only the on-call section visible) and render the

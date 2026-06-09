@@ -36,7 +36,7 @@ import { D, state } from "@frontmltd/frontmjs/core/State";
 import { adminReportDoc } from "../docs/admin-report-doc";
 import { resolveAdminRole } from "../../../lib/access";
 import { ERROR_CODES } from "../../../lib/constants";
-import { INTENT } from "../constants";
+import { CONTEXT, INTENT } from "../constants";
 import { resetEvidenceSlots } from "./evidence-slots";
 
 export const openManualLog = Intent.Create({
@@ -67,10 +67,9 @@ openManualLog.onResolution = async () => {
     return;
   }
 
-  // Fresh context for this dispatch (state.currentTabId does not persist across
-  // invocations — a fresh CreateAndInit is the correct entry; the blank-form reset
-  // below establishes the draft state, so no buffer carry-over is needed).
-  await Context.CreateAndInit(`admin_${state.getUniqueId()}`, { state });
+  // Stable per-screen tab (rule 37): reuse the manual-log contextId so reopening the
+  // form replaces its tab. The blank-form reset below establishes the draft state.
+  await Context.CreateAndInit(CONTEXT.MANUAL_LOG, { state });
 
   // FRESH-DRAFT RESET (rule 26 — in place, NEVER cloneAndInit).
   // 1. New docId FIRST so the new report is a new row (not an upsert of a loaded one).

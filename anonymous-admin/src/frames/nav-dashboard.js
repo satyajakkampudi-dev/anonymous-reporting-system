@@ -12,7 +12,7 @@ import { loadReportsForAdmin } from "../../../lib/access";
 import { buildDashboardStats } from "../../../lib/dashboard-stats";
 import { adminDisplayDoc } from "../docs/admin-display-doc";
 import { showScreen, SCREEN } from "./display-nav";
-import { INTENT, STATE_KEYS } from "../constants";
+import { CONTEXT, INTENT, STATE_KEYS } from "../constants";
 
 export const openDashboard = Intent.Create({
   intentId: INTENT.OPEN_DASHBOARD,
@@ -21,17 +21,9 @@ export const openDashboard = Intent.Create({
 });
 
 openDashboard.onResolution = async () => {
-  // Stay in the SAME tab when this dispatch came from an already-open tab (framework-mapping
-  // rule 37; mirrors the user app's nav-my-reports). The Alerts pagination prev/next re-opens
-  // the dashboard via an invoke_intent click that carries the originating tabId — Context.Create
-  // re-renders IN PLACE, whereas CreateAndInit always opens a NEW tab (per-click proliferation).
-  // Fall back to a new tab only on a genuine cold open (no originating tab).
-  const incomingTabId = state.messageFromUser?.tabId;
-  if (incomingTabId) {
-    await Context.Create(incomingTabId, { state });
-  } else {
-    await Context.CreateAndInit(`admin_${state.getUniqueId()}`, { state });
-  }
+  // Stable per-screen tab (rule 37): reuse the SAME contextId so the dashboard
+  // re-renders IN PLACE on every Alerts pagination / re-nav click — no new tab.
+  await Context.CreateAndInit(CONTEXT.MAIN_APP, { state });
 
   // Alerts breach-list page (rule 36). The alerts prev/next control re-opens the dashboard
   // carrying { page }; a plain dashboard open carries none → page 0. Read by the alerts

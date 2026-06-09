@@ -132,13 +132,17 @@ const ACTION_BUTTONS = [
     group: "tool",
     variant: "neutral",
   },
-  {
-    action: ACTION.EXPORT,
-    intentId: INTENT.EXPORT_REPORT,
-    label: "Export",
-    group: "tool",
-    variant: "neutral",
-  },
+  // Export (A-F14) — TEMPORARILY DISABLED (deferred; revisit the export functionality
+  // later). The button is withheld from the manage-actions card and the exportReport
+  // intent is no longer registered (commented in main.js). The frame + lib/export.js
+  // are left intact for the future re-enable.
+  // {
+  //   action: ACTION.EXPORT,
+  //   intentId: INTENT.EXPORT_REPORT,
+  //   label: "Export",
+  //   group: "tool",
+  //   variant: "neutral",
+  // },
 ];
 
 // Normalise a loaded collection row into a plain, identity-free object using the

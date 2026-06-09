@@ -47,7 +47,7 @@ import { NOTIFY_EVENT } from "./admin-notify";
 import { resolveAdminRole } from "../../../lib/access";
 import { canTransition, STATUS, statusLabel } from "../../../lib/ticket-status";
 import { ERROR_CODES, ROLE } from "../../../lib/constants";
-import { INTENT, STATE_KEYS } from "../constants";
+import { CONTEXT, INTENT, STATE_KEYS } from "../constants";
 
 // Shared copy so the pre-popup guard and the dispatcher's authoritative guard surface
 // the SAME message for the same condition (no drift).
@@ -105,9 +105,9 @@ escalateReport.onResolution = async () => {
     return;
   }
 
-  // 3. Attach to the EXISTING context (Redis buffer) — NOT loadDocument (rule 22). The
-  //    report the admin opened (openManageReport) is already hydrated in the buffer.
-  await Context.CreateAndInit(`admin_${state.getUniqueId()}`, { state });
+  // 3. Attach to the manage tab (stable per-screen id, rule 37 — the re-render via
+  //    openManageReport lands in the same tab), then re-read the report fresh (rule 22).
+  await Context.CreateAndInit(CONTEXT.MANAGE_REPORT, { state });
   await adminReportDoc.loadDocument({ reportId });
 
   // 4. Cheap pre-popup guard (defence-in-depth beyond the hidden button). The

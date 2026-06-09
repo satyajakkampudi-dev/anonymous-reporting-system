@@ -19,7 +19,7 @@ import { D, state } from "@frontmltd/frontmjs/core/State";
 import { reportDoc } from "../collections/reports";
 import { sendSubmitGuard } from "../sections/display/submit-guard";
 import { resetEvidenceSlots } from "./evidence-slots";
-import { INTENT } from "../constants";
+import { CONTEXT, INTENT } from "../constants";
 
 export const openSubmitReport = Intent.Create({
   intentId: INTENT.OPEN_SUBMIT_REPORT,
@@ -29,7 +29,7 @@ export const openSubmitReport = Intent.Create({
 
 openSubmitReport.onResolution = async () => {
   D.log({ message: "openSubmitReport: opening submit form" });
-  await Context.CreateAndInit(`user_${state.getUniqueId()}`, { state });
+  await Context.CreateAndInit(CONTEXT.SUBMIT_REPORT, { state }); // stable submit tab (rule 37)
   sendSubmitGuard(); // U-F5 — anonymity guard, above the form
   // Fresh form → only Evidence file 1 + "+ Add another file" visible (slots 2–5
   // hidden). Resets the persisted slot count BEFORE the form is rendered.

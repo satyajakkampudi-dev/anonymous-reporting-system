@@ -93,7 +93,7 @@ import {
   broadcastBotMessage,
   resolvePeerBotId,
 } from "../../../lib/notifications";
-import { INTENT } from "../constants";
+import { CONTEXT, INTENT } from "../constants";
 
 export const takeReview = Intent.Create({
   intentId: INTENT.TAKE_REVIEW,
@@ -130,8 +130,9 @@ takeReview.onResolution = async () => {
     return;
   }
 
-  // 3. Attach to the existing context, then re-read the report fresh (rule 12).
-  await Context.CreateAndInit(`admin_${state.getUniqueId()}`, { state });
+  // 3. Attach to the manage tab (stable per-screen id, rule 37 — the re-render via
+  //    openManageReport lands in the same tab), then re-read the report fresh (rule 12).
+  await Context.CreateAndInit(CONTEXT.MANAGE_REPORT, { state });
   await adminReportDoc.loadDocument({ reportId });
 
   // 4. Existence — no hydrated reportId means the report was not found.

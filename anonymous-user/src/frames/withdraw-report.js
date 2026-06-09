@@ -56,7 +56,7 @@ import { ownsReport } from "../../../lib/access";
 import { canTransition, STATUS } from "../../../lib/ticket-status";
 import { ACTOR_ROLE, ERROR_CODES } from "../../../lib/constants";
 import { saveDocWithSubCollections } from "../../../lib/persist";
-import { INTENT } from "../constants";
+import { CONTEXT, INTENT } from "../constants";
 
 export const withdrawReport = Intent.Create({
   intentId: INTENT.WITHDRAW_REPORT,
@@ -74,7 +74,8 @@ withdrawReport.onResolution = async () => {
   D.log({ message: "U-F12 withdraw: start", data: { reportId } });
 
   // 2. Fresh context for this dispatch, then re-read the report fresh (rule 12).
-  await Context.CreateAndInit(`user_${state.getUniqueId()}`, { state });
+  // Stable detail tab (rule 37): the re-render via openReportDetail lands in the same tab.
+  await Context.CreateAndInit(CONTEXT.REPORT_DETAIL, { state });
   await reportDoc.loadDocument({ reportId });
 
   // 3. Ownership FIRST — a non-owned or non-existent report yields the SAME message

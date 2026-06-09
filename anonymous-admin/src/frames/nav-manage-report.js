@@ -17,7 +17,7 @@ import {
 } from "../../../lib/constants";
 import { adminDisplayDoc } from "../docs/admin-display-doc";
 import { showScreen, SCREEN } from "./display-nav";
-import { INTENT, STATE_KEYS } from "../constants";
+import { CONTEXT, INTENT, STATE_KEYS } from "../constants";
 
 export const openManageReport = Intent.Create({
   intentId: INTENT.OPEN_MANAGE_REPORT,
@@ -106,7 +106,9 @@ openManageReport.onResolution = async () => {
     return;
   }
 
-  await Context.CreateAndInit(`admin_${state.getUniqueId()}`, { state });
+  // Stable per-screen tab (rule 37): reuse the manage contextId so opening another
+  // report (or re-rendering after a transition) replaces this tab, never a new one.
+  await Context.CreateAndInit(CONTEXT.MANAGE_REPORT, { state });
   const report = await loadReportForAdmin({ reportId });
   if (!report) {
     state.addErrorToStack(404, "Report not found.");

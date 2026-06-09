@@ -20,7 +20,7 @@ import { amendmentsCollection } from "../sections/amendments";
 import { statusHistoryCollection } from "../sections/status-history";
 import { prepareDetailContentEvidence } from "../sections/display/detail-content";
 import { prepareAmendmentsEvidence } from "../sections/display/amendments";
-import { INTENT } from "../constants";
+import { CONTEXT, INTENT } from "../constants";
 
 export const openReportDetail = Intent.Create({
   intentId: INTENT.OPEN_REPORT_DETAIL,
@@ -37,7 +37,8 @@ openReportDetail.onResolution = async () => {
 
   D.log({ message: "openReportDetail: opening detail", data: { reportId } });
 
-  await Context.CreateAndInit(`user_${state.getUniqueId()}`, { state });
+  // Stable detail tab (rule 37): opening another report replaces this tab, never a new one.
+  await Context.CreateAndInit(CONTEXT.REPORT_DETAIL, { state });
   await reportDoc.loadDocument({ reportId });
 
   // Ownership assertion — the report must belong to the caller.

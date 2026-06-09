@@ -78,7 +78,9 @@ import "./frames/override-severity";
 // CSV/PDF from the adminProjection set ONLY (no reporter identity, D15); PDF via the
 // HTML class toPDF, CSV via an HTML download page. Also supports a filtered-set export
 // (payload { filter }/{ scope:"queue" }) whose UI trigger is a flagged follow-up.
-import "./frames/export-report";
+// TEMPORARILY DISABLED (deferred — revisit export later). Intent left unregistered and
+// the Export button withheld from manage-actions; the frame is intact for re-enable.
+// import "./frames/export-report";
 
 // --- Cross-app contract RECEIVERS (side-effect: register the onMatching intents) ---
 // Each matches a single MSG.* bot-to-bot type from the reporter app and acts on it:

@@ -35,6 +35,12 @@ export const INTENT = {
 // Context ids (CLAUDE.md "App Entry-Point Bootstrap").
 export const CONTEXT = {
   MAIN_APP: "mainApp",
+  // Stable per-screen tab ids (rule 37). The framework keys each UI tab by the
+  // contextId STRING, so reusing the SAME string per screen re-renders IN PLACE
+  // (no new tab). Background contracts/jobs keep throwaway unique ids (no UI).
+  MY_REPORTS: "myReports",
+  REPORT_DETAIL: "reportDetail",
+  SUBMIT_REPORT: "submitReport",
 };
 
 // VideoCall control id (U-F15). The VideoCall instance is an Intent subclass and

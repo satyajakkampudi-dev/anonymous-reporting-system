@@ -46,7 +46,8 @@ import { isActionAllowed, ACTION } from "../../../lib/ticket-status";
 import { ACTOR_ROLE, ERROR_CODES } from "../../../lib/constants";
 import { sanitiseText } from "../../../lib/validation";
 import { saveDocWithSubCollections } from "../../../lib/persist";
-import { INTENT, STATE_KEYS } from "../constants";
+import { showScreen, SCREEN } from "./display-nav";
+import { CONTEXT, INTENT, STATE_KEYS } from "../constants";
 
 // The LIVE embedded amendments collection on `parentDoc` — reached via the parent's own
 // subCollections (the instance the framework loaded rows into + will serialise), never
@@ -80,7 +81,9 @@ addAmendment.onResolution = async () => {
   // new one, and saveDocWithSubCollections persists the FULL array (the embedded
   // sub-collection now serialises — see lib/persist.js). That is what makes a 2nd
   // amendment ADD a row instead of overwriting the 1st.
-  await Context.CreateAndInit(`user_${state.getUniqueId()}`, { state });
+  // Stable detail tab (rule 37): the amend popup overlays the detail tab and the
+  // onSubmit re-render lands in the same tab.
+  await Context.CreateAndInit(CONTEXT.REPORT_DETAIL, { state });
   await reportDoc.loadDocument({ reportId });
   // Stash the reportId so the popup-CONFIRM invocation (a SEPARATE Lambda call — see
   // onSubmit) can re-load this report and append to its existing amendments.
@@ -208,6 +211,9 @@ amendmentDoc.onSubmit = async (self) => {
     await prepareAmendmentsEvidence();
 
     // Re-render the Display Doc so the Amendments table shows the full, appended list.
+    // showScreen(DETAIL) FIRST (rule 37): tabs are reused now, so section visibility is
+    // not reset by a fresh tab — without this every screen's sections stack (broken UI).
+    showScreen(SCREEN.DETAIL);
     reportDisplayDoc.sendResponse();
   } finally {
     amendmentProcessing = false;
