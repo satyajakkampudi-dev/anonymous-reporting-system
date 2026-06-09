@@ -48,6 +48,7 @@ import { statusHistoryDisplaySection } from "../sections/display/status-history"
 import { amendmentsDisplaySection } from "../sections/display/amendments";
 import { alertsDigestDisplaySection } from "../sections/display/alerts";
 import { onCallDisplaySection } from "../sections/display/on-call";
+import { accessRefusalSection } from "../sections/display/access-refusal";
 import { adminDisplayDoc } from "../docs/admin-display-doc";
 
 // Screen identifiers — SCREAMING_SNAKE_CASE constants (rule 19; no magic strings).
@@ -56,6 +57,8 @@ export const SCREEN = {
   QUEUE: "QUEUE",
   MANAGE: "MANAGE",
   ON_CALL: "ON_CALL",
+  // Access-refused wall (A-F1) — shown by the gate when the caller is not an admin.
+  REFUSAL: "REFUSAL",
 };
 
 // Per-screen tab title (FrontM tab strip; set on the Display Doc before sendResponse —
@@ -65,6 +68,7 @@ const SCREEN_TITLES = {
   [SCREEN.QUEUE]: "Report Queue",
   [SCREEN.MANAGE]: "Manage Report",
   [SCREEN.ON_CALL]: "On-call",
+  [SCREEN.REFUSAL]: "Restricted",
 };
 
 // Every EXCLUSIVE display section showScreen governs (incoming-call is the OVERLAY and
@@ -80,6 +84,7 @@ const EXCLUSIVE_SECTIONS = [
   statusHistoryDisplaySection,
   amendmentsDisplaySection,
   onCallDisplaySection,
+  accessRefusalSection,
 ];
 
 // Screen → the sections visible on that screen. Every exclusive section NOT listed for
@@ -96,6 +101,7 @@ const SCREEN_SECTIONS = {
     amendmentsDisplaySection,
   ],
   [SCREEN.ON_CALL]: [onCallDisplaySection],
+  [SCREEN.REFUSAL]: [accessRefusalSection],
 };
 
 // Pure visibility mutator: hide every exclusive section, then reveal the ones for the

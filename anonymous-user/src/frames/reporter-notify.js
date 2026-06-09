@@ -44,6 +44,7 @@ import { statusLabel } from "../../../lib/ticket-status";
 import { CONTACT_METHOD, contactMethodFromLabel } from "../../../lib/constants";
 import { isValidEmail } from "../../../lib/validation";
 import { escapeHtml } from "../../../lib/utils/format";
+import { renderEmail } from "../../../lib/email-template";
 import { NOTIFY_EVENT } from "../constants";
 
 // Build the (identity-free) copy for an event. `statusText` is the live status
@@ -53,10 +54,18 @@ import { NOTIFY_EVENT } from "../constants";
 const buildCopy = (event, reportId, statusText) => {
   const safeId = escapeHtml(reportId);
   const safeStatus = escapeHtml(statusText);
-  const wrap = (lead) =>
-    `<p>${lead}</p>` +
-    `<p>Your report <strong>${safeId}</strong> is now <strong>${safeStatus}</strong>.</p>` +
-    `<p>Open the Anonymous Reporting app to view the full timeline. Your identity has remained anonymous throughout.</p>`;
+  // The email body goes through the shared renderEmail shell (framework-mapping
+  // rule 33): text wordmark, table layout, inline styles, no tracking pixel / no
+  // images, identity-free. `lead` is static copy; safeId/safeStatus are escaped.
+  const buildHtml = (title, lead) =>
+    renderEmail({
+      title,
+      introHtml:
+        `<p style="margin:0 0 12px 0;">${lead}</p>` +
+        `<p style="margin:0;">Your report <strong>${safeId}</strong> is now <strong>${safeStatus}</strong>.</p>`,
+      footerHtml:
+        "Open the Anonymous Reporting app to view the full timeline. Your identity has remained anonymous throughout.",
+    });
 
   switch (event) {
     case NOTIFY_EVENT.RECEIVED:
@@ -64,7 +73,8 @@ const buildCopy = (event, reportId, statusText) => {
         title: "Report received",
         message: `Your report ${reportId} has been received.`,
         subject: `Your report ${reportId} has been received`,
-        html: wrap(
+        html: buildHtml(
+          "Report received",
           "Thank you — your report has been received by the compliance team."
         ),
       };
@@ -73,7 +83,8 @@ const buildCopy = (event, reportId, statusText) => {
         title: "Report resolved",
         message: `Your report ${reportId} has been resolved — please review the outcome.`,
         subject: `Your report ${reportId} has been resolved`,
-        html: wrap(
+        html: buildHtml(
+          "Report resolved",
           "The compliance team has added a resolution to your report. Please review the outcome and let us know whether it addresses your concern."
         ),
       };
@@ -82,7 +93,7 @@ const buildCopy = (event, reportId, statusText) => {
         title: "Report closed",
         message: `Your report ${reportId} has been closed (${statusText}).`,
         subject: `Your report ${reportId} has been closed`,
-        html: wrap("Your report has been closed."),
+        html: buildHtml("Report closed", "Your report has been closed."),
       };
     case NOTIFY_EVENT.STATUS_CHANGED:
     default:
@@ -90,7 +101,10 @@ const buildCopy = (event, reportId, statusText) => {
         title: "Report update",
         message: `Your report ${reportId} is now ${statusText}.`,
         subject: `An update on your report ${reportId}`,
-        html: wrap("There has been an update to your report."),
+        html: buildHtml(
+          "Report update",
+          "There has been an update to your report."
+        ),
       };
   }
 };

@@ -16,6 +16,7 @@ import { statusHistoryDisplaySection } from "../sections/display/status-history"
 import { detailResolutionSection } from "../sections/display/detail-resolution";
 import { amendmentsDisplaySection } from "../sections/display/amendments";
 import { detailActionsSection } from "../sections/display/detail-actions";
+import { accessRefusalSection } from "../sections/display/access-refusal";
 import { reportDisplayDoc } from "../docs/report-display-doc";
 import { D } from "@frontmltd/frontmjs/core/State";
 
@@ -24,6 +25,8 @@ export const SCREEN = {
   HOME: "HOME",
   MY_REPORTS: "MY_REPORTS",
   DETAIL: "DETAIL",
+  // Access-refused wall (U-F0a) — shown by the gate on a missing quitelineenduser role.
+  REFUSAL: "REFUSAL",
 };
 
 // Per-screen tab title (shown on the FrontM tab strip; set on the Display Doc before
@@ -32,9 +35,10 @@ const SCREEN_TITLES = {
   [SCREEN.HOME]: "Anonymous Reporting",
   [SCREEN.MY_REPORTS]: "My Reports",
   [SCREEN.DETAIL]: "Report",
+  [SCREEN.REFUSAL]: "Restricted",
 };
 
-// All 8 display sections, in grid order.
+// All display sections, in grid order (incl. the access-refusal wall).
 const ALL_DISPLAY_SECTIONS = [
   homeLandingSection,
   myReportsListSection,
@@ -44,6 +48,7 @@ const ALL_DISPLAY_SECTIONS = [
   detailResolutionSection,
   amendmentsDisplaySection,
   detailActionsSection,
+  accessRefusalSection,
 ];
 
 // Screen → the sections that are VISIBLE on that screen. Every other section is
@@ -59,6 +64,7 @@ const SCREEN_SECTIONS = {
     amendmentsDisplaySection,
     detailActionsSection,
   ],
+  [SCREEN.REFUSAL]: [accessRefusalSection],
 };
 
 // Pure router: show only the requested screen's sections, hide the rest.

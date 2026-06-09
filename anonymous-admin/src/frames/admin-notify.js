@@ -2,7 +2,7 @@
 //
 // The SINGLE reusable dispatch that notifies the admins a report is assigned to,
 // over the routing chokepoint (resolveAssignees, lib/access — rule 14) and the
-// best-effort senders (sendAdminEmail / sendAdminWebPush, lib/notifications — each
+// best-effort senders (sendAdminEmail / sendPushToCurrentUser, lib/notifications — each
 // already swallows + D.log's its own failure). Called by the post-save hooks of the
 // admin transitions: the shared note-transition dispatcher (ESCALATED), auto-escalate
 // (ESCALATED), and manual-log (NEW). The cross-app X1 (new) / X2 (reopened) receivers
@@ -47,6 +47,7 @@ import {
 } from "../../../lib/constants";
 import { statusLabel } from "../../../lib/ticket-status";
 import { escapeHtml, formatRelative } from "../../../lib/utils/format";
+import { renderEmail } from "../../../lib/email-template";
 import {
   SHARED_KEYS,
   STATE_KEYS,
@@ -91,38 +92,25 @@ const urgencyLabel = (token) => URGENCY_LABELS[token] || token || "—";
 // "age" — relative time since creation (identity-free). Falls back to em-dash.
 const ageLabel = (createdOn) => formatRelative(createdOn) || "—";
 
-// Build the identity-free email HTML body. Every interpolation is escaped (rule 10).
-const buildEmailHtml = (report, copy) => {
-  const rows = [
-    ["Tracking ID", report.reportId],
-    ["Status", statusLabel(report.status)],
-    ["Severity", severityLabel(report.severity)],
-    ["Category", categoryLabel(report.category)],
-    ["Urgency", urgencyLabel(report.urgency)],
-    ["Age", ageLabel(report.createdOn)],
-  ]
-    .map(
-      ([label, value]) =>
-        `<tr>` +
-        `<td style="padding:4px 12px 4px 0;color:#6b7280;font-size:13px;">${escapeHtml(
-          label
-        )}</td>` +
-        `<td style="padding:4px 0;font-size:13px;font-weight:600;">${escapeHtml(
-          value
-        )}</td>` +
-        `</tr>`
-    )
-    .join("");
-
-  return (
-    `<div style="font-family:system-ui,Arial,sans-serif;color:#1f2937;">` +
-    `<p style="font-size:14px;">${escapeHtml(copy.lead)}</p>` +
-    `<table style="border-collapse:collapse;margin:8px 0;">${rows}</table>` +
-    `<p style="font-size:12px;color:#6b7280;">Open the compliance app to action this report. ` +
-    `This message contains no information that could identify the reporter.</p>` +
-    `</div>`
-  );
-};
+// Build the identity-free email HTML body via the shared renderEmail shell (framework-
+// mapping rule 33): text wordmark, table layout, inline styles, no tracking pixel / no
+// images. renderEmail escapes the row label/value (the single chokepoint), so the rows
+// are passed as plain { label, value }; copy.lead is escaped here (caller-supplied HTML).
+const buildEmailHtml = (report, copy) =>
+  renderEmail({
+    title: copy.subject,
+    introHtml: `<p style="margin:0;">${escapeHtml(copy.lead)}</p>`,
+    rows: [
+      { label: "Tracking ID", value: report.reportId },
+      { label: "Status", value: statusLabel(report.status) },
+      { label: "Severity", value: severityLabel(report.severity) },
+      { label: "Category", value: categoryLabel(report.category) },
+      { label: "Urgency", value: urgencyLabel(report.urgency) },
+      { label: "Age", value: ageLabel(report.createdOn) },
+    ],
+    footerHtml:
+      "Open the compliance app to action this report. This message contains no information that could identify the reporter.",
+  });
 
 // Record a notification failure into the durable, cross-admin sharedField (ER-D15).
 // Append-only with a TTL; defensive against a non-array existing value or a thrown

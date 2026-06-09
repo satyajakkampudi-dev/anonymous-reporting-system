@@ -23,7 +23,6 @@ import { resolveAdminRole, loadReportsForAdmin } from "../../../lib/access";
 import { frontmAdminRole } from "../../../lib/constants";
 import { buildDashboardStats } from "../../../lib/dashboard-stats";
 import { adminDisplayDoc } from "../docs/admin-display-doc";
-import { sendAccessRefusal } from "../sections/display/access-refusal";
 import { hydrateNotificationFailureStash } from "./admin-notify";
 import { showScreen, SCREEN } from "./display-nav";
 import { CONTEXT, STATE_KEYS } from "../constants";
@@ -54,10 +53,18 @@ import "../sections/display/amendments";
 import "../sections/display/alerts";
 import "../sections/display/on-call";
 import "../sections/display/incoming-call";
+import "../sections/display/access-refusal";
 import { armSlaDigestSweep } from "./sla-digest";
 
 export const appStart = async () => {
-  // 1. Access gate — Context B, before any bootstrap or gateway read (rule 27).
+  // 0. Context bootstrap FIRST (rule 27, MP-FIX-ACCESS-REFUSAL-RENDER) — Context.CreateAndInit
+  //    creates the conversation tab / state.currentTabId that ANY render needs (deny, retry,
+  //    or allow). Without it, sendResponse has no tab and the screen renders BLANK. Harmless
+  //    for a denied user (an empty tab; no field writes). adminReportDoc is autoSave:true
+  //    (rule 17) so the bootstrap is mandatory regardless.
+  await Context.CreateAndInit(CONTEXT.MAIN_APP, { state });
+
+  // 1. Access gate (rule 27).
   //    resolveAdminRole reads the seeded admin-users registry (lib/access.js — the
   //    SINGLE gating source, D3; no hardcoded allowlist). It performs a MongoDB read,
   //    so on a poor maritime link it can throw. A thrown error is NOT a deny — it
@@ -99,9 +106,11 @@ export const appStart = async () => {
   });
 
   if (!frontmRole && !registryRole) {
-    // DENY (neither a FrontM admin role nor a curated registry row): refusal, STOP.
-    // No Context.CreateAndInit, no gateway read — nothing is loaded behind the wall.
-    sendAccessRefusal();
+    // DENY (neither a FrontM admin role nor a curated registry row): render the Restricted
+    // screen via the Display Doc (showScreen + sendResponse, like every other screen) and
+    // STOP — no gateway read, nothing loaded behind the wall. Context already created above.
+    showScreen(SCREEN.REFUSAL);
+    adminDisplayDoc.sendResponse();
     return;
   }
 
@@ -109,9 +118,6 @@ export const appStart = async () => {
   //    provisioned entitlement), else the curated registry value. Stash for A-F4.
   const role = frontmRole || registryRole;
   state.setField(STATE_KEYS.ADMIN_ROLE, role);
-
-  // 3. Context bootstrap — BEFORE any loadDocument / buffer write.
-  await Context.CreateAndInit(CONTEXT.MAIN_APP, { state });
 
   // 4. Gateway load only (rule 15): identity-free, projection applied.
   const reports = await loadReportsForAdmin({});

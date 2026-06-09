@@ -1,31 +1,35 @@
-// U-F0a — Access-refused guard card (wireframes-anonymous-user §0; framework-mapping
-// rule 31). The reporter mirror of the admin app's access-refusal trio.
+// U-F0a — Access-refused screen (wireframes-anonymous-user §0; framework-mapping
+// rule 31). The reporter mirror of the admin app's access-refusal.
 //
 // A user without the reporter licence (FrontM `quitelineenduser` role) must hit a
-// clear, unambiguous wall — never a half-rendered Home screen. This is the surface
-// the access gate (app-start.js) sends on DENY, BEFORE any Context bootstrap or
-// reports load.
+// clear, unambiguous wall — never a half-rendered Home screen, never a BLANK screen.
 //
-// ARCHITECTURE — STANDALONE CardsSet, NOT a reportDisplayDoc section. The gate must
-// show the refusal WITHOUT touching the Display Doc, its onResponse stashes, or the
-// Context bootstrap (rule 31 — no Context.CreateAndInit on deny). Importing this
-// module pulls in no Data-Doc graph — mirrors the submit-guard standalone CardsSet
-// (docs/frontm-ai-cards-cardsets-comprehensive-guide.md §"Standalone CardsSets").
+// ARCHITECTURE (CORRECTED, MP-FIX-ACCESS-REFUSAL-RENDER) — this is a SECTION on
+// reportDisplayDoc rendered through showScreen(SCREEN.REFUSAL) + reportDisplayDoc
+// .sendResponse(), exactly like Home / My Reports (and like sailors-cart's
+// accessDeniedDisplayDoc.sendResponse()). It is NOT a standalone CardsSet sent on its
+// own: a lone CardsSet sent before/without an active Display-Doc screen renders blank.
+// The access gate (app-start.js) runs Context.CreateAndInit FIRST (so the tab /
+// state.currentTabId exists), then on DENY shows this screen and returns before any
+// data load.
 //
 // ANONYMITY / SAFETY: purely static copy — no field values, no report data, no
-// network. Safe on a cold start and a poor maritime link (no async work); the card
-// is sent synchronously after content is set.
+// network. onResponse is synchronous (the framework does NOT await it — CLAUDE.md
+// "Render handlers are NOT awaited"); nothing async here, so it is safe on a cold
+// start and a poor maritime link.
 
+import { Section } from "@frontmltd/frontmjs/core/Section";
 import { Card, CardsSet } from "@frontmltd/frontmjs/core/Card";
 import { CARD_TYPES } from "@frontmltd/frontmjs/core/ALLConstants";
 import { state } from "@frontmltd/frontmjs/core/State";
+import { reportDisplayDoc } from "../../../docs/report-display-doc";
 import { renderForPlatform } from "../../../../../lib/utils/platform";
 import { renderWeb } from "./web";
 import { renderMobile } from "./mobile";
 
 // The refusal copy (wireframes §0). Static — the renderers only lay it out per
 // platform. Kept here (not a magic string in the markup) so both renderers and any
-// future copy review read from one place, mirroring submit-guard's GUIDANCE const.
+// future copy review read from one place.
 const REFUSAL = {
   title: "Restricted",
   body: "You don't have access to Anonymous Reporting yet.",
@@ -33,14 +37,22 @@ const REFUSAL = {
     "Add the Anonymous Reporting licence to your FrontM profile, then reopen this app.",
 };
 
-// Standalone refusal CardsSet + Card (CARD_TYPES.HTML). readOnly — informational,
-// no action buttons (the wall is intentional; the licence is redeemed in the FrontM
-// profile, not in this app).
-export const accessRefusalCardsSet = new CardsSet("accessRefusalCardsSet", {
-  type: CARD_TYPES.HTML,
-  readOnly: true,
+// Section on reportDisplayDoc (own grid row, distinct from the 8 content sections).
+// Hidden on every screen except SCREEN.REFUSAL (display-nav showScreen toggles it).
+export const accessRefusalSection = new Section("accessRefusalSection", {
+  doc: reportDisplayDoc,
+  grid: { row: 8, column: 0 },
+  borderless: true,
+  collapsable: false,
   state,
 });
+
+export const accessRefusalCardsSet = new CardsSet("accessRefusalCardsSet", {
+  type: CARD_TYPES.HTML,
+  state,
+});
+
+accessRefusalSection.cardsSet = accessRefusalCardsSet;
 
 export const accessRefusalCard = new Card("accessRefusalCard", {
   type: CARD_TYPES.HTML,
@@ -50,12 +62,11 @@ export const accessRefusalCard = new Card("accessRefusalCard", {
   state,
 });
 
-// Render the refusal per platform and send it as a standalone response. Called by
-// the access gate (app-start.js) on DENY, then `return` — no bootstrap, no read.
-export const sendAccessRefusal = () => {
+// Build the refusal content per platform on every render (synchronous — onResponse is
+// not awaited). Static copy, so it is correct for any caller and needs no data.
+accessRefusalSection.onResponse = () => {
   accessRefusalCard.content = renderForPlatform(REFUSAL, {
     web: renderWeb,
     mobile: renderMobile,
   });
-  accessRefusalCardsSet.sendResponse();
 };

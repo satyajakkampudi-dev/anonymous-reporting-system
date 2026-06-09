@@ -19,7 +19,6 @@ import { reportDisplayDoc } from "../docs/report-display-doc";
 import { showScreen, SCREEN } from "./display-nav";
 import { CONTEXT } from "../constants";
 import { APP_ROLES, userHasRole } from "../../../lib/constants";
-import { sendAccessRefusal } from "../sections/display/access-refusal";
 
 // Side-effect imports: register every Section + Field on reportDoc and the two
 // embedded sub-collections so the Data Doc is fully populated.
@@ -39,25 +38,28 @@ import "../sections/display/status-history";
 import "../sections/display/detail-resolution";
 import "../sections/display/amendments";
 import "../sections/display/detail-actions";
+import "../sections/display/access-refusal";
 
 export const appStart = async () => {
-  // 0. Access gate (U-F0a, framework-mapping rule 31) — Context B, BEFORE any
-  //    bootstrap or read. Pure licence-role check: the reporter app requires the
-  //    FrontM `quitelineenduser` role. No registry fallback (no reporter allow-list
-  //    collection exists). On DENY: render the standalone refusal CardsSet and STOP —
-  //    no Context.CreateAndInit, no reports load, no Display-Doc render (the deny path
-  //    must not touch the autoSave buffer or the Display Doc, mirroring admin A-F1).
+  // 0. Context bootstrap FIRST (U-F0a, framework-mapping rule 31) — Context.CreateAndInit
+  //    creates the conversation tab / state.currentTabId that ANY render needs, deny or
+  //    allow. Skipping it on the deny path renders a BLANK screen (no tab to paint into).
+  //    Running it for a denied user is harmless (an empty tab; they perform no field writes).
+  await Context.CreateAndInit(CONTEXT.MAIN_APP, { state });
+
+  // 0a. Access gate — pure licence-role check: the reporter app requires the FrontM
+  //     `quitelineenduser` role (no registry fallback — no reporter allow-list collection).
+  //     On DENY: render the Restricted screen via the Display Doc (showScreen + sendResponse,
+  //     like every other screen) and STOP — BEFORE the reports load (no data for a denied user).
   D.warning({
     message: "U-F0a: reporter access gate decision",
     data: { client: state.client, roles: state.user && state.user.roles },
   });
   if (!userHasRole(state, APP_ROLES.END_USER)) {
-    sendAccessRefusal();
+    showScreen(SCREEN.REFUSAL);
+    reportDisplayDoc.sendResponse();
     return;
   }
-
-  // 1. Context bootstrap — BEFORE any loadDocument / buffer write.
-  await Context.CreateAndInit(CONTEXT.MAIN_APP, { state });
 
   // 2. Scope the My Reports list to the current reporter (own reports only).
   await reportsCollection.loadCollectionWithQuery({
