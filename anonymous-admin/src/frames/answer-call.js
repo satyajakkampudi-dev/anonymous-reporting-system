@@ -92,6 +92,24 @@ answerCall.onResolution = async () => {
   // Stable per-user On-call tab (rule 37): the Answer click carries no tabId, so a
   // `getUniqueId()` context spawned a new broken tab on the banner-clear render (step 6b).
   await Context.CreateAndInit(userTab(CONTEXT.ON_CALL, state), { state });
+
+  // 2b. Stop the web ring IMMEDIATELY on answer (before the async claim/save below). The
+  //     reference (callCentreQueueDataModel.attendCall) calls stopRing() FIRST and AGAIN
+  //     before join — one RING_STOP can be missed, and the user reported the ring kept
+  //     sounding after answering. Early + late (step 5b) RING_STOP, both on the On-call tab.
+  try {
+    adminVideoCall.sendResponse(ALL_CONSTANTS.VIDEO_CALL_ACTIONS.RING_STOP);
+    D.log({
+      message: "A-F21: early RING_STOP sent (ringStop)",
+      data: { callRef },
+    });
+  } catch (error) {
+    D.log({
+      message: "A-F21: early RING_STOP failed (non-fatal)",
+      data: { callRef, error: String(error) },
+    });
+  }
+
   await callQueueDoc.loadDocument({ callRef });
 
   const loadedRef = callQueueDoc.f[callRefField.id]?.value || "";

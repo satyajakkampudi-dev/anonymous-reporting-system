@@ -44,8 +44,8 @@ import { adminVideoCall } from "../answer-call";
 import { showScreen, SCREEN } from "../display-nav";
 import { ringVoipSelf } from "../../../../lib/calling";
 import { isWeb } from "../../../../lib/utils/platform";
-import { MSG, userTab } from "../../../../lib/constants";
-import { meetingIdField } from "../../sections/call-queue";
+import { MSG, userTab, CALL_STATUS } from "../../../../lib/constants";
+import { meetingIdField, callStatusField } from "../../sections/call-queue";
 import { CONTEXT } from "../../constants";
 
 export const incomingCallReceiver = Intent.Create({
@@ -99,6 +99,18 @@ incomingCallReceiver.onResolution = async () => {
   //      mobile → VoIP/CallKit self-push (ringVoipSelf) to wake the device.
   //    Banner (step 3) shows on both. Best-effort: a ring fault must not break delivery.
   const meetingId = callQueueDoc.f[meetingIdField.id]?.value || "";
+  const status = callQueueDoc.f[callStatusField.id]?.value || "";
+  // ONLY ring a call that is still RINGING. A late/duplicate MSG_INCOMING_CALL that lands
+  // AFTER the call was claimed (ACTIVE) or ended must NOT re-start the ring — that was the
+  // "ring keeps sounding after answer" bug (a second RING_START overrode the answer's
+  // RING_STOP). Mirrors the banner's own status gate.
+  if (status !== CALL_STATUS.RINGING) {
+    D.log({
+      message: "X3 receiver: not RINGING — skip ring",
+      data: { callRef, status },
+    });
+    return;
+  }
   try {
     if (isWeb()) {
       adminVideoCall.meetingId = meetingId; // RING_START carries the meeting context
