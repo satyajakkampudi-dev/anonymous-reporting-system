@@ -167,6 +167,15 @@ export const STATE_KEYS = {
   // openQueue invoke_intent payload; READ by the queue renderer to highlight the
   // active chip. Absent → QUEUE_FILTER.ALL (no filter applied yet).
   QUEUE_ACTIVE_FILTER: "QUEUE_ACTIVE_FILTER",
+  // Queue pagination (MP-FIX-QUEUE-PAGINATION, framework-mapping rule 36). The queue is
+  // paginated IN-MEMORY (the priority-float sort + free-text recusal don't translate to a
+  // Mongo sort/query; the full set is already loaded for dashboard stats). nav-queue slices
+  // buildQueueReports' result to LIST_PAGE_SIZE and stashes the current 0-indexed page +
+  // whether a next page exists, for the prev/next control.
+  QUEUE_PAGE: "QUEUE_PAGE",
+  QUEUE_HAS_MORE: "QUEUE_HAS_MORE",
+  // Alerts (A-F19) breach-list pagination — in-memory slice of the buildBreaches array.
+  ALERTS_PAGE: "ALERTS_PAGE",
   // Notification-failure list for the Alerts / Digest fallback banner (A-D-alerts,
   // ER-D15). A SYNCHRONOUS render stash consumed by the alerts onResponse (which is
   // not awaited and so cannot read the durable sharedField directly — same constraint,

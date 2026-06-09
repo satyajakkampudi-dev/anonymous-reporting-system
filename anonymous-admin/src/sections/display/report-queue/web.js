@@ -127,6 +127,7 @@ export const renderWeb = (data) => {
     `border:1px solid ${COLORS.BORDER};border-radius:${TYPOGRAPHY.RADIUS}px;overflow:hidden;">` +
     header +
     `<div>${body}</div>` +
+    (data.paginationHtml || "") +
     `</div>`
   );
 };

@@ -150,5 +150,5 @@ export const renderWeb = (data) => {
       ? emptyStateHtml("No reports match the selected filters.")
       : tableHtml(data);
 
-  return shell(filterBarHtml(data) + body);
+  return shell(filterBarHtml(data) + body + (data.paginationHtml || ""));
 };

@@ -40,8 +40,9 @@ import {
   extractRowData,
 } from "../../../../../lib/access";
 import { renderForPlatform } from "../../../../../lib/utils/platform";
+import { renderPaginationControls } from "../../../../../lib/utils/pagination";
 import { STATUS } from "../../../../../lib/ticket-status";
-import { SEVERITY, URGENCY } from "../../../../../lib/constants";
+import { SEVERITY, URGENCY, ROLE } from "../../../../../lib/constants";
 import { INTENT, STATE_KEYS, QUEUE_FILTER } from "../../../constants";
 import { renderWeb } from "./web";
 import { renderMobile } from "./mobile";
@@ -89,6 +90,15 @@ const QUEUE_FILTER_CHIPS = [
   { key: QUEUE_FILTER.RESOLVED, label: "Resolved" },
 ];
 
+// Role-aware chip set. ESCALATED reports are routed to the SECONDARY admin and HIDDEN
+// from the PRIMARY's queue by the A-F4 role filter (roleSees) — so the "Escalated" chip
+// is dead for the primary (always empty). Show it only to the secondary; everyone else
+// gets the rest.
+const chipsForRole = (role) =>
+  QUEUE_FILTER_CHIPS.filter(
+    (c) => c.key !== QUEUE_FILTER.ESCALATED || role === ROLE.SECONDARY_ADMIN
+  );
+
 // Derived priority flag (display_elements "Priority" → badge). Pure presentation —
 // the SORT that floats these to the top is A-F5's job; we only tag the row.
 const isPriorityReport = (r) =>
@@ -118,14 +128,24 @@ reportQueueDisplaySection.onResponse = () => {
 
   const activeFilter =
     state.getField(STATE_KEYS.QUEUE_ACTIVE_FILTER) || QUEUE_FILTER.ALL;
+  const role = state.getField(STATE_KEYS.ADMIN_ROLE) || "";
+  const page = Number(state.getField(STATE_KEYS.QUEUE_PAGE)) || 0;
+  const hasMore = !!state.getField(STATE_KEYS.QUEUE_HAS_MORE);
 
   const data = {
     reports,
-    chips: QUEUE_FILTER_CHIPS,
+    chips: chipsForRole(role),
     activeFilter,
     // Navigation contract consumed by the renderers' buttons.
     openIntent: INTENT.OPEN_MANAGE_REPORT, // per-row Open → manage/detail
     filterIntent: INTENT.OPEN_QUEUE, // chip → re-run the queue with a filter
+    // Prev/next control (rule 36) — carries the active filter so paging preserves it.
+    paginationHtml: renderPaginationControls({
+      page,
+      hasMore,
+      intentId: INTENT.OPEN_QUEUE,
+      payloadExtra: { filter: activeFilter },
+    }),
   };
 
   reportQueueDisplayPlaceholderCard.content = renderForPlatform(data, {

@@ -28,6 +28,7 @@ import {
   resolveAdminIdentity,
 } from "../../../lib/access";
 import { buildQueueReports } from "../../../lib/queue";
+import { LIST_PAGE_SIZE } from "../../../lib/constants";
 import { adminDisplayDoc } from "../docs/admin-display-doc";
 import { showScreen, SCREEN } from "./display-nav";
 import { INTENT, STATE_KEYS, QUEUE_FILTER } from "../constants";
@@ -44,7 +45,17 @@ const normaliseFilter = (raw) =>
   Object.values(QUEUE_FILTER).includes(raw) ? raw : QUEUE_FILTER.ALL;
 
 openQueue.onResolution = async () => {
-  await Context.CreateAndInit(`admin_${state.getUniqueId()}`, { state });
+  // Stay in the SAME tab when this dispatch came from an already-open tab (framework-mapping
+  // rule 37; mirrors the user app's nav-my-reports). The quick-filter chips and the pagination
+  // prev/next are invoke_intent clicks that carry the originating tabId — Context.Create
+  // re-renders IN PLACE, whereas CreateAndInit always opens a NEW tab (per-click proliferation:
+  // "Report Queue" ×N). Fall back to a new tab only on a genuine cold open (no originating tab).
+  const incomingTabId = state.messageFromUser?.tabId;
+  if (incomingTabId) {
+    await Context.Create(incomingTabId, { state });
+  } else {
+    await Context.CreateAndInit(`admin_${state.getUniqueId()}`, { state });
+  }
 
   // Active quick-filter from the chip / dashboard card click (Context-B payload is one
   // level deep under .payload — rule "Custom HTML Payloads").
@@ -69,16 +80,33 @@ openQueue.onResolution = async () => {
     filter: activeFilter,
   });
 
-  // Stash both contracts BEFORE the render (the renderer's onResponse is not awaited and
-  // cannot load — rule 11/18). Empty set → empty array → consumer empty state.
-  state.setField(STATE_KEYS.QUEUE_REPORTS, queueReports);
+  // Pagination (rule 36) — IN-MEMORY slice of the role-filtered + recused + priority-sorted
+  // list (the priority-float sort + free-text recusal can't be a Mongo sort/query, and the
+  // full set is already loaded for the dashboard, so we slice here). A filter chip emits
+  // { filter } (no page) → page 0; the prev/next control emits { page, filter }.
+  const page =
+    Number(state.messageFromUser?.payload?.page) >= 0
+      ? Number(state.messageFromUser.payload.page)
+      : 0;
+  const start = page * LIST_PAGE_SIZE;
+  const pageReports = queueReports.slice(start, start + LIST_PAGE_SIZE);
+  const hasMore = queueReports.length > start + LIST_PAGE_SIZE;
+
+  // Stash the PAGE (+ page/hasMore for the control) BEFORE the render (the renderer's
+  // onResponse is not awaited and cannot load — rule 11/18). Empty → empty state.
+  state.setField(STATE_KEYS.QUEUE_REPORTS, pageReports);
   state.setField(STATE_KEYS.QUEUE_ACTIVE_FILTER, activeFilter);
+  state.setField(STATE_KEYS.QUEUE_PAGE, page);
+  state.setField(STATE_KEYS.QUEUE_HAS_MORE, hasMore);
 
   D.log({
     message: "openQueue produced queue stash",
     data: {
       loaded: reports.length,
-      shown: queueReports.length,
+      total: queueReports.length,
+      page,
+      shown: pageReports.length,
+      hasMore,
       filter: activeFilter,
       // role token only — never an email/id (anonymity; identity used solely to recuse).
       viewingRole: viewingRole || "UNKNOWN",

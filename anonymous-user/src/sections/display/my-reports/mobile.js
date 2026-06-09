@@ -128,6 +128,8 @@ export const renderMobile = (data) => {
       : data.reports.map((r) => reportCardHtml(data, r)).join("");
 
   return shell(
-    filterBarHtml(data) + `<div style="padding:${SPACING.LG}px;">${list}</div>`
+    filterBarHtml(data) +
+      `<div style="padding:${SPACING.LG}px;">${list}</div>` +
+      (data.paginationHtml || "")
   );
 };

@@ -18,6 +18,8 @@ import {
   MY_REPORTS_STATUS_GROUP,
   MY_REPORTS_CATEGORY_ALL,
 } from "../constants";
+import { LIST_PAGE_SIZE } from "../../../lib/constants";
+import { statusesForGroup } from "../sections/display/my-reports";
 
 export const openMyReports = Intent.Create({
   intentId: INTENT.OPEN_MY_REPORTS,
@@ -45,23 +47,40 @@ openMyReports.onResolution = async () => {
   // deep under state.messageFromUser.payload (CLAUDE.md invoke_intent envelope). A
   // chip-less open (Home nav, or the post-submit continueWithIntent which drops
   // messageFromUser) carries no payload → reset to ALL/ALL so the full list shows.
+  // A filter chip emits { statusGroup, category } (no page) → reset to page 0. The prev/next
+  // pagination control emits { page, statusGroup, category } → use that page. A chip-less open
+  // (Home nav / post-submit continueWithIntent) carries no payload → ALL/ALL, page 0.
   const payload = state.messageFromUser?.payload || {};
   const statusGroup = payload.statusGroup || MY_REPORTS_STATUS_GROUP.ALL;
   const category = payload.category || MY_REPORTS_CATEGORY_ALL;
+  const page = Number(payload.page) >= 0 ? Number(payload.page) : 0;
+  state.setField(STATE_KEYS.MY_REPORTS_FILTER, { statusGroup, category, page });
+
+  // Build the SERVER-SIDE query (rule 36): reporter-scoped + status-group + category, sorted
+  // newest-first, paged via skip/limit. Over-fetch by 1 so the renderer can detect "more".
+  const query = { reporterId: state.user?.userId };
+  const statuses = statusesForGroup(statusGroup);
+  if (statuses) query.status = { $in: statuses };
+  if (category !== MY_REPORTS_CATEGORY_ALL) query.category = category;
+
   D.log({
     message: "openMyReports: start",
-    data: { statusGroup, category },
-  });
-  state.setField(STATE_KEYS.MY_REPORTS_FILTER, {
-    statusGroup,
-    category,
+    data: { statusGroup, category, page },
   });
   await reportsCollection.loadCollectionWithQuery({
-    query: { reporterId: state.user?.userId },
+    query,
+    sort: { createdOn: -1 },
+    limit: LIST_PAGE_SIZE + 1,
+    skip: page * LIST_PAGE_SIZE,
   });
   D.log({
     message: "openMyReports: reports loaded",
-    data: { statusGroup, category, count: reportsCollection.rows?.length || 0 },
+    data: {
+      statusGroup,
+      category,
+      page,
+      count: reportsCollection.rows?.length || 0,
+    },
   });
   // Two-Doc: render the My Reports list via the Display Doc.
   showScreen(SCREEN.MY_REPORTS);

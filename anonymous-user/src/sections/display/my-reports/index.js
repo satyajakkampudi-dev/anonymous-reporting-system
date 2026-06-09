@@ -38,9 +38,14 @@ import {
   MY_REPORTS_STATUS_GROUP,
   MY_REPORTS_CATEGORY_ALL,
 } from "../../../constants";
-import { CATEGORY_LABELS, URGENCY_LABELS } from "../../../../../lib/constants";
+import {
+  CATEGORY_LABELS,
+  URGENCY_LABELS,
+  LIST_PAGE_SIZE,
+} from "../../../../../lib/constants";
 import { STATUS, isTerminal } from "../../../../../lib/ticket-status";
 import { renderForPlatform } from "../../../../../lib/utils/platform";
+import { renderPaginationControls } from "../../../../../lib/utils/pagination";
 import { renderWeb } from "./web";
 import { renderMobile } from "./mobile";
 
@@ -73,7 +78,7 @@ export const myReportsListPlaceholderCard = new Card(
 // Coarse status group for the filter chips, DERIVED from the shared state machine
 // so the user app never re-encodes status semantics: terminal → Done; the two
 // not-yet-triaged statuses → Open; every other live status → In progress.
-const statusGroupOf = (status) => {
+export const statusGroupOf = (status) => {
   if (isTerminal(status)) return MY_REPORTS_STATUS_GROUP.DONE;
   if (status === STATUS.OPEN || status === STATUS.REOPENED) {
     return MY_REPORTS_STATUS_GROUP.OPEN;
@@ -82,6 +87,14 @@ const statusGroupOf = (status) => {
   if (status === STATUS.RESOLVED) return MY_REPORTS_STATUS_GROUP.RESOLVED;
   // Remaining live states (UNDER_REVIEW / ESCALATED) → In progress.
   return MY_REPORTS_STATUS_GROUP.IN_PROGRESS;
+};
+
+// INVERSE of statusGroupOf — the STATUS tokens in a chip group, for the server-side
+// query (`status: { $in: statusesForGroup(group) }`). Derived from statusGroupOf so the
+// query and the chip semantics can never drift. Returns null for ALL (no status filter).
+export const statusesForGroup = (group) => {
+  if (!group || group === MY_REPORTS_STATUS_GROUP.ALL) return null;
+  return Object.values(STATUS).filter((s) => statusGroupOf(s) === group);
 };
 
 // Status-group chips, in wireframe order: All · Open · In progress · Resolved · Done.
@@ -125,15 +138,20 @@ const buildCategoryChips = (activeGroup, activeCategory) => {
   return chips;
 };
 
-// Build the card content on every render (reporter-scoped, empty-safe).
+// Build the card content on every render (reporter-scoped, empty-safe). The status/
+// category filtering + ordering + paging are done SERVER-SIDE by the openMyReports loader
+// (nav-my-reports.js) — `reportsCollection.rows` here is already the filtered, newest-first
+// page (over-fetched by 1 to detect "more"). This handler maps the page, slices the
+// over-fetch, and appends the prev/next control (framework-mapping rule 36).
 myReportsListSection.onResponse = () => {
   const activeFilter = state.getField(STATE_KEYS.MY_REPORTS_FILTER) || {};
   const activeGroup = activeFilter.statusGroup || MY_REPORTS_STATUS_GROUP.ALL;
   const activeCategory = activeFilter.category || MY_REPORTS_CATEGORY_ALL;
+  const page = Number(activeFilter.page) >= 0 ? Number(activeFilter.page) : 0;
 
   // reportsCollection.rows are Doc objects (collection guide § "What is
   // collection.rows") — read each field via row.f[field.id].value.
-  const allReports = (reportsCollection.rows || []).map((row) => {
+  const loaded = (reportsCollection.rows || []).map((row) => {
     const statusToken = row.f[statusField.id]?.value || "";
     const categoryToken = row.f[categoryField.id]?.value || "";
     const urgencyToken = row.f[urgencyField.id]?.value || "";
@@ -148,18 +166,24 @@ myReportsListSection.onResponse = () => {
     };
   });
 
-  // Newest first — the reporter's most recent report is the one they came back for.
-  allReports.sort(
+  // Defensive newest-first (the query already sorts); then split the over-fetch row off
+  // to learn whether a next page exists.
+  loaded.sort(
     (a, b) => (Number(b.createdOn) || 0) - (Number(a.createdOn) || 0)
   );
+  const hasMore = loaded.length > LIST_PAGE_SIZE;
+  const pageRows = loaded.slice(0, LIST_PAGE_SIZE);
 
-  const matched = allReports.filter(
-    (r) =>
-      (activeGroup === MY_REPORTS_STATUS_GROUP.ALL ||
-        r.group === activeGroup) &&
-      (activeCategory === MY_REPORTS_CATEGORY_ALL ||
-        r.categoryToken === activeCategory)
-  );
+  const isFiltered =
+    activeGroup !== MY_REPORTS_STATUS_GROUP.ALL ||
+    activeCategory !== MY_REPORTS_CATEGORY_ALL;
+
+  const paginationHtml = renderPaginationControls({
+    page,
+    hasMore,
+    intentId: INTENT.OPEN_MY_REPORTS,
+    payloadExtra: { statusGroup: activeGroup, category: activeCategory },
+  });
 
   const data = {
     intents: {
@@ -167,13 +191,15 @@ myReportsListSection.onResponse = () => {
       filter: INTENT.OPEN_MY_REPORTS,
       submit: INTENT.OPEN_SUBMIT_REPORT,
     },
-    reports: matched,
-    hasAnyReports: allReports.length > 0,
-    isFiltered:
-      activeGroup !== MY_REPORTS_STATUS_GROUP.ALL ||
-      activeCategory !== MY_REPORTS_CATEGORY_ALL,
+    reports: pageRows,
+    // "Any reports at all" can't be derived from a single paged/filtered query without a
+    // second count; treat a filtered or non-first page as "has reports" so an empty result
+    // shows the "no match" body rather than the first-time empty state.
+    hasAnyReports: pageRows.length > 0 || isFiltered || page > 0,
+    isFiltered,
     statusChips: buildStatusChips(activeGroup, activeCategory),
     categoryChips: buildCategoryChips(activeGroup, activeCategory),
+    paginationHtml,
   };
 
   myReportsListPlaceholderCard.content = renderForPlatform(data, {

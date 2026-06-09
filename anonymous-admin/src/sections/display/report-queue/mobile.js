@@ -121,6 +121,7 @@ export const renderMobile = (data) => {
     `border:1px solid ${COLORS.BORDER};border-radius:${TYPOGRAPHY.RADIUS}px;overflow:hidden;">` +
     header +
     `<div style="padding:${SPACING.MD}px;">${body}</div>` +
+    (data.paginationHtml || "") +
     `</div>`
   );
 };

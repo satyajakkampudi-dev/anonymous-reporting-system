@@ -91,6 +91,7 @@ export const renderMobile = (data) => {
     `color:${COLORS.TEXT};">Alerts</div>` +
     `</div>` +
     `<div style="padding:${SPACING.MD}px;">${body}</div>` +
+    (data.paginationHtml || "") +
     `</div>`
   );
 };

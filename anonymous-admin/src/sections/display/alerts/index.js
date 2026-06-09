@@ -61,7 +61,9 @@ import {
   extractRowData,
 } from "../../../../../lib/access";
 import { renderForPlatform } from "../../../../../lib/utils/platform";
+import { renderPaginationControls } from "../../../../../lib/utils/pagination";
 import { buildBreaches } from "../../../../../lib/sla";
+import { LIST_PAGE_SIZE } from "../../../../../lib/constants";
 import { INTENT, STATE_KEYS } from "../../../constants";
 import { renderWeb } from "./web";
 import { renderMobile } from "./mobile";
@@ -125,15 +127,30 @@ const readNotificationFailures = () => {
 // Build the card content on every render (screen-level → always renders; empty-safe).
 alertsDigestDisplaySection.onResponse = () => {
   const reports = readReports();
-  const breaches = buildBreaches(reports);
+  const allBreaches = buildBreaches(reports);
   const failures = readNotificationFailures();
+
+  // In-memory pagination (rule 36) — slice the computed breach list; the failure-banner
+  // count stays over the FULL set (not the page). Page-change re-renders the dashboard via
+  // OPEN_DASHBOARD (the alerts panel lives on the Dashboard screen).
+  const page = Number(state.getField(STATE_KEYS.ALERTS_PAGE)) || 0;
+  const start = page * LIST_PAGE_SIZE;
+  const breaches = allBreaches.slice(start, start + LIST_PAGE_SIZE);
+  const hasMore = allBreaches.length > start + LIST_PAGE_SIZE;
 
   const data = {
     breaches,
     // Banner: count of reports that could not be notified (ER-D15). 0 → no banner.
+    // Counts the FULL failure set, not the current page.
     notificationFailureCount: failures.length,
     // Per-row navigation contract consumed by the renderers' Open buttons.
     openIntent: INTENT.OPEN_MANAGE_REPORT,
+    paginationHtml: renderPaginationControls({
+      page,
+      hasMore,
+      intentId: INTENT.OPEN_DASHBOARD,
+      payloadExtra: {},
+    }),
   };
 
   alertsDigestDisplayPlaceholderCard.content = renderForPlatform(data, {

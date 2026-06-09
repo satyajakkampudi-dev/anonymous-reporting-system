@@ -48,7 +48,12 @@ import { appendStatusHistoryRow } from "./status-history-writer";
 import { saveDocWithSubCollections } from "../../../lib/persist";
 import { dispatchAdminNotify } from "./admin-notify";
 import { resolveAdminRole } from "../../../lib/access";
-import { canTransition, STATUS } from "../../../lib/ticket-status";
+import {
+  canTransition,
+  isActionAllowed,
+  ACTION,
+  STATUS,
+} from "../../../lib/ticket-status";
 import { sanitiseText } from "../../../lib/validation";
 import { ERROR_CODES, MSG, STATIC_DATA_KEYS } from "../../../lib/constants";
 import {
@@ -168,6 +173,26 @@ noteCaptureDoc.onSubmit = async (self) => {
     D.log({
       message: "A-F10/F11: note transition rejected — illegal/stale transition",
       data: { reportId, current, to: target, role },
+    });
+    return;
+  }
+
+  // 8a. ROLE gate (defence-in-depth). canTransition's ESCALATE/CLOSE_REJECTED transitions
+  //     use the generic ADMIN actor, so it does NOT distinguish primary vs secondary — the
+  //     role split lives in allowedActionsByRole. Enforce it server-side so a hidden button
+  //     (e.g. the secondary has no Escalate — MP-FIX-SECONDARY-NO-ESCALATE) cannot be
+  //     bypassed by a crafted/stale invoke. Map the target status to its action token.
+  const ACTION_FOR_TARGET = {
+    [STATUS.ESCALATED]: ACTION.ESCALATE,
+    [STATUS.CLOSED_REJECTED]: ACTION.CLOSE_REJECTED,
+  };
+  const requiredAction = ACTION_FOR_TARGET[target];
+  if (requiredAction && !isActionAllowed(current, role, requiredAction)) {
+    state.addErrorToStack(ERROR_CODES.ILLEGAL_TRANSITION, ILLEGAL_MSG);
+    D.log({
+      message:
+        "A-F10/F11: note transition rejected — action not allowed for role",
+      data: { reportId, current, to: target, role, requiredAction },
     });
     return;
   }

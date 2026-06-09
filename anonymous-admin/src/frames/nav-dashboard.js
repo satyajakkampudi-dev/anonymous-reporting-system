@@ -21,7 +21,27 @@ export const openDashboard = Intent.Create({
 });
 
 openDashboard.onResolution = async () => {
-  await Context.CreateAndInit(`admin_${state.getUniqueId()}`, { state });
+  // Stay in the SAME tab when this dispatch came from an already-open tab (framework-mapping
+  // rule 37; mirrors the user app's nav-my-reports). The Alerts pagination prev/next re-opens
+  // the dashboard via an invoke_intent click that carries the originating tabId — Context.Create
+  // re-renders IN PLACE, whereas CreateAndInit always opens a NEW tab (per-click proliferation).
+  // Fall back to a new tab only on a genuine cold open (no originating tab).
+  const incomingTabId = state.messageFromUser?.tabId;
+  if (incomingTabId) {
+    await Context.Create(incomingTabId, { state });
+  } else {
+    await Context.CreateAndInit(`admin_${state.getUniqueId()}`, { state });
+  }
+
+  // Alerts breach-list page (rule 36). The alerts prev/next control re-opens the dashboard
+  // carrying { page }; a plain dashboard open carries none → page 0. Read by the alerts
+  // onResponse to slice its breach list in-memory.
+  const alertsPage =
+    Number(state.messageFromUser?.payload?.page) >= 0
+      ? Number(state.messageFromUser.payload.page)
+      : 0;
+  state.setField(STATE_KEYS.ALERTS_PAGE, alertsPage);
+
   const reports = await loadReportsForAdmin({});
 
   // A-F2: aggregate + small-cell suppress over the SAME gateway set and stash, so the

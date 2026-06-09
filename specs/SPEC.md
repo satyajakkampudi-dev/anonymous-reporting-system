@@ -96,7 +96,7 @@ Defined in `lib/ticket-status.js` as `{ [status]: { transitions: [{ to, actor, a
 | From | To | Actor | Trigger |
 |------|----|-------|---------|
 | OPEN | UNDER_REVIEW | admin | take review |
-| OPEN | ESCALATED | system | auto-escalate (unactioned) |
+| OPEN | ESCALATED | admin (primary) / system | escalate / auto-escalate (unactioned) |
 | UNDER_REVIEW | RESOLVED | admin | post resolution |
 | UNDER_REVIEW | ESCALATED | admin/system | escalate / auto-escalate |
 | ESCALATED | UNDER_REVIEW | secondary admin | take review |
@@ -112,6 +112,12 @@ Defined in `lib/ticket-status.js` as `{ [status]: { transitions: [{ to, actor, a
 
 **Terminal:** `CLOSED_BY_USER, CLOSED_BY_SYSTEM, CLOSED_REJECTED, WITHDRAWN`.
 Status `meta`: `{ label, tone, allowedActionsByRole }` for consistent rendering/gating in both apps.
+
+**Escalate is PRIMARY-only (MP-FIX-SECONDARY-NO-ESCALATE).** The "admin" actor on the
+OPEN/UNDER_REVIEW/REOPENED → ESCALATED transitions means the **PRIMARY** admin. The SECONDARY admin is
+the **top of the escalation chain** (escalation always routes PRIMARY → SECONDARY; no higher tier), so
+`ACTION.ESCALATE` is absent from `SECONDARY_ADMIN` in every status' `allowedActionsByRole` — the secondary
+resolves/closes rather than escalates.
 
 **Concurrency (ER-B5):** every transition re-reads the report and checks the move is legal from the
 **current** `status` and that `version` matches the read; on mismatch the write is rejected (stale).
