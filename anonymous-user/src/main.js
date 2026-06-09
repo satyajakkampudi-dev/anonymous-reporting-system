@@ -62,6 +62,10 @@ import "./frames/call-timeout";
 // (RINGING->ABANDONED, ACTIVE->ENDED; ER-C12). Registers the callEnd intent; needs the
 // call-queue section Field exports above.
 import "./frames/call-end";
+// Meeting-lifecycle receivers (endMeeting / leaveUser) — the reporter app OWNS the Daily
+// meeting, so the Loft backend fires these on THIS bot; they end the call + notify the
+// answering admin to go available (MSG_CALL_ENDED). See the frame header.
+import "./frames/contracts/call-lifecycle";
 
 // --- Cross-app receivers (side-effect: register the inbound bot-to-bot intents).
 //     Admin -> user contracts; each loads the report by id and notifies ONLY the

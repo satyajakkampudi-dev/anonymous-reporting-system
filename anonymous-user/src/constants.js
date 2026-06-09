@@ -71,7 +71,30 @@ export const STATE_KEYS = {
   // module-level mutables that reset on a Lambda cold start (Context B). Read by
   // restoreEvidenceSlotVisibility / revealNextEvidenceSlot in frames/evidence-slots.
   EVIDENCE_SLOTS_VISIBLE: "EVIDENCE_SLOTS_VISIBLE",
+  // Debounce stamp (epoch ms) for the "Call compliance" CTA. startAnonymousCall
+  // (U-F15) writes Date.now() here on entry; a repeat within CALL_DEBOUNCE_MS is
+  // suppressed so a double-click / framework re-dispatch during the ~2s createMeeting
+  // window cannot spin up multiple Daily meetings + rings (one click = one call).
+  CALL_DEBOUNCE_AT: "CALL_DEBOUNCE_AT",
+  // Reporter Call-CTA lifecycle state (one of CALL_UI.*). Drives the Home button label:
+  //   CONNECTING — click → meeting created, ringing admins (U-F15)
+  //   CONNECTED  — an admin joined (joinMeeting lifecycle on the owner bot)
+  //   IDLE       — call ended / left, or never started (call-lifecycle endMeeting/leaveUser)
+  // Each transition re-renders Home in place so the button reflects the live call state.
+  CALL_UI_STATE: "CALL_UI_STATE",
 };
+
+// Reporter Call-CTA lifecycle states (see STATE_KEYS.CALL_UI_STATE).
+export const CALL_UI = {
+  IDLE: "idle",
+  CONNECTING: "connecting",
+  CONNECTED: "connected",
+};
+
+// Debounce window for the "Call compliance" CTA (see STATE_KEYS.CALL_DEBOUNCE_AT).
+// 10s comfortably covers an accidental double-click and the meeting-setup window,
+// while still letting a genuine retry through shortly after.
+export const CALL_DEBOUNCE_MS = 10 * 1000;
 
 // My Reports list — coarse status-group filter chips (wireframe §3:
 // [All][Open][In progress][Done]). Group membership is DERIVED from the shared

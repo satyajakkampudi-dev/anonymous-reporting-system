@@ -35,6 +35,14 @@
 // dismiss the overlay against whatever screen is current, and because incoming-call is
 // never hidden the banner renders (or clears) correctly on any screen.
 //
+// UPDATE (MP-FIX-CALL-RING-TAB): the X3/X7/answer/dismiss frames now attach to the
+// STABLE per-user On-call tab (`userTab(CONTEXT.ON_CALL, state)`) AND call
+// `showScreen(SCREEN.ON_CALL)` before `sendResponse`. The earlier "render against
+// whatever screen is current, no showScreen" approach broke once tabs were no longer
+// unique-per-invocation: a `getUniqueId()` context opened a NEW empty tab whose sections
+// all defaulted to visible → stacked, broken UI. Routing the ring to the On-call screen
+// gives a clean, consistent surface (On-call card + ring overlay).
+//
 // DEPENDENCY DIRECTION (no cycle — AGENTS.md tree): this frame IMPORTS the display
 // Sections; the display Sections NEVER import this frame.
 

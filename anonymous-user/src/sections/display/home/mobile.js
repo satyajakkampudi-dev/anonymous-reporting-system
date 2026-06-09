@@ -51,7 +51,7 @@ export const renderMobile = (data) => {
     `</p>` +
     ctaButton(intents.submit, "✚  Submit a report", "primary") +
     ctaButton(intents.myReports, "📋  My Reports", "neutral") +
-    ctaButton(intents.call, "📞  Call compliance (anonymous)", "voice") +
+    ctaButton(intents.call, data.callLabel, data.callTone) +
     `</div>` +
     `</div>`
   );

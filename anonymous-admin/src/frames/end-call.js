@@ -38,9 +38,11 @@
 
 import { D, state } from "@frontmltd/frontmjs/core/State";
 import { Context } from "@frontmltd/frontmjs/core/Context";
+import { ALL_CONSTANTS } from "@frontmltd/frontmjs/core/ALLConstants";
 import { Intent } from "@frontmltd/frontmjs/core/Intent";
 import { callQueueDoc } from "../docs/call-queue-doc";
 import { adminDisplayDoc } from "../docs/admin-display-doc";
+import { adminVideoCall } from "./answer-call";
 import {
   callRefField,
   callStatusField,
@@ -49,8 +51,9 @@ import {
   durationMsField,
 } from "../sections/call-queue";
 import { setOwnAvailability } from "./availability-writer";
-import { CALL_STATUS, AVAILABILITY } from "../../../lib/constants";
-import { INTENT, STATE_KEYS } from "../constants";
+import { CALL_STATUS, AVAILABILITY, userTab } from "../../../lib/constants";
+import { showScreen, SCREEN } from "./display-nav";
+import { INTENT, STATE_KEYS, CONTEXT } from "../constants";
 
 // Shared guarded ACTIVE -> ENDED transition. Returns { ended: boolean } so a caller can
 // branch its user-facing copy. `attached` indicates the caller has already Context.Create'd
@@ -197,11 +200,93 @@ dismissCall.onResolution = async () => {
   // Record the local dismissal, then re-render so the banner re-gates and clears on THIS
   // screen. Context attach (preserve the buffer — rule 22) is needed for the render.
   state.setField(STATE_KEYS.DISMISSED_CALL_REF, callRef);
-  await Context.CreateAndInit(`admin_${state.getUniqueId()}`, { state });
+  // Stable per-user On-call tab + On-call screen (rule 37): re-render THIS admin's
+  // On-call tab so the banner re-gates and clears — not a new broken tab.
+  await Context.CreateAndInit(userTab(CONTEXT.ON_CALL, state), { state });
+  showScreen(SCREEN.ON_CALL);
   adminDisplayDoc.sendResponse();
+  // Silence this admin's own audible web ring (started by the X3 receiver via RING_START).
+  // RING_STOP = "ringStop"; no "RING_STOP_ACTION" key exists in VIDEO_CALL_ACTIONS.
+  try {
+    adminVideoCall.sendResponse(ALL_CONSTANTS.VIDEO_CALL_ACTIONS.RING_STOP);
+  } catch (error) {
+    D.log({
+      message: "A-F22: RING_STOP (dismiss) failed (non-fatal)",
+      data: { callRef, error: String(error) },
+    });
+  }
   D.log({
     message:
       "A-F22: dismissed locally + admin display re-rendered (banner cleared)",
     data: { callRef },
   });
+};
+
+// --- 4. Call ENDED / admin left the meeting → free the admin's presence ---
+// SHARED chokepoint. Given a meetingId: end the call (guarded ACTIVE->ENDED) AND
+// UNCONDITIONALLY free THIS admin (busy -> available) — they are no longer on a call.
+// endActiveCall alone only frees when it found an ACTIVE row, so the unconditional
+// setOwnAvailability guarantees BUSY never sticks. Idempotent / safe to call repeatedly.
+const freeAdminOnMeetingEnd = async (meetingId, source) => {
+  D.log({
+    message: "A-F22: meeting-end → freeing admin",
+    data: { meetingId, source, userId: state.user?.userId },
+  });
+  await Context.CreateAndInit(`admin_${state.getUniqueId()}`, { state });
+  if (meetingId) {
+    try {
+      await callQueueDoc.loadDocument({ meetingId });
+      const callRef = callQueueDoc.f[callRefField.id]?.value || "";
+      if (callRef) await endActiveCall(callRef, { attached: true });
+    } catch (error) {
+      D.log({
+        message: "A-F22: end-by-meetingId failed (non-fatal)",
+        data: { meetingId, source, error: String(error) },
+      });
+    }
+  }
+  const free = await setOwnAvailability(AVAILABILITY.AVAILABLE, {
+    attach: false,
+  });
+  D.log({
+    message: "A-F22: availability set AVAILABLE on meeting end",
+    data: { meetingId, source, ok: free?.ok },
+  });
+};
+
+// RELIABLE end signal: the Loft/Daily BACKEND fires these framework-convention intents on
+// the participant's bot when the meeting ends / they leave — the SAME mechanism SeaMedix
+// uses (endMeeting / leaveUser → medicalMeetingEnded). This is what actually frees the
+// admin who answered; videoCall.onCallEnd (below) is kept as a belt-and-suspenders client
+// signal but did NOT fire on web in testing (admin stayed BUSY). Payload carries meetingId.
+export const meetingEndedReceiver = Intent.Create({
+  intentId: INTENT.MEETING_ENDED, // "endMeeting"
+  prompt: "The anonymous call meeting ended",
+  state,
+});
+meetingEndedReceiver.onResolution = async () => {
+  await freeAdminOnMeetingEnd(
+    state.messageFromUser?.meetingId || "",
+    "endMeeting"
+  );
+};
+
+export const userLeftReceiver = Intent.Create({
+  intentId: INTENT.USER_LEFT, // "leaveUser"
+  prompt: "A participant left the anonymous call",
+  state,
+});
+userLeftReceiver.onResolution = async () => {
+  await freeAdminOnMeetingEnd(
+    state.messageFromUser?.meetingId || "",
+    "leaveUser"
+  );
+};
+
+// Belt-and-suspenders client signal (kept; may fire on some clients/mobile).
+adminVideoCall.onCallEnd = async () => {
+  await freeAdminOnMeetingEnd(
+    state.messageFromUser?.meetingId || adminVideoCall.meetingId || "",
+    "onCallEnd"
+  );
 };

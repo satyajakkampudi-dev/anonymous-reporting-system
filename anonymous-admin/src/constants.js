@@ -56,6 +56,13 @@ export const INTENT = {
   // guarded no-op (rule 13). Separate id from endCall so the timeout can never be
   // mistaken for a user-initiated hang-up in logs/audit.
   CALL_INACTIVITY: "callInactivity",
+  // Meeting-lifecycle intents the Loft/Daily BACKEND fires (framework conventions, the
+  // SAME names SeaMedix registers) when the live meeting ends / a participant leaves.
+  // These — NOT videoCall.onCallEnd — are the reliable "the admin left the call" signal;
+  // their handlers (frames/end-call.js) free the admin's presence (busy -> available) and
+  // end the call. Values are fixed by the platform: "endMeeting" / "leaveUser".
+  MEETING_ENDED: "endMeeting",
+  USER_LEFT: "leaveUser",
   // System-scheduled auto-close. resolveReport (A-E-resolveReport) arms a
   // jobScheduler message for resolvedOn + AUTO_CLOSE_DELAY_MS (D2) carrying
   // payload { reportId } ONLY (no identity). The handler that registers this id

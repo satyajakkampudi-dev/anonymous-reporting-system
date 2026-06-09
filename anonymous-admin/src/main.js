@@ -93,6 +93,9 @@ import "./frames/contracts/new-report";
 import "./frames/contracts/report-reopened";
 import "./frames/contracts/incoming-call";
 import "./frames/contracts/call-stop-ring";
+// MSG_CALL_ENDED receiver: the reporter app (meeting owner) sends this after the Loft
+// backend's endMeeting/leaveUser fires there; frees the answering admin's presence.
+import "./frames/contracts/call-ended";
 // MSG_ADMIN_NOTIFY receiver (rule 32): escalate / auto-escalate / manual-log dispatch
 // to the assignees' userIds; this runs in each recipient's session → push-to-self.
 import "./frames/contracts/admin-notify-receiver";

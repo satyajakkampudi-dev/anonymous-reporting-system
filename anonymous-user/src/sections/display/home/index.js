@@ -17,7 +17,7 @@ import { CARD_TYPES } from "@frontmltd/frontmjs/core/ALLConstants";
 import { state } from "@frontmltd/frontmjs/core/State";
 import { reportDisplayDoc } from "../../../docs/report-display-doc";
 import { renderForPlatform } from "../../../../../lib/utils/platform";
-import { INTENT } from "../../../constants";
+import { INTENT, STATE_KEYS, CALL_UI } from "../../../constants";
 import { renderWeb } from "./web";
 import { renderMobile } from "./mobile";
 
@@ -51,12 +51,27 @@ export const homeLandingPlaceholderCard = new Card(
 // constants — index.js owns the navigation contract and passes the intent ids
 // in. The string values are the public data-intent-id contract (constants.js).
 homeLandingSection.onResponse = () => {
+  // Call-CTA lifecycle label (Call compliance → Connecting → Connected → Call compliance).
+  // Driven by STATE_KEYS.CALL_UI_STATE, which the call frames set + re-render Home at each
+  // transition (U-F15 connecting; joinMeeting connected; endMeeting/leaveUser idle). Safe
+  // to revert now that the call-end signal exists, so it never sticks.
+  const callUiState = state.getField(STATE_KEYS.CALL_UI_STATE) || CALL_UI.IDLE;
+  // index.js owns the constants; renderers just consume callLabel/callTone.
+  const callLabel =
+    callUiState === CALL_UI.CONNECTING
+      ? "📞  Connecting…"
+      : callUiState === CALL_UI.CONNECTED
+        ? "📞  Connected"
+        : "📞  Call compliance (anonymous)";
+  const callTone = callUiState === CALL_UI.CONNECTING ? "neutral" : "voice";
   const data = {
     intents: {
       submit: INTENT.OPEN_SUBMIT_REPORT,
       myReports: INTENT.OPEN_MY_REPORTS,
       call: INTENT.START_ANONYMOUS_CALL,
     },
+    callLabel,
+    callTone,
   };
 
   homeLandingPlaceholderCard.content = renderForPlatform(data, {

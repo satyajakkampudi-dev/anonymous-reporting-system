@@ -53,7 +53,7 @@ export const renderWeb = (data) => {
     `<div style="display:flex;gap:${SPACING.LG}px;flex-wrap:wrap;">` +
     ctaButton(intents.submit, "✚  Submit a report", "primary") +
     ctaButton(intents.myReports, "📋  My Reports", "neutral") +
-    ctaButton(intents.call, "📞  Call compliance (anonymous)", "voice") +
+    ctaButton(intents.call, data.callLabel, data.callTone) +
     `</div>` +
     `</div>` +
     `</div>`

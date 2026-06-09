@@ -27,6 +27,8 @@ import { ALL_CONSTANTS } from "@frontmltd/frontmjs/core/ALLConstants";
 import { Intent } from "@frontmltd/frontmjs/core/Intent";
 import { D, state } from "@frontmltd/frontmjs/core/State";
 import { callQueueDoc } from "../docs/call-queue-doc";
+import { reportDisplayDoc } from "../docs/report-display-doc";
+import { showScreen, SCREEN } from "./display-nav";
 import {
   callRefField,
   callStatusField,
@@ -38,6 +40,7 @@ import {
   generateCallRef,
   resolveAvailableAdmins,
   ringAvailableAdmins,
+  getMeetingLoftHost,
 } from "../../../lib/calling";
 import { resolvePeerBotId } from "../../../lib/notifications";
 import { isDuplicateKeyError } from "../../../lib/id-generator";
@@ -46,8 +49,17 @@ import {
   ERROR_CODES,
   TIMING,
   STATIC_DATA_KEYS,
+  userTab,
 } from "../../../lib/constants";
-import { INTENT, VIDEO_CALL, VOICEMAIL } from "../constants";
+import {
+  INTENT,
+  VIDEO_CALL,
+  VOICEMAIL,
+  STATE_KEYS,
+  CALL_DEBOUNCE_MS,
+  CONTEXT,
+  CALL_UI,
+} from "../constants";
 
 // VideoCall instance — MUST be exported so the framework can route JOIN_MEETING and
 // the call-lifecycle responses (docs: "the VideoCall instance must be exported").
@@ -75,9 +87,65 @@ startAnonymousCall.onResolution = async () => {
     },
   });
 
-  // 1. Attach to the existing context (preserve the autoSaveBuffer — rule 22).
-  await Context.CreateAndInit(`user_${state.getUniqueId()}`, { state });
+  // 0. DEBOUNCE GUARD (one click = one call). The CTA can fire more than once for a
+  //    single tap (accidental double-click, or a re-dispatch while the ~2s createMeeting
+  //    runs); without a guard each fire mints a NEW Daily meeting + ring fan-out. Suppress
+  //    a repeat within CALL_DEBOUNCE_MS using a conversation-state timestamp. Set BEFORE any
+  //    meeting work so a suppressed repeat does nothing. (Best-effort against truly
+  //    simultaneous Lambdas — Redis write latency — but it catches the observed case.)
+  const nowTs = Date.now();
+  const lastCallAt = Number(state.getField(STATE_KEYS.CALL_DEBOUNCE_AT) || 0);
+  if (lastCallAt && nowTs - lastCallAt < CALL_DEBOUNCE_MS) {
+    D.log({
+      message: "U-F15: duplicate Call-compliance click suppressed (debounce)",
+      data: { sinceMs: nowTs - lastCallAt },
+    });
+    return;
+  }
+  state.setField(STATE_KEYS.CALL_DEBOUNCE_AT, nowTs);
+
+  // 1. Run on the reporter's HOME tab (userTab(CONTEXT.MAIN_APP) — the SAME stable id
+  //    app-start uses) so the CONNECTING re-render below lands IN PLACE (no new tab). The
+  //    whole call flow runs on this tab.
+  await Context.CreateAndInit(userTab(CONTEXT.MAIN_APP, state), { state });
   D.log({ message: "U-F15: context ready" });
+
+  // 1b. Lifecycle feedback: flip the Home Call CTA to "Connecting…" immediately. It now
+  //     reverts reliably — joinMeeting → "Connected", endMeeting/leaveUser → "Call
+  //     compliance" (contracts/call-lifecycle.js). Best-effort; never blocks the call.
+  state.setField(STATE_KEYS.CALL_UI_STATE, CALL_UI.CONNECTING);
+  try {
+    showScreen(SCREEN.HOME);
+    reportDisplayDoc.sendResponse();
+  } catch (error) {
+    D.log({
+      message: "U-F15: Home 'Connecting…' re-render failed (non-fatal)",
+      data: { error: String(error) },
+    });
+  }
+
+  // 1b. Resolve the currently-available admins ONCE, up-front. Their emails are passed as
+  //     meeting `participants` (step 2) so the Loft/Daily backend TRACKS them and fires the
+  //     endMeeting/leaveUser lifecycle intents that free an admin's presence on hang-up
+  //     (SeaMedix pattern — without participants the admin stays BUSY). The SAME list is
+  //     reused for the ring fan-out (step 4) — no second query. Identity-free of the
+  //     reporter (admins only; the reporter stays a masked guest). Best-effort.
+  let availableAdmins = [];
+  try {
+    availableAdmins = await resolveAvailableAdmins();
+  } catch (error) {
+    D.log({
+      message: "U-F15: resolveAvailableAdmins failed (continuing)",
+      data: { error: String(error) },
+    });
+  }
+  const adminEmails = (availableAdmins || [])
+    .map((a) => a.adminEmail)
+    .filter(Boolean);
+  D.log({
+    message: "U-F15: available admins resolved",
+    data: { count: availableAdmins.length, withEmail: adminEmails.length },
+  });
 
   // 2. Create the masked voice-only meeting + mint the masked guest token. On a
   //    non-200 from the video-call capability, createMeeting pushes a system error
@@ -85,7 +153,10 @@ startAnonymousCall.onResolution = async () => {
   let call;
   D.log({ message: "U-F15: → initiateAnonymousCall" });
   try {
-    call = await initiateAnonymousCall({ videoCall: anonymousVideoCall });
+    call = await initiateAnonymousCall({
+      videoCall: anonymousVideoCall,
+      participantEmails: adminEmails,
+    });
   } catch (error) {
     D.log({
       message: "U-F15: initiateAnonymousCall failed",
@@ -224,15 +295,12 @@ startAnonymousCall.onResolution = async () => {
   //    timeout (step 3b) is the backstop. No available admins → ringAvailableAdmins
   //    logs and rings no one; the timeout still offers voicemail.
   try {
-    const admins = await resolveAvailableAdmins();
-    D.log({
-      message: "U-F15: admins resolved",
-      data: { callRef, count: (admins || []).length },
-    });
+    // Reuse the admins resolved up-front (step 1b) — same "who is on call now" set.
+    const admins = availableAdmins;
     const toBotId = await resolvePeerBotId(STATIC_DATA_KEYS.ADMIN_BOT_ID);
     D.log({
       message: "U-F15: admin botId resolved",
-      data: { callRef, toBotId },
+      data: { callRef, toBotId, adminCount: (admins || []).length },
     });
     await ringAvailableAdmins({
       callRef,
@@ -256,7 +324,25 @@ startAnonymousCall.onResolution = async () => {
   // 5. Place the reporter into the meeting as the masked guest (voice-only, camera
   //    off via the meeting's startVideoOff). Uses the masked-guest token minted in
   //    step 2 — the reporter never appears under their real name.
-  D.log({ message: "U-F15: → JOIN_MEETING", data: { callRef, meetingId } });
+  //
+  // serverUrl before JOIN (SeaMedix openMeeting pattern). serverUrl is the bare FrontM
+  // "Loft" player HOST (e.g. dailydev.frontm.ai) — the web client opens the call at
+  // https://<lofthost>/<roomId>. Feeding the full Daily room URL here was WRONG: the client
+  // built a broken "https://https//frontm.daily.co/room/room" (double protocol + dup room).
+  anonymousVideoCall.serverUrl = await getMeetingLoftHost();
+  D.log({
+    message: "U-F15: → JOIN_MEETING",
+    data: {
+      callRef,
+      meetingId,
+      // The instance fields the framework actually uses to open the meeting. If
+      // hasToken is false the client has nothing to join with → screen stays put.
+      hasToken: !!anonymousVideoCall.meetingToken,
+      domain: anonymousVideoCall.domain,
+      serverUrl: anonymousVideoCall.serverUrl,
+      instanceMeetingId: anonymousVideoCall.meetingId,
+    },
+  });
   try {
     anonymousVideoCall.sendResponse(
       ALL_CONSTANTS.VIDEO_CALL_ACTIONS.JOIN_MEETING

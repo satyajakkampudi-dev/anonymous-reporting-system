@@ -44,9 +44,19 @@ import {
   answeredOnField,
 } from "../sections/call-queue";
 import { setOwnAvailability } from "./availability-writer";
-import { resolveAvailableAdmins, sendCallStopRing } from "../../../lib/calling";
-import { CALL_STATUS, AVAILABILITY, TIMING } from "../../../lib/constants";
-import { INTENT, CALL } from "../constants";
+import {
+  resolveAvailableAdmins,
+  sendCallStopRing,
+  getMeetingLoftHost,
+} from "../../../lib/calling";
+import {
+  CALL_STATUS,
+  AVAILABILITY,
+  TIMING,
+  userTab,
+} from "../../../lib/constants";
+import { showScreen, SCREEN } from "./display-nav";
+import { INTENT, CALL, CONTEXT } from "../constants";
 
 // VideoCall instance — MUST be exported so the framework can route JOIN_MEETING (docs:
 // "the VideoCall instance must be exported to be accessible by the framework"; video-call
@@ -79,7 +89,9 @@ answerCall.onResolution = async () => {
 
   // 2. Attach to the existing context (Redis buffer, no MongoDB-clobbering reload —
   //    rule 22) and re-read THIS call-queue row fresh by callRef.
-  await Context.CreateAndInit(`admin_${state.getUniqueId()}`, { state });
+  // Stable per-user On-call tab (rule 37): the Answer click carries no tabId, so a
+  // `getUniqueId()` context spawned a new broken tab on the banner-clear render (step 6b).
+  await Context.CreateAndInit(userTab(CONTEXT.ON_CALL, state), { state });
   await callQueueDoc.loadDocument({ callRef });
 
   const loadedRef = callQueueDoc.f[callRefField.id]?.value || "";
@@ -141,6 +153,18 @@ answerCall.onResolution = async () => {
     });
   }
 
+  // 5b. Silence THIS admin's own audible web ring (started by the X3 receiver via
+  //     RING_START) before opening the meeting. RING_STOP = "ringStop"; there is no
+  //     "RING_STOP_ACTION" key in VIDEO_CALL_ACTIONS (that's a static method on VideoCall).
+  try {
+    adminVideoCall.sendResponse(ALL_CONSTANTS.VIDEO_CALL_ACTIONS.RING_STOP);
+  } catch (error) {
+    D.log({
+      message: "A-F21: RING_STOP (own ring) failed (non-fatal)",
+      data: { callRef, error: String(error) },
+    });
+  }
+
   // 6. JOIN the EXISTING meeting (video-call ref § getAccessToken / sendResponse — the
   //    canonical "join an existing meeting by meetingId" pattern: mint an access token
   //    for the already-created meetingId, then sendResponse(JOIN_MEETING)). Voice-only /
@@ -160,7 +184,25 @@ answerCall.onResolution = async () => {
     "You have answered the call, but we could not open the meeting automatically. Please try re-joining from your call screen.".sendResponse();
   } else {
     try {
-      await adminVideoCall.getAccessToken({ meetingId });
+      // useDaily MUST match the meeting (created useDaily:true in U-F15). The framework
+      // defaults getAccessToken's useDaily to FALSE — a non-Daily token for a Daily
+      // meeting never validates, so the admin client hangs at "connecting" then drops
+      // (the symptom observed live). Mirrors the reference answerer (healthMariner
+      // queueRouting.joinCall: getAccessToken({ meetingId, guestEmail, useDaily:true })).
+      await adminVideoCall.getAccessToken({ meetingId, useDaily: true });
+      // serverUrl before JOIN (SeaMedix openMeeting pattern) = bare FrontM "Loft" player
+      // HOST (e.g. dailydev.frontm.ai); the client opens https://<lofthost>/<roomId>. NOT
+      // the full Daily room URL (that produced the broken double-protocol/dup-room URL).
+      adminVideoCall.serverUrl = await getMeetingLoftHost();
+      D.log({
+        message: "A-F21: access token minted (useDaily)",
+        data: {
+          callRef,
+          meetingId,
+          domain: adminVideoCall.domain,
+          serverUrl: adminVideoCall.serverUrl,
+        },
+      });
       adminVideoCall.sendResponse(
         ALL_CONSTANTS.VIDEO_CALL_ACTIONS.JOIN_MEETING
       );
@@ -179,6 +221,7 @@ answerCall.onResolution = async () => {
   //    the meeting surface but never refreshes the chat/dashboard view). The dashboard
   //    sections are empty-safe and read persisted state.setField stashes, so re-rendering
   //    here is safe in this Context-B invocation. Mirrors the X3 receiver's render call.
+  showScreen(SCREEN.ON_CALL);
   adminDisplayDoc.sendResponse();
   D.log({
     message: "A-F21: admin display re-rendered (banner cleared)",
