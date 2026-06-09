@@ -14,6 +14,7 @@ import { loadReportForAdmin } from "../../../lib/access";
 import {
   STATIC_DATA_KEYS,
   SIGNED_URL_EXPIRY_SECONDS,
+  userTab,
 } from "../../../lib/constants";
 import { adminDisplayDoc } from "../docs/admin-display-doc";
 import { showScreen, SCREEN } from "./display-nav";
@@ -108,7 +109,7 @@ openManageReport.onResolution = async () => {
 
   // Stable per-screen tab (rule 37): reuse the manage contextId so opening another
   // report (or re-rendering after a transition) replaces this tab, never a new one.
-  await Context.CreateAndInit(CONTEXT.MANAGE_REPORT, { state });
+  await Context.CreateAndInit(userTab(CONTEXT.MANAGE_REPORT, state), { state });
   const report = await loadReportForAdmin({ reportId });
   if (!report) {
     state.addErrorToStack(404, "Report not found.");

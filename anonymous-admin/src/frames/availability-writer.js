@@ -30,6 +30,7 @@ import {
   SCOPE,
   roleToAdminRole,
   frontmAdminRole,
+  userTab,
 } from "../../../lib/constants";
 import { CONTEXT } from "../constants";
 
@@ -67,7 +68,7 @@ export const setOwnAvailability = async (
     // Stable On-call tab (rule 37): the only attach=true caller is setAvailability,
     // which re-renders the On-call screen — so reuse its tab. (Call frames pass
     // attach=false and attach their own context.)
-    await Context.CreateAndInit(CONTEXT.ON_CALL, { state });
+    await Context.CreateAndInit(userTab(CONTEXT.ON_CALL, state), { state });
   }
   await adminUserDoc.loadDocument({ adminUserId: userId });
 

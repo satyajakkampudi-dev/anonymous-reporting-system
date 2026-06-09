@@ -65,13 +65,25 @@ export const startAnonymousCall = Intent.Create({
 });
 
 startAnonymousCall.onResolution = async () => {
+  // ENTER — proves the intent actually dispatched from the Home CTA click.
+  D.log({
+    message: "U-F15: ENTER — Call compliance clicked",
+    data: {
+      userId: state.user?.userId,
+      conversationId: state.conversationId,
+      userDomain: state.currentUserDomain,
+    },
+  });
+
   // 1. Attach to the existing context (preserve the autoSaveBuffer — rule 22).
   await Context.CreateAndInit(`user_${state.getUniqueId()}`, { state });
+  D.log({ message: "U-F15: context ready" });
 
   // 2. Create the masked voice-only meeting + mint the masked guest token. On a
   //    non-200 from the video-call capability, createMeeting pushes a system error
   //    and returns undefined → meetingId is empty; surface a calm message and stop.
   let call;
+  D.log({ message: "U-F15: → initiateAnonymousCall" });
   try {
     call = await initiateAnonymousCall({ videoCall: anonymousVideoCall });
   } catch (error) {
@@ -88,6 +100,15 @@ startAnonymousCall.onResolution = async () => {
 
   let { callRef } = call || {};
   const meetingId = call && call.meetingId;
+  D.log({
+    message: "U-F15: ← initiateAnonymousCall ok",
+    data: {
+      callRef,
+      meetingId,
+      hasGuestToken: !!(call && call.guestToken),
+      meetingUrl: call && call.meetingUrl,
+    },
+  });
   if (!meetingId || !callRef) {
     D.log({
       message: "U-F15: meeting/callRef missing after createMeeting",
@@ -106,6 +127,11 @@ startAnonymousCall.onResolution = async () => {
   for (const field of callQueueDoc.fields) {
     field.value = null;
   }
+  D.log({
+    message: "U-F15: meeting/callRef validated",
+    data: { callRef, meetingId },
+  });
+
   const now = Date.now();
   callQueueDoc.f[callRefField.id].value = callRef;
   callQueueDoc.f[callStatusField.id].value = CALL_STATUS.RINGING;
@@ -119,6 +145,7 @@ startAnonymousCall.onResolution = async () => {
     attempt += 1
   ) {
     const errorsBefore = (state.errorStack || []).length;
+    D.log({ message: "U-F15: → save call-queue", data: { callRef, attempt } });
     try {
       await callQueueDoc.save();
     } catch (error) {
@@ -143,10 +170,23 @@ startAnonymousCall.onResolution = async () => {
     }
     // save() can abort WITHOUT throwing if a field/onSave gate stacks an error.
     if ((state.errorStack || []).length > errorsBefore) {
+      D.log({
+        message: "U-F15: call-queue save aborted by onSave gate (no throw)",
+        data: {
+          callRef,
+          attempt,
+          errorsBefore,
+          errorsNow: (state.errorStack || []).length,
+          stackedErrors: (state.errorStack || [])
+            .slice(errorsBefore)
+            .map((e) => (e && (e.message || e.errorMessage)) || String(e)),
+        },
+      });
       return;
     }
     persisted = true;
   }
+  D.log({ message: "U-F15: RINGING entry persisted", data: { callRef } });
 
   // 3b. [U-F16] Arm the 30s no-answer timeout. The jobScheduler delivers a message to
   //    the reporter's OWN conversation after CALL_RING_TIMEOUT_MS that fires
@@ -166,6 +206,7 @@ startAnonymousCall.onResolution = async () => {
         { intentId: INTENT.CALL_TIMEOUT, data: { callRef, meetingId } },
       ],
     });
+    D.log({ message: "U-F15: no-answer timeout armed", data: { callRef } });
   } catch (error) {
     D.log({
       message: "U-F15/16: failed to arm the no-answer timeout",
@@ -184,13 +225,25 @@ startAnonymousCall.onResolution = async () => {
   //    logs and rings no one; the timeout still offers voicemail.
   try {
     const admins = await resolveAvailableAdmins();
+    D.log({
+      message: "U-F15: admins resolved",
+      data: { callRef, count: (admins || []).length },
+    });
     const toBotId = await resolvePeerBotId(STATIC_DATA_KEYS.ADMIN_BOT_ID);
+    D.log({
+      message: "U-F15: admin botId resolved",
+      data: { callRef, toBotId },
+    });
     await ringAvailableAdmins({
       callRef,
       meetingId,
       admins,
       toBotId,
       userDomain: state.currentUserDomain,
+    });
+    D.log({
+      message: "U-F15: ring fan-out done",
+      data: { callRef, count: (admins || []).length },
     });
   } catch (error) {
     D.log({
@@ -203,7 +256,23 @@ startAnonymousCall.onResolution = async () => {
   // 5. Place the reporter into the meeting as the masked guest (voice-only, camera
   //    off via the meeting's startVideoOff). Uses the masked-guest token minted in
   //    step 2 — the reporter never appears under their real name.
-  anonymousVideoCall.sendResponse(
-    ALL_CONSTANTS.VIDEO_CALL_ACTIONS.JOIN_MEETING
-  );
+  D.log({ message: "U-F15: → JOIN_MEETING", data: { callRef, meetingId } });
+  try {
+    anonymousVideoCall.sendResponse(
+      ALL_CONSTANTS.VIDEO_CALL_ACTIONS.JOIN_MEETING
+    );
+    D.log({
+      message: "U-F15: ✓ JOIN_MEETING sent",
+      data: { callRef, meetingId },
+    });
+  } catch (error) {
+    D.log({
+      message: "U-F15: JOIN_MEETING sendResponse threw",
+      data: { callRef, meetingId, error: String(error) },
+    });
+    state.addSystemErrorToStack(
+      ERROR_CODES.CALL_RING_FAILED,
+      "We could not connect you to the call just now. Please try again."
+    );
+  }
 };

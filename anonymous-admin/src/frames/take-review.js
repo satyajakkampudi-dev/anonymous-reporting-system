@@ -88,7 +88,12 @@ import { appendStatusHistoryRow } from "./status-history-writer";
 import { saveDocWithSubCollections } from "../../../lib/persist";
 import { resolveAdminRole } from "../../../lib/access";
 import { canTransition, STATUS, statusLabel } from "../../../lib/ticket-status";
-import { ERROR_CODES, MSG, STATIC_DATA_KEYS } from "../../../lib/constants";
+import {
+  ERROR_CODES,
+  MSG,
+  STATIC_DATA_KEYS,
+  userTab,
+} from "../../../lib/constants";
 import {
   broadcastBotMessage,
   resolvePeerBotId,
@@ -132,7 +137,7 @@ takeReview.onResolution = async () => {
 
   // 3. Attach to the manage tab (stable per-screen id, rule 37 — the re-render via
   //    openManageReport lands in the same tab), then re-read the report fresh (rule 12).
-  await Context.CreateAndInit(CONTEXT.MANAGE_REPORT, { state });
+  await Context.CreateAndInit(userTab(CONTEXT.MANAGE_REPORT, state), { state });
   await adminReportDoc.loadDocument({ reportId });
 
   // 4. Existence — no hydrated reportId means the report was not found.

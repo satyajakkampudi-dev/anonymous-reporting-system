@@ -115,6 +115,15 @@ export const STATE_KEYS = {
   ADMIN_ROLE: "ADMIN_ROLE",
   // reportId stashed by openManageReport's payload, read after the gateway load.
   CURRENT_REPORT_ID: "CURRENT_REPORT_ID",
+  // Local (per-admin) incoming-call dismissal. The ring banner is gated on the SHARED
+  // callQueueDoc status === RINGING, but Dismiss (A-F22) is LOCAL ONLY — it must hide
+  // THIS admin's banner WITHOUT changing the shared status (others keep ringing). There
+  // is no per-admin field on the shared row to carry that, so dismissCall stashes the
+  // dismissed callRef here and the incoming-call section AND-gates on it: a banner shows
+  // only while RINGING AND its callRef !== the locally-dismissed one. Per-callRef, so a
+  // later NEW call (different callRef) rings normally; survives the autoSaveBuffer
+  // rehydrating a stale RINGING status on this conversation (Context B safety).
+  DISMISSED_CALL_REF: "DISMISSED_CALL_REF",
   // Count of currently-visible evidence file slots on the manual-log form (1–5).
   // Progressive disclosure: slot 1 always visible; "+ Add another file" reveals the
   // next. The `hidden` Field flags reset on a Lambda cold start (Context B), so the

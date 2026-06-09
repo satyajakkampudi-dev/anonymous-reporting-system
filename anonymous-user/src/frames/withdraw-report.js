@@ -54,7 +54,7 @@ import {
 import { appendStatusHistoryRow } from "./status-history-writer";
 import { ownsReport } from "../../../lib/access";
 import { canTransition, STATUS } from "../../../lib/ticket-status";
-import { ACTOR_ROLE, ERROR_CODES } from "../../../lib/constants";
+import { ACTOR_ROLE, ERROR_CODES, userTab } from "../../../lib/constants";
 import { saveDocWithSubCollections } from "../../../lib/persist";
 import { CONTEXT, INTENT } from "../constants";
 
@@ -75,7 +75,7 @@ withdrawReport.onResolution = async () => {
 
   // 2. Fresh context for this dispatch, then re-read the report fresh (rule 12).
   // Stable detail tab (rule 37): the re-render via openReportDetail lands in the same tab.
-  await Context.CreateAndInit(CONTEXT.REPORT_DETAIL, { state });
+  await Context.CreateAndInit(userTab(CONTEXT.REPORT_DETAIL, state), { state });
   await reportDoc.loadDocument({ reportId });
 
   // 3. Ownership FIRST — a non-owned or non-existent report yields the SAME message

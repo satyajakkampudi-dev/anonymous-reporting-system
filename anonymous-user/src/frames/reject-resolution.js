@@ -56,6 +56,7 @@ import {
   REOPEN_CAP,
   MSG,
   STATIC_DATA_KEYS,
+  userTab,
 } from "../../../lib/constants";
 import { sanitiseText } from "../../../lib/validation";
 import { CONTEXT, INTENT, STATE_KEYS } from "../constants";
@@ -136,7 +137,7 @@ rejectResolution.onResolution = async () => {
   // report the reporter opened (openReportDetail) is already hydrated in the buffer.
   // Stable detail tab (rule 37): the reason popup overlays the detail tab and the
   // re-render via openReportDetail lands in the same tab.
-  await Context.CreateAndInit(CONTEXT.REPORT_DETAIL, { state });
+  await Context.CreateAndInit(userTab(CONTEXT.REPORT_DETAIL, state), { state });
   await reportDoc.loadDocument({ reportId });
 
   // Cheap pre-popup guard (defence-in-depth beyond the hidden button; the card already

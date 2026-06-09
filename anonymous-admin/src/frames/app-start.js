@@ -20,7 +20,7 @@
 import { Context } from "@frontmltd/frontmjs/core/Context";
 import { D, state } from "@frontmltd/frontmjs/core/State";
 import { resolveAdminRole, loadReportsForAdmin } from "../../../lib/access";
-import { frontmAdminRole } from "../../../lib/constants";
+import { frontmAdminRole, userTab } from "../../../lib/constants";
 import { buildDashboardStats } from "../../../lib/dashboard-stats";
 import { adminDisplayDoc } from "../docs/admin-display-doc";
 import { hydrateNotificationFailureStash } from "./admin-notify";
@@ -62,7 +62,7 @@ export const appStart = async () => {
   //    or allow). Without it, sendResponse has no tab and the screen renders BLANK. Harmless
   //    for a denied user (an empty tab; no field writes). adminReportDoc is autoSave:true
   //    (rule 17) so the bootstrap is mandatory regardless.
-  await Context.CreateAndInit(CONTEXT.MAIN_APP, { state });
+  await Context.CreateAndInit(userTab(CONTEXT.MAIN_APP, state), { state });
 
   // 1. Access gate (rule 27).
   //    resolveAdminRole reads the seeded admin-users registry (lib/access.js — the

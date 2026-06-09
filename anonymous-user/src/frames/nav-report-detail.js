@@ -11,7 +11,7 @@ import { Intent } from "@frontmltd/frontmjs/core/Intent";
 import { Context } from "@frontmltd/frontmjs/core/Context";
 import { D, state } from "@frontmltd/frontmjs/core/State";
 import { ownsReport } from "../../../lib/access";
-import { ERROR_CODES } from "../../../lib/constants";
+import { ERROR_CODES, userTab } from "../../../lib/constants";
 import { reportDoc } from "../collections/reports";
 import { reportDisplayDoc } from "../docs/report-display-doc";
 import { showScreen, SCREEN } from "./display-nav";
@@ -38,7 +38,7 @@ openReportDetail.onResolution = async () => {
   D.log({ message: "openReportDetail: opening detail", data: { reportId } });
 
   // Stable detail tab (rule 37): opening another report replaces this tab, never a new one.
-  await Context.CreateAndInit(CONTEXT.REPORT_DETAIL, { state });
+  await Context.CreateAndInit(userTab(CONTEXT.REPORT_DETAIL, state), { state });
   await reportDoc.loadDocument({ reportId });
 
   // Ownership assertion — the report must belong to the caller.

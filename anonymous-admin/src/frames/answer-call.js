@@ -36,6 +36,7 @@ import { ALL_CONSTANTS } from "@frontmltd/frontmjs/core/ALLConstants";
 import { Intent } from "@frontmltd/frontmjs/core/Intent";
 import { D, state } from "@frontmltd/frontmjs/core/State";
 import { callQueueDoc } from "../docs/call-queue-doc";
+import { adminDisplayDoc } from "../docs/admin-display-doc";
 import {
   callRefField,
   callStatusField,
@@ -62,6 +63,15 @@ export const answerCall = Intent.Create({
 answerCall.onResolution = async () => {
   // 1. Payload (one level deep). callRef is mandatory; meetingId is needed to join.
   const { callRef, meetingId } = state.messageFromUser?.payload || {};
+  D.log({
+    message: "A-F21: ENTER — Answer clicked",
+    data: {
+      callRef,
+      meetingId,
+      hasPayload: !!state.messageFromUser?.payload,
+      userId: state.user?.userId,
+    },
+  });
   if (!callRef) {
     state.addErrorToStack(400, "Missing callRef for answerCall");
     return;
@@ -162,6 +172,18 @@ answerCall.onResolution = async () => {
       "You have answered the call, but we could not connect you to the meeting just now. Please try re-joining from your call screen.".sendResponse();
     }
   }
+
+  // 6b. Re-render the admin shell so THIS admin's screen reflects the claim: the
+  //    incoming-call section re-gates on status (now ACTIVE, not RINGING) → the ring
+  //    banner clears. Without this the banner persists (the JOIN_MEETING response opens
+  //    the meeting surface but never refreshes the chat/dashboard view). The dashboard
+  //    sections are empty-safe and read persisted state.setField stashes, so re-rendering
+  //    here is safe in this Context-B invocation. Mirrors the X3 receiver's render call.
+  adminDisplayDoc.sendResponse();
+  D.log({
+    message: "A-F21: admin display re-rendered (banner cleared)",
+    data: { callRef },
+  });
 
   // 7. STOP_RING (X7) — tell the OTHER currently-available admins to stop ringing. The
   //    available set is the SAME set X3 rang (lib/calling.resolveAvailableAdmins);

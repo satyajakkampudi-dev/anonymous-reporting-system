@@ -19,7 +19,7 @@ import {
   MY_REPORTS_STATUS_GROUP,
   MY_REPORTS_CATEGORY_ALL,
 } from "../constants";
-import { LIST_PAGE_SIZE } from "../../../lib/constants";
+import { LIST_PAGE_SIZE, userTab } from "../../../lib/constants";
 import { statusesForGroup } from "../sections/display/my-reports";
 
 export const openMyReports = Intent.Create({
@@ -34,7 +34,7 @@ openMyReports.onResolution = async () => {
   // intentId + payload; state.currentTabId is null) — so Context.Create is unusable and
   // a `user_${getUniqueId()}` id opens a new tab per click. Reusing the stable MY_REPORTS
   // id re-renders the list IN PLACE on every filter chip.
-  await Context.CreateAndInit(CONTEXT.MY_REPORTS, { state });
+  await Context.CreateAndInit(userTab(CONTEXT.MY_REPORTS, state), { state });
   // MP-FIX-NAV — stash the active filter so the render handler (my-reports/index.js
   // onResponse) can apply it. The status/category chips are intent buttons that emit
   // openMyReports with a { statusGroup, category } data-payload — delivered ONE level

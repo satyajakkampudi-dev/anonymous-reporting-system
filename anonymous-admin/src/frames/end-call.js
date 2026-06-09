@@ -40,6 +40,7 @@ import { D, state } from "@frontmltd/frontmjs/core/State";
 import { Context } from "@frontmltd/frontmjs/core/Context";
 import { Intent } from "@frontmltd/frontmjs/core/Intent";
 import { callQueueDoc } from "../docs/call-queue-doc";
+import { adminDisplayDoc } from "../docs/admin-display-doc";
 import {
   callRefField,
   callStatusField,
@@ -49,7 +50,7 @@ import {
 } from "../sections/call-queue";
 import { setOwnAvailability } from "./availability-writer";
 import { CALL_STATUS, AVAILABILITY } from "../../../lib/constants";
-import { INTENT } from "../constants";
+import { INTENT, STATE_KEYS } from "../constants";
 
 // Shared guarded ACTIVE -> ENDED transition. Returns { ended: boolean } so a caller can
 // branch its user-facing copy. `attached` indicates the caller has already Context.Create'd
@@ -175,12 +176,32 @@ export const dismissCall = Intent.Create({
 dismissCall.onResolution = async () => {
   // Per the A-D-incomingcall header, Dismiss is LOCAL ONLY — others keep ringing. We do
   // NOT touch callQueueDoc status (no end / no claim): a dismiss on one admin's screen
-  // must not end or claim the shared call. The banner is removed client-side; this
-  // handler only acknowledges. Read callRef defensively for the log (no write).
+  // must not end or claim the shared call. Instead we stash the dismissed callRef in this
+  // admin's own per-conversation state and re-render the shell — the incoming-call section
+  // AND-gates on STATE_KEYS.DISMISSED_CALL_REF, so the banner clears HERE while the shared
+  // RINGING status (and other admins' banners) are untouched.
   const { callRef } = state.messageFromUser?.payload || {};
   D.log({
-    message: "A-F22: dismissCall (local dismiss only)",
+    message: "A-F22: ENTER — Dismiss clicked (local dismiss only)",
+    data: {
+      callRef,
+      hasPayload: !!state.messageFromUser?.payload,
+      userId: state.user?.userId,
+    },
+  });
+  if (!callRef) {
+    state.addErrorToStack(400, "Missing callRef for dismissCall");
+    return;
+  }
+
+  // Record the local dismissal, then re-render so the banner re-gates and clears on THIS
+  // screen. Context attach (preserve the buffer — rule 22) is needed for the render.
+  state.setField(STATE_KEYS.DISMISSED_CALL_REF, callRef);
+  await Context.CreateAndInit(`admin_${state.getUniqueId()}`, { state });
+  adminDisplayDoc.sendResponse();
+  D.log({
+    message:
+      "A-F22: dismissed locally + admin display re-rendered (banner cleared)",
     data: { callRef },
   });
-  "Incoming call dismissed. Other available admins are still being notified.".sendResponse();
 };

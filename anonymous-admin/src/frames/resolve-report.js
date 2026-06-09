@@ -84,6 +84,7 @@ import {
   TIMING,
   MSG,
   STATIC_DATA_KEYS,
+  userTab,
 } from "../../../lib/constants";
 import {
   broadcastBotMessage,
@@ -134,7 +135,7 @@ resolveReport.onResolution = async () => {
 
   // 3. Attach to the manage tab (stable per-screen id, rule 37 — the re-render via
   //    openManageReport lands in the same tab), then re-read the report fresh (rule 22).
-  await Context.CreateAndInit(CONTEXT.MANAGE_REPORT, { state });
+  await Context.CreateAndInit(userTab(CONTEXT.MANAGE_REPORT, state), { state });
   await adminReportDoc.loadDocument({ reportId });
 
   // 4. Cheap pre-popup guard (defence-in-depth beyond the hidden button). The

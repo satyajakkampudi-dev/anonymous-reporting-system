@@ -28,7 +28,7 @@ import {
   resolveAdminIdentity,
 } from "../../../lib/access";
 import { buildQueueReports } from "../../../lib/queue";
-import { LIST_PAGE_SIZE } from "../../../lib/constants";
+import { LIST_PAGE_SIZE, userTab } from "../../../lib/constants";
 import { adminDisplayDoc } from "../docs/admin-display-doc";
 import { showScreen, SCREEN } from "./display-nav";
 import { CONTEXT, INTENT, STATE_KEYS, QUEUE_FILTER } from "../constants";
@@ -47,7 +47,7 @@ const normaliseFilter = (raw) =>
 openQueue.onResolution = async () => {
   // Stable per-screen tab (rule 37): reuse the SAME contextId so the queue
   // re-renders IN PLACE on every quick-filter chip / pagination click — no new tab.
-  await Context.CreateAndInit(CONTEXT.QUEUE, { state });
+  await Context.CreateAndInit(userTab(CONTEXT.QUEUE, state), { state });
 
   // Active quick-filter from the chip / dashboard card click (Context-B payload is one
   // level deep under .payload — rule "Custom HTML Payloads").

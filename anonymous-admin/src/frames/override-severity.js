@@ -53,7 +53,12 @@ import { appendStatusHistoryRow } from "./status-history-writer";
 import { saveDocWithSubCollections } from "../../../lib/persist";
 import { resolveAdminRole } from "../../../lib/access";
 import { isActionAllowed, ACTION } from "../../../lib/ticket-status";
-import { SEVERITY, SEVERITY_LABELS, ERROR_CODES } from "../../../lib/constants";
+import {
+  SEVERITY,
+  SEVERITY_LABELS,
+  ERROR_CODES,
+  userTab,
+} from "../../../lib/constants";
 import { CONTEXT, INTENT, STATE_KEYS } from "../constants";
 
 // Valid severity tokens — the only values the dropdown may legitimately submit and
@@ -107,7 +112,7 @@ overrideSeverity.onResolution = async () => {
 
   // 3. Attach to the manage tab (stable per-screen id, rule 37 — the re-render via
   //    openManageReport lands in the same tab), then re-read the report fresh (rule 22).
-  await Context.CreateAndInit(CONTEXT.MANAGE_REPORT, { state });
+  await Context.CreateAndInit(userTab(CONTEXT.MANAGE_REPORT, state), { state });
   await adminReportDoc.loadDocument({ reportId });
 
   // 4. Cheap pre-popup guard (defence-in-depth beyond the hidden button): the CURRENT

@@ -43,7 +43,7 @@ import {
 } from "../sections/amendments";
 import { prepareAmendmentsEvidence } from "../sections/display/amendments";
 import { isActionAllowed, ACTION } from "../../../lib/ticket-status";
-import { ACTOR_ROLE, ERROR_CODES } from "../../../lib/constants";
+import { ACTOR_ROLE, ERROR_CODES, userTab } from "../../../lib/constants";
 import { sanitiseText } from "../../../lib/validation";
 import { saveDocWithSubCollections } from "../../../lib/persist";
 import { showScreen, SCREEN } from "./display-nav";
@@ -83,7 +83,7 @@ addAmendment.onResolution = async () => {
   // amendment ADD a row instead of overwriting the 1st.
   // Stable detail tab (rule 37): the amend popup overlays the detail tab and the
   // onSubmit re-render lands in the same tab.
-  await Context.CreateAndInit(CONTEXT.REPORT_DETAIL, { state });
+  await Context.CreateAndInit(userTab(CONTEXT.REPORT_DETAIL, state), { state });
   await reportDoc.loadDocument({ reportId });
   // Stash the reportId so the popup-CONFIRM invocation (a SEPARATE Lambda call — see
   // onSubmit) can re-load this report and append to its existing amendments.

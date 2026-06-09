@@ -12,6 +12,7 @@ import { loadReportsForAdmin } from "../../../lib/access";
 import { buildDashboardStats } from "../../../lib/dashboard-stats";
 import { adminDisplayDoc } from "../docs/admin-display-doc";
 import { showScreen, SCREEN } from "./display-nav";
+import { userTab } from "../../../lib/constants";
 import { CONTEXT, INTENT, STATE_KEYS } from "../constants";
 
 export const openDashboard = Intent.Create({
@@ -23,7 +24,7 @@ export const openDashboard = Intent.Create({
 openDashboard.onResolution = async () => {
   // Stable per-screen tab (rule 37): reuse the SAME contextId so the dashboard
   // re-renders IN PLACE on every Alerts pagination / re-nav click — no new tab.
-  await Context.CreateAndInit(CONTEXT.MAIN_APP, { state });
+  await Context.CreateAndInit(userTab(CONTEXT.MAIN_APP, state), { state });
 
   // Alerts breach-list page (rule 36). The alerts prev/next control re-opens the dashboard
   // carrying { page }; a plain dashboard open carries none → page 0. Read by the alerts

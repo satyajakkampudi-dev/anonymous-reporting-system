@@ -47,7 +47,7 @@ import {
 } from "../../call-queue";
 import { CALL_STATUS } from "../../../../../lib/constants";
 import { renderForPlatform } from "../../../../../lib/utils/platform";
-import { INTENT } from "../../../constants";
+import { INTENT, STATE_KEYS } from "../../../constants";
 import { renderWeb } from "./web";
 import { renderMobile } from "./mobile";
 
@@ -93,14 +93,23 @@ const readCallStatus = () => callQueueDoc?.f?.[callStatusField.id]?.value || "";
 // Daily.co meeting id — passed to the Answer claim so the admin can join. "" when unloaded.
 const readMeetingId = () => callQueueDoc?.f?.[meetingIdField.id]?.value || "";
 
+// The callRef this admin locally dismissed (A-F22 dismissCall). "" when none. Used to
+// suppress the banner for a call THIS admin dismissed without touching the shared status.
+const readDismissedRef = () =>
+  state.getField(STATE_KEYS.DISMISSED_CALL_REF) || "";
+
 // Build the card content on every render. Screen-scoped + empty-safe: emits nothing unless a
 // genuinely RINGING call is loaded on callQueueDoc.
 incomingCallDisplaySection.onResponse = () => {
   const callRef = readCallRef();
   const data = {
-    // True only for a live ringing call → renderers emit the banner; otherwise "" (no banner
-    // on Dashboard/Queue/detail/On-call, and none for an already-claimed or ended call).
-    hasCall: !!callRef && readCallStatus() === CALL_STATUS.RINGING,
+    // True only for a live ringing call THIS admin has not locally dismissed → renderers
+    // emit the banner; otherwise "" (no banner on Dashboard/Queue/detail/On-call, none for
+    // an already-claimed or ended call, and none once this admin pressed Dismiss).
+    hasCall:
+      !!callRef &&
+      readCallStatus() === CALL_STATUS.RINGING &&
+      readDismissedRef() !== callRef,
     // Opaque ref + Daily meeting id — travel ONLY inside the Answer button's data-payload
     // (consumed by the A-F21 atomic claim), never shown as text. Identity-free (rule 16/30).
     callRef,

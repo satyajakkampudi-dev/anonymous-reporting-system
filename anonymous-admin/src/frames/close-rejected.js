@@ -49,7 +49,7 @@ import { statusField } from "../sections/manual-log";
 import { registerNoteTransition } from "./note-transition";
 import { resolveAdminRole } from "../../../lib/access";
 import { canTransition, STATUS, statusLabel } from "../../../lib/ticket-status";
-import { ERROR_CODES } from "../../../lib/constants";
+import { ERROR_CODES, userTab } from "../../../lib/constants";
 import { CONTEXT, INTENT, STATE_KEYS } from "../constants";
 
 // Shared copy so the pre-popup guard and the dispatcher's authoritative guard surface
@@ -106,7 +106,7 @@ closeRejected.onResolution = async () => {
 
   // 3. Attach to the manage tab (stable per-screen id, rule 37 — the re-render via
   //    openManageReport lands in the same tab), then re-read the report fresh (rule 22).
-  await Context.CreateAndInit(CONTEXT.MANAGE_REPORT, { state });
+  await Context.CreateAndInit(userTab(CONTEXT.MANAGE_REPORT, state), { state });
   await adminReportDoc.loadDocument({ reportId });
 
   // 4. Cheap pre-popup guard (defence-in-depth beyond the hidden button). The

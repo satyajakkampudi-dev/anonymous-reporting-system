@@ -18,7 +18,7 @@ import { reportsCollection } from "../collections/reports";
 import { reportDisplayDoc } from "../docs/report-display-doc";
 import { showScreen, SCREEN } from "./display-nav";
 import { CONTEXT } from "../constants";
-import { APP_ROLES, userHasRole } from "../../../lib/constants";
+import { APP_ROLES, userHasRole, userTab } from "../../../lib/constants";
 
 // Side-effect imports: register every Section + Field on reportDoc and the two
 // embedded sub-collections so the Data Doc is fully populated.
@@ -45,7 +45,7 @@ export const appStart = async () => {
   //    creates the conversation tab / state.currentTabId that ANY render needs, deny or
   //    allow. Skipping it on the deny path renders a BLANK screen (no tab to paint into).
   //    Running it for a denied user is harmless (an empty tab; they perform no field writes).
-  await Context.CreateAndInit(CONTEXT.MAIN_APP, { state });
+  await Context.CreateAndInit(userTab(CONTEXT.MAIN_APP, state), { state });
 
   // 0a. Access gate — pure licence-role check: the reporter app requires the FrontM
   //     `quitelineenduser` role (no registry fallback — no reporter allow-list collection).
