@@ -59,6 +59,7 @@ import {
   resolvedOnField,
 } from "../sections/manual-log";
 import { appendStatusHistoryRow } from "./status-history-writer";
+import { saveDocWithSubCollections } from "../../../lib/persist";
 import { canTransition, STATUS } from "../../../lib/ticket-status";
 import {
   ACTOR_ROLE,
@@ -169,7 +170,7 @@ autoCloseReport.onResolution = async () => {
   //    SLA digest backstop (A-F18) can catch it; the job may also re-fire harmlessly.
   const errorsBefore = (state.errorStack || []).length;
   try {
-    await adminReportDoc.save();
+    await saveDocWithSubCollections(adminReportDoc);
   } catch (error) {
     D.log({
       message: "A-F17: report save failed on auto-close",

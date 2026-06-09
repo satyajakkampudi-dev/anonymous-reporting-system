@@ -76,6 +76,7 @@ export const MY_REPORTS_STATUS_GROUP = {
   ALL: "all",
   OPEN: "open",
   IN_PROGRESS: "in_progress",
+  RESOLVED: "resolved",
   DONE: "done",
 };
 

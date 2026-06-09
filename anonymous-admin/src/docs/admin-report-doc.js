@@ -14,6 +14,7 @@
 // Doc (AGENTS.md dependency tree: docs/ → nothing app-local).
 
 import { Doc } from "@frontmltd/frontmjs/core/Doc";
+import { Collection } from "@frontmltd/frontmjs/core/Collection";
 import { state } from "@frontmltd/frontmjs/core/State";
 import { reportDoc, reportsCollection } from "../../../lib/collections/reports";
 
@@ -63,4 +64,25 @@ export const noteCaptureDoc = new Doc("noteCaptureDoc", state, {
   autoSave: false,
   confirm: "Save",
   cancel: "Cancel",
+});
+
+// REQUIRED: each capture Doc opened via sendQuickFormResponse() needs a backing
+// Collection. The framework's Doc.onResolution (which runs on every quick-form CONFIRM,
+// BEFORE onSubmit) unconditionally reads `this.collection.rows.length` (Doc.js debug
+// line) — a collection-less capture Doc therefore throws "Cannot read properties of
+// undefined (reading 'rows')" on submit, so the popup never persists. These collections
+// are TRANSIENT: never queried or saved (the capture value is copied onto the report by
+// the frame); they exist solely to give each capture Doc a defined `.collection`.
+export const resolveCaptureCollection = new Collection(
+  "resolveCaptureCollection",
+  { document: resolveCaptureDoc, name: "resolveCapture", state }
+);
+export const severityCaptureCollection = new Collection(
+  "severityCaptureCollection",
+  { document: severityCaptureDoc, name: "severityCapture", state }
+);
+export const noteCaptureCollection = new Collection("noteCaptureCollection", {
+  document: noteCaptureDoc,
+  name: "noteCapture",
+  state,
 });

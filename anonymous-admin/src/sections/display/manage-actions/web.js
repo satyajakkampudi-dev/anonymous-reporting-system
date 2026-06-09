@@ -9,7 +9,7 @@
 //
 // NO reporter identity is present in the data (rule 30, ER-A2/A3, C1) — buttons carry only reportId.
 
-import { intentButtonHtml } from "../../../../../lib/utils/format";
+import { intentButtonHtml, escapeHtml } from "../../../../../lib/utils/format";
 import {
   COLORS,
   SPACING,
@@ -56,22 +56,51 @@ const buttonStyle = (variant) => {
   );
 };
 
+// A disabled action: rendered as a non-clickable, greyed pill (no data-action intent),
+// so e.g. Override severity is visibly present-but-inactive on a resolved/closed report.
 const renderButton = (reportId, btn) =>
-  intentButtonHtml(
-    btn.intentId,
-    btn.label,
-    { reportId },
-    buttonStyle(btn.variant)
-  );
+  btn.disabled
+    ? `<span style="${buttonStyle(btn.variant)}opacity:0.45;cursor:not-allowed;` +
+      `display:inline-block;" title="Not available once the report is resolved">` +
+      `${escapeHtml(btn.label)}</span>`
+    : intentButtonHtml(
+        btn.intentId,
+        btn.label,
+        { reportId },
+        buttonStyle(btn.variant)
+      );
 
 const buttonGroup = (reportId, buttons) =>
   `<div style="display:flex;gap:${SPACING.MD}px;flex-wrap:wrap;align-items:center;">` +
   buttons.map((b) => renderButton(reportId, b)).join("") +
   `</div>`;
 
+// Disabled status chip (e.g. green "Resolved") shown where the forward-transition
+// buttons would be — the case outcome, not an action.
+const completedChipHtml = (chip) => {
+  if (!chip) return "";
+  const t =
+    chip.tone === "success"
+      ? toneColors(TONE.SUCCESS)
+      : toneColors(TONE.NEUTRAL);
+  return (
+    `<span style="padding:${SPACING.SM}px ${SPACING.LG}px;border-radius:${TYPOGRAPHY.RADIUS}px;` +
+    `font-family:${TYPOGRAPHY.FONT_FAMILY};font-size:${TYPOGRAPHY.SIZE_SM}px;` +
+    `font-weight:${TYPOGRAPHY.WEIGHT_MEDIUM};background:${t.bg};color:${t.fg};` +
+    `border:1px solid ${t.border};opacity:0.85;cursor:default;display:inline-block;">` +
+    `${escapeHtml(chip.label)}</span>`
+  );
+};
+
 export const renderWeb = (data) => {
-  // No legal action (no report open, no role, or terminal status) — emit nothing.
+  // No legal action and no completed chip — emit nothing.
   if (!data.hasActions) return "";
+
+  const left =
+    `<div style="display:flex;gap:${SPACING.MD}px;flex-wrap:wrap;align-items:center;">` +
+    data.transitions.map((b) => renderButton(data.reportId, b)).join("") +
+    completedChipHtml(data.completedChip) +
+    `</div>`;
 
   return (
     `<div style="font-family:${TYPOGRAPHY.FONT_FAMILY};background:${COLORS.SURFACE};` +
@@ -80,7 +109,7 @@ export const renderWeb = (data) => {
     sectionTitle("Actions") +
     `<div style="display:flex;justify-content:space-between;align-items:center;` +
     `gap:${SPACING.LG}px;flex-wrap:wrap;">` +
-    buttonGroup(data.reportId, data.transitions) +
+    left +
     buttonGroup(data.reportId, data.tools) +
     `</div></div>`
   );

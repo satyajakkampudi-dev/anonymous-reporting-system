@@ -212,3 +212,12 @@ const rearm = async (nowMs) => {
     });
   }
 };
+
+// One-shot kickoff for the self-rearming digest chain — called from admin app-start so
+// the sweep is running without a manual ops step. Idempotent: the deterministic
+// DIGEST_JOB_ID means re-arming on each app open overwrites the pending sweep rather
+// than stacking (rule 19). Best-effort (rearm swallows its own errors).
+export const armSlaDigestSweep = async () => {
+  await rearm(Date.now());
+  D.log({ message: "A-F18: SLA digest sweep armed at app-start" });
+};

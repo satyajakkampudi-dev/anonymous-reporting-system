@@ -109,7 +109,8 @@ detailActionsSection.onResponse = () => {
   }
   // Reject: status allows it AND the report has not already been reopened (D10,
   // REOPEN_CAP). Withholding here matches the frame-level reopen-cap guard (U-F11).
-  if (allowed.includes(ACTION.REJECT) && reopenCount < REOPEN_CAP) {
+  const rejectAllowedByStatus = allowed.includes(ACTION.REJECT);
+  if (rejectAllowedByStatus && reopenCount < REOPEN_CAP) {
     resolution.push({
       intentId: INTENT.REJECT_RESOLUTION,
       label: "Reject",
@@ -117,12 +118,21 @@ detailActionsSection.onResponse = () => {
     });
   }
 
+  // Hint: the status WOULD allow Reject (i.e. the report is RESOLVED) but the one-reopen
+  // cap (D10) is reached — so only Accept is offered. Explain WHY, rather than silently
+  // dropping the Reject button, so the reporter understands the report can't be reopened
+  // again. Shown beside the remaining Accept action.
+  const reopenCapReached = rejectAllowedByStatus && reopenCount >= REOPEN_CAP;
+
   const data = {
     // Nothing legal to do (no report loaded, or terminal status) → renderer emits "".
     hasActions: lifecycle.length + resolution.length > 0,
     reportId,
     lifecycle,
     resolution,
+    reopenCapNote: reopenCapReached
+      ? "You've already reopened this report once, so it can't be reopened again. You can still accept the resolution."
+      : "",
   };
 
   detailActionsPlaceholderCard.content = renderForPlatform(data, {

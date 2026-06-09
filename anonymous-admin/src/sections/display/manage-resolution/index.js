@@ -112,6 +112,18 @@ manageResolutionDisplaySection.onResponse = () => {
   const resolution = report?.resolution || "";
   const rejectReason = report?.rejectReason || "";
 
+  // Show the Resolution block ONLY once there is actual resolution CONTENT — i.e. after
+  // the report has been RESOLVED (or a reporter reject reason exists from a prior
+  // resolution: REOPENED / closed). On OPEN / UNDER_REVIEW / ESCALATED there is no
+  // resolution yet, so the block is hidden entirely (no "No resolution recorded yet"
+  // placeholder before a resolution is written). Empty content = hidden card.
+  const showResolution =
+    !!report && (!!resolution.trim() || !!rejectReason.trim());
+  if (!showResolution) {
+    manageResolutionDisplayPlaceholderCard.content = "";
+    return;
+  }
+
   const data = {
     // No report open (Dashboard / Queue screens, or not found) → renderer emits nothing.
     hasReport: !!report,

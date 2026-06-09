@@ -36,7 +36,7 @@ import { CARD_TYPES } from "@frontmltd/frontmjs/core/ALLConstants";
 import { D, state } from "@frontmltd/frontmjs/core/State";
 import { reportDisplayDoc } from "../../../docs/report-display-doc";
 import { reportDoc } from "../../../../../lib/collections/reports";
-import { reportIdField } from "../../report-details";
+import { reportIdField, statusField } from "../../report-details";
 import {
   amendmentsCollection,
   amendmentIdField,
@@ -47,7 +47,9 @@ import {
 import {
   STATIC_DATA_KEYS,
   SIGNED_URL_EXPIRY_SECONDS,
+  ACTOR_ROLE,
 } from "../../../../../lib/constants";
+import { allowedActions, ACTION } from "../../../../../lib/ticket-status";
 import { INTENT } from "../../../constants";
 import { renderForPlatform } from "../../../../../lib/utils/platform";
 import { renderWeb } from "./web";
@@ -203,11 +205,23 @@ amendmentsDisplaySection.onResponse = () => {
     (a, b) => (Number(b.amendedOn) || 0) - (Number(a.amendedOn) || 0)
   );
 
+  // Amend is offered ONLY while the report is non-terminal — the SAME state-machine gate
+  // (allowedActionsByRole) the detail-actions card + the addAmendment frame use. Once the
+  // report is CLOSED_* / WITHDRAWN there is nothing to amend, so the "+ Add" button is
+  // withheld (the table still renders the existing amendments, read-only).
+  const status = reportDoc.f[statusField.id]?.value || "";
+  const canAmend =
+    !!reportId &&
+    allowedActions(status, ACTOR_ROLE.REPORTER).includes(ACTION.AMEND);
+
   const data = {
     // No report loaded (Home / My-Reports screens) → the renderer emits nothing.
     hasReport: !!reportId,
     reportId,
-    addIntent: INTENT.ADD_AMENDMENT,
+    // Only expose the add intent when amending is legal — the renderer hides the
+    // "+ Add" button when this is absent.
+    addIntent: canAmend ? INTENT.ADD_AMENDMENT : "",
+    canAmend,
     amendments,
   };
 

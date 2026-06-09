@@ -47,7 +47,13 @@ import {
   applyAdminProjection,
   extractRowData,
 } from "../../../../../lib/access";
-import { allowedActions, ACTION } from "../../../../../lib/ticket-status";
+import {
+  allowedActions,
+  ACTION,
+  STATUS,
+  isTerminal,
+  statusLabel,
+} from "../../../../../lib/ticket-status";
 import { renderForPlatform } from "../../../../../lib/utils/platform";
 import { INTENT, STATE_KEYS } from "../../../constants";
 import { renderWeb } from "./web";
@@ -169,17 +175,36 @@ manageActionsDisplaySection.onResponse = () => {
   const transitions = ACTION_BUTTONS.filter(
     (b) => b.group === "transition" && allowed.includes(b.action)
   );
+
+  // Once the report is RESOLVED or terminal (closed/withdrawn), severity no longer
+  // drives anything (the case is done / awaiting the reporter), so Override severity is
+  // shown DISABLED rather than actionable. Export stays active (you can always export).
+  const severityMoot = status === STATUS.RESOLVED || isTerminal(status);
   const tools = ACTION_BUTTONS.filter(
     (b) => b.group === "tool" && allowed.includes(b.action)
+  ).map((b) =>
+    b.action === ACTION.OVERRIDE_SEVERITY && severityMoot
+      ? { ...b, disabled: true }
+      : b
   );
 
+  // A disabled status chip shown in the Actions area when the case has no forward
+  // transition left for this admin — RESOLVED (green) or a terminal/closed state — so the
+  // outcome is visible in the actions bar, not just an empty card. Mirrors the header pill.
+  const completedChip =
+    status === STATUS.RESOLVED
+      ? { label: "Resolved", tone: "success" }
+      : isTerminal(status)
+        ? { label: statusLabel(status), tone: "neutral" }
+        : null;
+
   const data = {
-    // Nothing legal to do (no report open, no role, or no actions for this status) →
-    // renderer emits "" (empty-safe).
-    hasActions: transitions.length + tools.length > 0,
+    // Nothing legal to do (no report open, no role) AND no completed chip → emit "".
+    hasActions: transitions.length + tools.length > 0 || !!completedChip,
     reportId,
     transitions,
     tools,
+    completedChip,
   };
 
   manageActionsDisplayPlaceholderCard.content = renderForPlatform(data, {

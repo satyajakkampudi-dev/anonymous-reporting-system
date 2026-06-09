@@ -221,4 +221,5 @@ export const QUEUE_FILTER = {
   OPEN: "open",
   UNDER_REVIEW: "under_review",
   ESCALATED: "escalated",
+  RESOLVED: "resolved",
 };

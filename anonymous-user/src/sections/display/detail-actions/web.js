@@ -7,7 +7,7 @@
 // escapes the label and JSON-escapes the data-payload, NFR-2 / rule 10) and theme
 // tokens (theme.js). No buttons are invented here; the legal set is decided in index.js.
 
-import { intentButtonHtml } from "../../../../../lib/utils/format";
+import { intentButtonHtml, escapeHtml } from "../../../../../lib/utils/format";
 import {
   COLORS,
   SPACING,
@@ -55,17 +55,28 @@ const buttonGroup = (reportId, buttons) =>
   buttons.map((b) => renderButton(reportId, b)).join("") +
   `</div>`;
 
-export const renderWeb = (data) => {
-  // No legal action (no report loaded, or terminal status) — emit nothing.
-  if (!data.hasActions) return "";
+// Reopen-cap hint (D10): shown when the report is RESOLVED but already reopened once,
+// so Reject is withheld — explains why only Accept remains. Muted, full-width line.
+const reopenCapNoteHtml = (note) =>
+  !note
+    ? ""
+    : `<div style="font-family:${TYPOGRAPHY.FONT_FAMILY};font-size:${TYPOGRAPHY.SIZE_SM}px;` +
+      `color:${COLORS.TEXT_MUTED};margin-top:${SPACING.SM}px;line-height:1.4;">` +
+      `${escapeHtml(note)}</div>`;
 
-  return (
-    `<div style="font-family:${TYPOGRAPHY.FONT_FAMILY};background:${COLORS.SURFACE};` +
-    `border:1px solid ${COLORS.BORDER};border-radius:${TYPOGRAPHY.RADIUS}px;` +
-    `padding:${SPACING.MD}px ${SPACING.XL}px;display:flex;justify-content:space-between;` +
-    `align-items:center;gap:${SPACING.LG}px;flex-wrap:wrap;">` +
-    buttonGroup(data.reportId, data.lifecycle) +
-    buttonGroup(data.reportId, data.resolution) +
-    `</div>`
-  );
+export const renderWeb = (data) => {
+  // No legal action AND no hint (no report loaded, or terminal status) — emit nothing.
+  if (!data.hasActions && !data.reopenCapNote) return "";
+
+  const bar = data.hasActions
+    ? `<div style="font-family:${TYPOGRAPHY.FONT_FAMILY};background:${COLORS.SURFACE};` +
+      `border:1px solid ${COLORS.BORDER};border-radius:${TYPOGRAPHY.RADIUS}px;` +
+      `padding:${SPACING.MD}px ${SPACING.XL}px;display:flex;justify-content:space-between;` +
+      `align-items:center;gap:${SPACING.LG}px;flex-wrap:wrap;">` +
+      buttonGroup(data.reportId, data.lifecycle) +
+      buttonGroup(data.reportId, data.resolution) +
+      `</div>`
+    : "";
+
+  return bar + reopenCapNoteHtml(data.reopenCapNote);
 };

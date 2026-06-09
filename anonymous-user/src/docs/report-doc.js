@@ -11,6 +11,7 @@
 // docs/ import nothing but state (AGENTS.md dependency tree: docs/ → nothing).
 
 import { Doc } from "@frontmltd/frontmjs/core/Doc";
+import { Collection } from "@frontmltd/frontmjs/core/Collection";
 import { state } from "@frontmltd/frontmjs/core/State";
 import { reportDoc, reportsCollection } from "../../../lib/collections/reports";
 
@@ -40,4 +41,16 @@ export const rejectReasonDoc = new Doc("rejectReasonDoc", state, {
   title: "Reopen report",
   confirm: "Reopen report",
   cancel: "Cancel",
+});
+
+// REQUIRED: a capture Doc opened via sendQuickFormResponse() needs a backing Collection.
+// The framework's Doc.onResolution (runs on every quick-form CONFIRM, before onSubmit)
+// reads `this.collection.rows.length` unconditionally — a collection-less capture Doc
+// throws "Cannot read properties of undefined (reading 'rows')" on submit. This TRANSIENT
+// collection is never queried/saved (the reason is copied onto reportDoc by the frame);
+// it exists only to give rejectReasonDoc a defined `.collection`.
+export const rejectReasonCollection = new Collection("rejectReasonCollection", {
+  document: rejectReasonDoc,
+  name: "rejectReasonCapture",
+  state,
 });

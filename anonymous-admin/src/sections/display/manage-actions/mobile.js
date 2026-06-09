@@ -9,7 +9,7 @@
 //
 // NO reporter identity is present in the data (rule 30, ER-A2/A3, C1) — buttons carry only reportId.
 
-import { intentButtonHtml } from "../../../../../lib/utils/format";
+import { intentButtonHtml, escapeHtml } from "../../../../../lib/utils/format";
 import {
   COLORS,
   SPACING,
@@ -55,13 +55,18 @@ const buttonStyle = (variant) => {
   );
 };
 
+// Disabled action → non-clickable greyed pill (no intent), e.g. Override severity on a
+// resolved/closed report.
 const renderButton = (reportId, btn) =>
-  intentButtonHtml(
-    btn.intentId,
-    btn.label,
-    { reportId },
-    buttonStyle(btn.variant)
-  );
+  btn.disabled
+    ? `<span style="${buttonStyle(btn.variant)}opacity:0.45;cursor:not-allowed;` +
+      `display:inline-block;">${escapeHtml(btn.label)}</span>`
+    : intentButtonHtml(
+        btn.intentId,
+        btn.label,
+        { reportId },
+        buttonStyle(btn.variant)
+      );
 
 const buttonRow = (reportId, buttons, marginBottom) => {
   if (!buttons.length) return "";
@@ -73,17 +78,41 @@ const buttonRow = (reportId, buttons, marginBottom) => {
   );
 };
 
+// Disabled status chip (e.g. green "Resolved") shown in place of forward transitions.
+const completedChipHtml = (chip) => {
+  if (!chip) return "";
+  const t =
+    chip.tone === "success"
+      ? toneColors(TONE.SUCCESS)
+      : toneColors(TONE.NEUTRAL);
+  return (
+    `<span style="padding:${SPACING.SM}px ${SPACING.LG}px;border-radius:${TYPOGRAPHY.RADIUS}px;` +
+    `font-family:${TYPOGRAPHY.FONT_FAMILY};font-size:${TYPOGRAPHY.SIZE_SM}px;` +
+    `font-weight:${TYPOGRAPHY.WEIGHT_MEDIUM};background:${t.bg};color:${t.fg};` +
+    `border:1px solid ${t.border};display:inline-block;">${escapeHtml(chip.label)}</span>`
+  );
+};
+
 export const renderMobile = (data) => {
-  // No legal action (no report open, no role, or terminal status) — emit nothing.
+  // No legal action and no completed chip — emit nothing.
   if (!data.hasActions) return "";
+
+  // First row: forward transitions + the disabled status chip (Resolved / closed).
+  const firstRow =
+    data.transitions.length || data.completedChip
+      ? `<div style="display:flex;gap:${SPACING.SM}px;flex-wrap:wrap;align-items:center;` +
+        `${data.tools.length ? `margin-bottom:${SPACING.SM}px;` : ""}">` +
+        data.transitions.map((b) => renderButton(data.reportId, b)).join("") +
+        completedChipHtml(data.completedChip) +
+        `</div>`
+      : "";
 
   return (
     `<div style="font-family:${TYPOGRAPHY.FONT_FAMILY};background:${COLORS.SURFACE};` +
     `border:1px solid ${COLORS.BORDER};border-radius:${TYPOGRAPHY.RADIUS}px;` +
     `padding:${SPACING.LG}px;">` +
     sectionTitle("Actions") +
-    // Transitions row keeps its bottom margin only when a tools row follows.
-    buttonRow(data.reportId, data.transitions, data.tools.length > 0) +
+    firstRow +
     buttonRow(data.reportId, data.tools, false) +
     `</div>`
   );

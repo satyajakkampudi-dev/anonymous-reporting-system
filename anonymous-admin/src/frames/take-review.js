@@ -85,6 +85,7 @@ import {
   updatedOnField,
 } from "../sections/manual-log";
 import { appendStatusHistoryRow } from "./status-history-writer";
+import { saveDocWithSubCollections } from "../../../lib/persist";
 import { resolveAdminRole } from "../../../lib/access";
 import { canTransition, STATUS, statusLabel } from "../../../lib/ticket-status";
 import { ERROR_CODES, MSG, STATIC_DATA_KEYS } from "../../../lib/constants";
@@ -177,7 +178,7 @@ takeReview.onResolution = async () => {
   //    success (mirrors the user-side transitions / U-F8).
   const errorsBefore = (state.errorStack || []).length;
   try {
-    await adminReportDoc.save();
+    await saveDocWithSubCollections(adminReportDoc);
   } catch (error) {
     state.addSystemErrorToStack(
       500,
@@ -220,4 +221,12 @@ takeReview.onResolution = async () => {
   });
 
   `Report **${reportId}** is now **${statusLabel(STATUS.UNDER_REVIEW)}**. It is yours to action — the change has been recorded in the report's timeline.`.sendResponse();
+
+  // Re-render the Manage view so the UI reflects the new status WITHOUT the admin
+  // closing/reopening the tab: updated status pill, the new timeline row, and the
+  // action set re-gated (Resolve now appears). Chain to openManageReport — it re-reads
+  // fresh via the gateway, re-signs evidence, and re-renders the Display Doc.
+  state.continueWithIntentWithIdAndMessage(INTENT.OPEN_MANAGE_REPORT, {
+    payload: { reportId },
+  });
 };

@@ -286,4 +286,10 @@ rejectReasonDoc.onSubmit = async (self) => {
   await sendReportReopenedMessage(reportId, reportDoc, reason);
 
   `Thank you. Your report **${reportId}** has been reopened and sent back to the compliance team for another look.\n\nYour reason has been added to the report's timeline. Your identity has remained anonymous throughout. Note that a report can be reopened only once.`.sendResponse();
+
+  // Re-render the detail so the UI reflects the reopened state (status pill + new
+  // timeline row) WITHOUT reopening the tab. Chain to openReportDetail.
+  state.continueWithIntentWithIdAndMessage(INTENT.OPEN_REPORT_DETAIL, {
+    payload: { reportId },
+  });
 };

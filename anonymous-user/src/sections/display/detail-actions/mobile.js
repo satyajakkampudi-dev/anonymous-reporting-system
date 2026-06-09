@@ -7,7 +7,7 @@
 // the shared intentButtonHtml primitive (format.js — escapes the label + JSON-escapes
 // the data-payload, NFR-2 / rule 10) and theme tokens (theme.js). No buttons invented.
 
-import { intentButtonHtml } from "../../../../../lib/utils/format";
+import { intentButtonHtml, escapeHtml } from "../../../../../lib/utils/format";
 import {
   COLORS,
   SPACING,
@@ -65,8 +65,15 @@ const buttonRow = (reportId, buttons, marginBottom) => {
 };
 
 export const renderMobile = (data) => {
-  // No legal action (no report loaded, or terminal status) — emit nothing.
-  if (!data.hasActions) return "";
+  // No legal action AND no hint (no report loaded, or terminal status) — emit nothing.
+  if (!data.hasActions && !data.reopenCapNote) return "";
+
+  // Reopen-cap hint (D10): RESOLVED but already reopened once → Reject withheld; explain.
+  const note = data.reopenCapNote
+    ? `<div style="font-family:${TYPOGRAPHY.FONT_FAMILY};font-size:${TYPOGRAPHY.SIZE_SM}px;` +
+      `color:${COLORS.TEXT_MUTED};margin-top:${SPACING.SM}px;line-height:1.4;">` +
+      `${escapeHtml(data.reopenCapNote)}</div>`
+    : "";
 
   return (
     `<div style="font-family:${TYPOGRAPHY.FONT_FAMILY};background:${COLORS.SURFACE};` +
@@ -76,6 +83,7 @@ export const renderMobile = (data) => {
     // Lifecycle row keeps its bottom margin only when a resolution row follows.
     buttonRow(data.reportId, data.lifecycle, data.resolution.length > 0) +
     buttonRow(data.reportId, data.resolution, false) +
+    note +
     `</div>`
   );
 };

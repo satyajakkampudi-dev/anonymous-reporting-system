@@ -79,11 +79,25 @@ const reportCardHtml = (data, r) => {
 };
 
 export const renderMobile = (data) => {
+  // "Create report" CTA — top-right of the header (emits openSubmitReport).
+  const createBtn = intentButtonHtml(
+    data.intents.submit,
+    "✚  Create",
+    {},
+    `padding:${SPACING.SM}px ${SPACING.MD}px;border-radius:${TYPOGRAPHY.RADIUS}px;` +
+      `border:1px solid ${COLORS.PRIMARY_DARK};background:${COLORS.PRIMARY};` +
+      `color:${COLORS.PRIMARY_CONTRAST};font-family:${TYPOGRAPHY.FONT_FAMILY};` +
+      `font-size:${TYPOGRAPHY.SIZE_SM}px;font-weight:${TYPOGRAPHY.WEIGHT_MEDIUM};white-space:nowrap;`
+  );
   const shell = (inner) =>
     `<div style="font-family:${TYPOGRAPHY.FONT_FAMILY};background:${COLORS.SURFACE};` +
     `border:1px solid ${COLORS.BORDER};border-radius:${TYPOGRAPHY.RADIUS}px;overflow:hidden;">` +
-    `<div style="padding:${SPACING.LG}px;font-size:${TYPOGRAPHY.SIZE_LG}px;` +
-    `font-weight:${TYPOGRAPHY.WEIGHT_BOLD};color:${COLORS.TEXT};">My Reports</div>` +
+    `<div style="padding:${SPACING.LG}px;display:flex;justify-content:space-between;` +
+    `align-items:center;gap:${SPACING.MD}px;">` +
+    `<span style="font-size:${TYPOGRAPHY.SIZE_LG}px;font-weight:${TYPOGRAPHY.WEIGHT_BOLD};` +
+    `color:${COLORS.TEXT};">My Reports</span>` +
+    createBtn +
+    `</div>` +
     inner +
     `</div>`;
 

@@ -78,11 +78,14 @@ const statusGroupOf = (status) => {
   if (status === STATUS.OPEN || status === STATUS.REOPENED) {
     return MY_REPORTS_STATUS_GROUP.OPEN;
   }
+  // RESOLVED has its own chip (admin resolved it; awaiting the reporter's accept/reject).
+  if (status === STATUS.RESOLVED) return MY_REPORTS_STATUS_GROUP.RESOLVED;
+  // Remaining live states (UNDER_REVIEW / ESCALATED) → In progress.
   return MY_REPORTS_STATUS_GROUP.IN_PROGRESS;
 };
 
-// Status-group chips, in wireframe order: All · Open · In progress · Done. Each
-// carries the data-payload it will emit (its own group + the currently-active
+// Status-group chips, in wireframe order: All · Open · In progress · Resolved · Done.
+// Each carries the data-payload it will emit (its own group + the currently-active
 // category, so toggling status preserves the category filter).
 const buildStatusChips = (activeGroup, activeCategory) => {
   const G = MY_REPORTS_STATUS_GROUP;
@@ -90,6 +93,7 @@ const buildStatusChips = (activeGroup, activeCategory) => {
     { group: G.ALL, label: "All" },
     { group: G.OPEN, label: "Open" },
     { group: G.IN_PROGRESS, label: "In progress" },
+    { group: G.RESOLVED, label: "Resolved" },
     { group: G.DONE, label: "Done" },
   ];
   return defs.map((d) => ({

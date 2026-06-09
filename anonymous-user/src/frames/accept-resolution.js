@@ -147,4 +147,10 @@ acceptResolution.onResolution = async () => {
   //    task, wired HERE after save(). Not built in U-F10 — do NOT invent it now.
 
   `Thank you. Your report **${reportId}** is now closed.\n\nWe're glad this could be resolved. Your identity has remained anonymous throughout, and the full timeline stays on record for you.`.sendResponse();
+
+  // Re-render the detail so the UI reflects the closed state (status pill, the new
+  // timeline row, and no further actions) WITHOUT reopening. Chain to openReportDetail.
+  state.continueWithIntentWithIdAndMessage(INTENT.OPEN_REPORT_DETAIL, {
+    payload: { reportId },
+  });
 };

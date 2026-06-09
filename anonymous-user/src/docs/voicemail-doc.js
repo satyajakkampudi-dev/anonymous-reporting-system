@@ -16,6 +16,7 @@
 // confirm/cancel give the quick form its action buttons.
 
 import { Doc } from "@frontmltd/frontmjs/core/Doc";
+import { Collection } from "@frontmltd/frontmjs/core/Collection";
 import { state } from "@frontmltd/frontmjs/core/State";
 
 export const voicemailDoc = new Doc("voicemailDoc", state, {
@@ -23,3 +24,12 @@ export const voicemailDoc = new Doc("voicemailDoc", state, {
   confirm: "Send voice message",
   cancel: "Cancel",
 });
+
+// REQUIRED: a sendQuickFormResponse() capture Doc needs a backing Collection — the
+// framework's Doc.onResolution reads `this.collection.rows.length` on every CONFIRM
+// (before onSubmit), so a collection-less capture Doc crashes with
+// "Cannot read properties of undefined (reading 'rows')". Transient: never queried/saved.
+export const voicemailCaptureCollection = new Collection(
+  "voicemailCaptureCollection",
+  { document: voicemailDoc, name: "voicemailCapture", state }
+);

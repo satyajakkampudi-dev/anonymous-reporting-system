@@ -31,7 +31,8 @@ const headerHtml = (data) =>
   `padding:${SPACING.LG}px ${SPACING.XL}px;border-bottom:1px solid ${COLORS.BORDER};">` +
   `<div style="font-size:${TYPOGRAPHY.SIZE_LG}px;font-weight:${TYPOGRAPHY.WEIGHT_BOLD};` +
   `color:${COLORS.TEXT};">Amendments</div>` +
-  addButtonHtml(data) +
+  // "+ Add" only while amending is legal (non-terminal); withheld once CLOSED_*/WITHDRAWN.
+  (data.canAmend ? addButtonHtml(data) : "") +
   `</div>`;
 
 const headerCell = (label) =>

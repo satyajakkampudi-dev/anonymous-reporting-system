@@ -75,6 +75,7 @@ import {
 } from "../sections/manual-log";
 import { resolutionInputField } from "../sections/resolve-popup";
 import { appendStatusHistoryRow } from "./status-history-writer";
+import { saveDocWithSubCollections } from "../../../lib/persist";
 import { resolveAdminRole } from "../../../lib/access";
 import { canTransition, STATUS, statusLabel } from "../../../lib/ticket-status";
 import { sanitiseText } from "../../../lib/validation";
@@ -161,7 +162,16 @@ resolveReport.onResolution = async () => {
 resolveCaptureDoc.onSubmit = async (self) => {
   // 1. Resolution: mandatory + sanitised (rule 10 — strip markup; safe for HTML card +
   //    any email/X4 use). Reject a resolution that sanitises to empty (markup-only/abuse).
-  const resolution = sanitiseText(self.f[resolutionInputField.id]?.value);
+  const rawResolution = self.f[resolutionInputField.id]?.value;
+  const resolution = sanitiseText(rawResolution);
+  D.log({
+    message: "A-F9 resolve: onSubmit start",
+    data: {
+      hasRaw: !!rawResolution,
+      rawType: typeof rawResolution,
+      sanitisedLen: (resolution || "").length,
+    },
+  });
   if (!resolution) {
     state.addErrorToStack(400, "Please describe how this report was resolved.");
     return;
@@ -232,13 +242,17 @@ resolveCaptureDoc.onSubmit = async (self) => {
   adminReportDoc.f[updatedOnField.id].value = now;
 
   // 8. One statusHistory row, atomic with the report write (rule 12). actorRole is the
-  //    admin's ROLE token — never an id (anonymity, rule 16). note is optional and
-  //    omitted (the resolution text lives on its own column; the timeline records the
-  //    transition, not a copy of the resolution body).
+  //    admin's ROLE token — never an id (anonymity, rule 16). We RECORD THE RESOLUTION
+  //    TEXT as the row's note: the `resolution` column only ever holds the LATEST
+  //    resolution, so on a re-resolve (after a reject/reopen) the previous resolution
+  //    would be overwritten and lost. Storing it on the timeline row preserves every
+  //    resolution in the history — each "Resolved" row shows the resolution that was
+  //    given at that point. Identity-free (admin free-text, already sanitised).
   appendStatusHistoryRow(adminReportDoc, {
     fromStatus: current,
     toStatus: STATUS.RESOLVED,
     actorRole: role,
+    note: resolution,
   });
 
   // 9. Persist. save() (audit: true, NFR-3) re-runs the Doc/field onSave gates; a gate
@@ -246,7 +260,7 @@ resolveCaptureDoc.onSubmit = async (self) => {
   //    does and do not claim success.
   const errorsBefore = (state.errorStack || []).length;
   try {
-    await adminReportDoc.save();
+    await saveDocWithSubCollections(adminReportDoc);
   } catch (error) {
     state.addSystemErrorToStack(
       500,
@@ -310,4 +324,10 @@ resolveCaptureDoc.onSubmit = async (self) => {
   });
 
   `Report **${reportId}** is now **${statusLabel(STATUS.RESOLVED)}**. Your resolution has been recorded in the report's timeline and shared with the reporter. If they take no action, the report will close automatically in 30 days.`.sendResponse();
+
+  // Re-render the Manage view so the UI reflects the new status WITHOUT the admin
+  // closing/reopening the tab (updated status pill, new timeline row, re-gated actions).
+  state.continueWithIntentWithIdAndMessage(INTENT.OPEN_MANAGE_REPORT, {
+    payload: { reportId },
+  });
 };

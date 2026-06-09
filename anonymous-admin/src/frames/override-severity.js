@@ -50,6 +50,7 @@ import {
 } from "../sections/manual-log";
 import { severityInputField } from "../sections/severity-popup";
 import { appendStatusHistoryRow } from "./status-history-writer";
+import { saveDocWithSubCollections } from "../../../lib/persist";
 import { resolveAdminRole } from "../../../lib/access";
 import { isActionAllowed, ACTION } from "../../../lib/ticket-status";
 import { SEVERITY, SEVERITY_LABELS, ERROR_CODES } from "../../../lib/constants";
@@ -236,7 +237,7 @@ severityCaptureDoc.onSubmit = async (self) => {
   //     resolve-report.js does and do not claim success.
   const errorsBefore = (state.errorStack || []).length;
   try {
-    await adminReportDoc.save();
+    await saveDocWithSubCollections(adminReportDoc);
   } catch (error) {
     state.addSystemErrorToStack(
       500,
@@ -264,4 +265,10 @@ severityCaptureDoc.onSubmit = async (self) => {
   `Severity for report **${reportId}** is now **${
     SEVERITY_LABELS[next] || next
   }**. The change has been recorded in the report's timeline.`.sendResponse();
+
+  // Re-render the Manage view so the UI reflects the new severity WITHOUT the admin
+  // closing/reopening the tab (updated severity, new timeline row, re-gated actions).
+  state.continueWithIntentWithIdAndMessage(INTENT.OPEN_MANAGE_REPORT, {
+    payload: { reportId },
+  });
 };

@@ -101,11 +101,26 @@ const tableHtml = (data) =>
   `</table>`;
 
 export const renderWeb = (data) => {
+  // "Create report" CTA — top-right of the header. Emits openSubmitReport so the reporter
+  // can start a new report straight from the list (data.intents.submit).
+  const createBtn = intentButtonHtml(
+    data.intents.submit,
+    "✚  Create report",
+    {},
+    `padding:${SPACING.SM}px ${SPACING.LG}px;border-radius:${TYPOGRAPHY.RADIUS}px;` +
+      `border:1px solid ${COLORS.PRIMARY_DARK};background:${COLORS.PRIMARY};` +
+      `color:${COLORS.PRIMARY_CONTRAST};font-family:${TYPOGRAPHY.FONT_FAMILY};` +
+      `font-size:${TYPOGRAPHY.SIZE_SM}px;font-weight:${TYPOGRAPHY.WEIGHT_MEDIUM};`
+  );
   const shell = (inner) =>
     `<div style="font-family:${TYPOGRAPHY.FONT_FAMILY};background:${COLORS.SURFACE};` +
     `border:1px solid ${COLORS.BORDER};border-radius:${TYPOGRAPHY.RADIUS}px;overflow:hidden;">` +
-    `<div style="padding:${SPACING.LG}px ${SPACING.XL}px;font-size:${TYPOGRAPHY.SIZE_LG}px;` +
-    `font-weight:${TYPOGRAPHY.WEIGHT_BOLD};color:${COLORS.TEXT};">My Reports</div>` +
+    `<div style="padding:${SPACING.LG}px ${SPACING.XL}px;display:flex;` +
+    `justify-content:space-between;align-items:center;gap:${SPACING.LG}px;">` +
+    `<span style="font-size:${TYPOGRAPHY.SIZE_LG}px;font-weight:${TYPOGRAPHY.WEIGHT_BOLD};` +
+    `color:${COLORS.TEXT};">My Reports</span>` +
+    createBtn +
+    `</div>` +
     inner +
     `</div>`;
 

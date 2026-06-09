@@ -49,9 +49,14 @@ openReportDetail.onResolution = async () => {
     return;
   }
 
-  // Sub-collections are not auto-populated by loadDocument.
-  await amendmentsCollection.loadCollectionWithQuery({});
-  await statusHistoryCollection.loadCollectionWithQuery({});
+  // The embedded amendments + statusHistory sub-collections ARE populated by
+  // loadDocument: reportDoc.hasSubDocs is true, so loadDocument runs through
+  // buildDocumentFromContainer, which clears + fills each registered sub-collection
+  // (amendmentsCollection / statusHistoryCollection) from the report's embedded arrays.
+  // Do NOT call loadCollectionWithQuery({}) here — these are EMBEDDED arrays, not
+  // standalone collections, so that query hits the (non-existent) `amendments_<botId>`
+  // collection, finds nothing, and CLEARS the rows loadDocument just loaded → empty
+  // timeline/amendments on a fresh open. (Removed: the two loadCollectionWithQuery calls.)
 
   D.log({
     message: "openReportDetail: report loaded",

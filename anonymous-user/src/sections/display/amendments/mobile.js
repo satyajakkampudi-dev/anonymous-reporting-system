@@ -73,7 +73,9 @@ export const renderMobile = (data) => {
   const body = data.amendments.length
     ? data.amendments.map(amendmentBlock).join("")
     : emptyStateHtml(
-        "No amendments yet. Use “Add amendment” to attach further information."
+        data.canAmend
+          ? "No amendments yet. Use “Add amendment” to attach further information."
+          : "No amendments."
       );
 
   return (
@@ -81,7 +83,8 @@ export const renderMobile = (data) => {
     `border:1px solid ${COLORS.BORDER};border-radius:${TYPOGRAPHY.RADIUS}px;padding:${SPACING.LG}px;">` +
     `<div style="font-size:${TYPOGRAPHY.SIZE_LG}px;font-weight:${TYPOGRAPHY.WEIGHT_BOLD};` +
     `color:${COLORS.TEXT};margin-bottom:${SPACING.MD}px;">Amendments</div>` +
-    addButtonHtml(data) +
+    // "+ Add amendment" only while amending is legal (non-terminal); withheld once closed.
+    (data.canAmend ? addButtonHtml(data) : "") +
     `<div style="margin-top:${SPACING.MD}px;">${body}</div>` +
     `</div>`
   );

@@ -86,6 +86,7 @@ const QUEUE_FILTER_CHIPS = [
   { key: QUEUE_FILTER.OPEN, label: "Open" },
   { key: QUEUE_FILTER.UNDER_REVIEW, label: "U/Review" },
   { key: QUEUE_FILTER.ESCALATED, label: "Escalated" },
+  { key: QUEUE_FILTER.RESOLVED, label: "Resolved" },
 ];
 
 // Derived priority flag (display_elements "Priority" → badge). Pure presentation —
