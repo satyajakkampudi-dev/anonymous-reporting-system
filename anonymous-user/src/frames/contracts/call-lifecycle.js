@@ -83,10 +83,64 @@ meetingJoinedReceiver.onResolution = async () => {
     return;
   }
   const status = callQueueDoc.f[callStatusField.id]?.value || "";
-  const attendedBy = callQueueDoc.f[attendedByField.id]?.value || "";
-  // Connected = an admin has claimed/joined (ACTIVE + attendedBy). Otherwise leave the
-  // current state (e.g. the reporter's own join keeps it CONNECTING).
-  if (attendedBy && status === CALL_STATUS.ACTIVE) {
+  let attendedBy = callQueueDoc.f[attendedByField.id]?.value || "";
+  const callRef = callQueueDoc.f[callRefField.id]?.value || "";
+
+  // Who joined. The reporter is state.user (this app runs as the reporter); anyone else is
+  // an admin. We log both id/email to confirm what joinMeeting provides on onship.
+  const joinerId = state.messageFromUser?.userId || "";
+  const joinerEmail = state.messageFromUser?.userEmail || "";
+  const reporterId = state.user?.userId || "";
+  D.log({
+    message: "U-CALL-LIFECYCLE: joinMeeting joiner",
+    data: { meetingId, joinerId, joinerEmail, attendedBy },
+  });
+
+  // JOIN-DRIVEN CLAIM (healthMariner joinMeetingIntent). On WEB the Answer button (A-F21)
+  // already claimed (attendedBy set) → this is a guarded no-op. On MOBILE, lifting CallKit
+  // does NOT run A-F21, so the claim must happen here when an admin joins: an admin joiner
+  // (not the reporter) + not yet claimed → RINGING/-> ACTIVE + stamp attendedBy, then tell
+  // the admin to go busy (MSG_CALL_CLAIMED).
+  if (joinerId && joinerId !== reporterId && !attendedBy) {
+    const now = Date.now();
+    callQueueDoc.f[callStatusField.id].value = CALL_STATUS.ACTIVE;
+    callQueueDoc.f[attendedByField.id].value = joinerId;
+    callQueueDoc.f[answeredOnField.id].value = now;
+    try {
+      await callQueueDoc.save();
+      attendedBy = joinerId;
+      D.log({
+        message: "U-CALL-LIFECYCLE: join-driven claim (-> ACTIVE)",
+        data: { meetingId, callRef, attendedBy },
+      });
+    } catch (error) {
+      D.log({
+        message: "U-CALL-LIFECYCLE: claim save failed (non-fatal)",
+        data: { meetingId, callRef, error: String(error) },
+      });
+    }
+    try {
+      const adminBotId = await resolvePeerBotId(STATIC_DATA_KEYS.ADMIN_BOT_ID);
+      await sendBotMessage({
+        type: MSG.CALL_CLAIMED,
+        payload: { meetingId, attendedBy: joinerId, callRef },
+        userIds: [joinerId],
+        botId: adminBotId,
+        userDomain: state.currentUserDomain,
+      });
+    } catch (error) {
+      D.log({
+        message: "U-CALL-LIFECYCLE: notify-admin (claimed) failed (non-fatal)",
+        data: { meetingId, error: String(error) },
+      });
+    }
+  }
+
+  // Connected = the call is claimed/ACTIVE (admin on the call). Flip the Home CTA.
+  if (
+    attendedBy &&
+    callQueueDoc.f[callStatusField.id]?.value === CALL_STATUS.ACTIVE
+  ) {
     renderHomeCallUi(CALL_UI.CONNECTED);
     D.log({
       message: "U-CALL-LIFECYCLE: CONNECTED (admin joined)",

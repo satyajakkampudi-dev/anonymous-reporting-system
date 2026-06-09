@@ -42,6 +42,7 @@ import { callQueueDoc } from "../../docs/call-queue-doc";
 import { adminDisplayDoc } from "../../docs/admin-display-doc";
 import { adminVideoCall } from "../answer-call";
 import { showScreen, SCREEN } from "../display-nav";
+import { ringVoipSelf, getMeetingLoftHost } from "../../../../lib/calling";
 import { MSG, userTab, CALL_STATUS } from "../../../../lib/constants";
 import { meetingIdField, callStatusField } from "../../sections/call-queue";
 import { CONTEXT } from "../../constants";
@@ -104,11 +105,9 @@ incomingCallReceiver.onResolution = async () => {
     });
     return;
   }
-  // WEB ring only here: RING_START shows the in-app web ring UI. MOBILE rings via the
-  // reporter's VoIP/CallKit fan-out (lib/calling.ringAvailableAdmins) — this receiver runs
-  // server-side where state.client is always "web", so it can't gate per device; RING_START
-  // is harmless on mobile (the mobile client ignores web ring actions). Action value is
-  // RING_START ("ringStart") — there is no "RING_START_ACTION" key in VIDEO_CALL_ACTIONS.
+  // WEB ring: RING_START shows the in-app web ring UI. Action value is RING_START
+  // ("ringStart") — there is no "RING_START_ACTION" key in VIDEO_CALL_ACTIONS. Harmless on
+  // mobile (the mobile client ignores web ring actions).
   try {
     adminVideoCall.meetingId = meetingId; // RING_START carries the meeting context
     adminVideoCall.sendResponse(ALL_CONSTANTS.VIDEO_CALL_ACTIONS.RING_START);
@@ -119,6 +118,29 @@ incomingCallReceiver.onResolution = async () => {
   } catch (error) {
     D.log({
       message: "X3 receiver: RING_START failed (non-fatal)",
+      data: { callRef, error: String(error) },
+    });
+  }
+
+  // MOBILE ring: mint THIS admin's meeting token, then send a VoIP/CallKit push carrying
+  // the token (videoSessionId) + Loft host (mediasoupHost) so lifting the native call joins
+  // the Daily room directly (healthMariner incommingQueueEntryIntent pattern). Device-token
+  // push → reaches mobile CallKit, does NOT toast web.
+  try {
+    await adminVideoCall.getAccessToken({ meetingId, useDaily: true });
+    const loftHost = await getMeetingLoftHost();
+    const voip = await ringVoipSelf({
+      meetingId,
+      meetingToken: adminVideoCall.meetingToken,
+      loftHost,
+    });
+    D.log({
+      message: "X3 receiver: mobile VoIP push sent",
+      data: { callRef, ok: voip?.ok, hasToken: !!adminVideoCall.meetingToken },
+    });
+  } catch (error) {
+    D.log({
+      message: "X3 receiver: mobile VoIP push failed (non-fatal)",
       data: { callRef, error: String(error) },
     });
   }

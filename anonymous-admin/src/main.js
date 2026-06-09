@@ -93,6 +93,12 @@ import "./frames/contracts/new-report";
 import "./frames/contracts/report-reopened";
 import "./frames/contracts/incoming-call";
 import "./frames/contracts/call-stop-ring";
+// joinMeeting on the admin bot: the MOBILE claim — lifting CallKit doesn't run A-F21, so
+// the admin's join claims the call here (RINGING -> ACTIVE + busy + stop ring).
+import "./frames/contracts/call-joined";
+// MSG_CALL_CLAIMED receiver: the reporter app sends this when an admin joins without the
+// web Answer button (mobile/CallKit) — sets that admin busy (join-driven claim).
+import "./frames/contracts/call-claimed";
 // MSG_CALL_ENDED receiver: the reporter app (meeting owner) sends this after the Loft
 // backend's endMeeting/leaveUser fires there; frees the answering admin's presence.
 import "./frames/contracts/call-ended";
