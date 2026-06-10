@@ -11,6 +11,25 @@ Everything below is **config, not code** — provisioned by devops per environme
 
 ---
 
+## Dev Domain (`onship`) — concrete values (current)
+
+```
+domain               | onship
+systemId             | test   → collections suffixed _test (e.g. admin_users_test)
+
+# static data
+anonymousadminbotid  | 8d068c16b25f1ca38ac85
+anonymoususerbotid   | cb35185f1c67335f73e92
+anonCallLoftHost     | dailydev.frontm.ai        (bare host; client opens https://dailydev.frontm.ai/<roomId>)
+conversationsBucket  | <platform default>        (verify present)
+ContentS3Bucket      | <domain content bucket>   (verify getStaticData returns the bucket name)
+anonymousemail       | (unset — falls back to host@anonymous.invalid; optional)
+```
+
+> Dev access is currently via the temporary `sailorscartadmin` test entitlement (`satya@frontm.com`); the real `quiteline*` roles are the production path.
+
+---
+
 ## QA Domain — config for the devops ticket (copy-paste)
 
 **License roles** (granted via license keys)
