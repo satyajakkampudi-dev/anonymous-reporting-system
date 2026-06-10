@@ -34,6 +34,8 @@ import { Intent } from "@frontmltd/frontmjs/core/Intent";
 import { Context } from "@frontmltd/frontmjs/core/Context";
 import { D, state } from "@frontmltd/frontmjs/core/State";
 import { adminReportDoc } from "../docs/admin-report-doc";
+import { statusHistorySection } from "../sections/status-history";
+import { amendmentsSection } from "../sections/amendments";
 import { resolveAdminRole } from "../../../lib/access";
 import { ERROR_CODES, userTab } from "../../../lib/constants";
 import { CONTEXT, INTENT } from "../constants";
@@ -91,6 +93,16 @@ openManualLog.onResolution = async () => {
   // draft opens with a single file input (frames/evidence-slots.js). MUST run before the
   // sendResponse below so the first render reflects the reset visibility.
   resetEvidenceSlots();
+
+  // Hide the Status timeline + Amendments embedded sub-collection host sections on the
+  // CREATE form. A brand-new manual report has no timeline (the first OPEN row is written
+  // on submit) and no amendments (reporter-appended only, never the admin — rule 30), so
+  // they would render as empty, confusing header bars. The report-DETAIL/manage view does
+  // NOT use these Data-Doc host sections (it renders via the Display Doc), so hiding them
+  // on the Data-Doc form has no effect there — the manual-log form is the only Data-Doc
+  // form render. (forCollection embedding/persistence is unaffected by `hidden`.)
+  statusHistorySection.hidden = true;
+  amendmentsSection.hidden = true;
 
   // Render the FORM. A Data-Doc form render IS correct for data ENTRY (the "never
   // sendResponse the Data Doc" rule is about READ/display screens, which use the Display
