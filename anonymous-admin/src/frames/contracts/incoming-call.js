@@ -45,7 +45,7 @@ import { showScreen, SCREEN } from "../display-nav";
 import { ringVoipSelf, getMeetingLoftHost } from "../../../../lib/calling";
 import { MSG, userTab, CALL_STATUS } from "../../../../lib/constants";
 import { meetingIdField, callStatusField } from "../../sections/call-queue";
-import { CONTEXT } from "../../constants";
+import { CONTEXT, VIDEO_CALL } from "../../constants";
 
 export const incomingCallReceiver = Intent.Create({
   intentId: "incomingCallReceiver",
@@ -133,6 +133,7 @@ incomingCallReceiver.onResolution = async () => {
       meetingId,
       meetingToken: adminVideoCall.meetingToken,
       loftHost,
+      videoControlId: VIDEO_CALL.CONTROL_ID, // binds the mobile join to adminVideoCall
     });
     D.log({
       message: "X3 receiver: mobile VoIP push sent",

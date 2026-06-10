@@ -28,6 +28,9 @@ import { Intent } from "@frontmltd/frontmjs/core/Intent";
 import { D, state } from "@frontmltd/frontmjs/core/State";
 import { callQueueDoc } from "../docs/call-queue-doc";
 import { reportDisplayDoc } from "../docs/report-display-doc";
+// voicemailDoc — the transient audio-capture form. The 30s no-answer path (call-timeout.js)
+// owns its onSubmit; we reuse the SAME form for the all-admins-busy short-circuit below.
+import { voicemailDoc } from "../docs/voicemail-doc";
 import { showScreen, SCREEN } from "./display-nav";
 import {
   callRefField,
@@ -110,25 +113,12 @@ startAnonymousCall.onResolution = async () => {
   await Context.CreateAndInit(userTab(CONTEXT.MAIN_APP, state), { state });
   D.log({ message: "U-F15: context ready" });
 
-  // 1b. Lifecycle feedback: flip the Home Call CTA to "Connecting…" immediately. It now
-  //     reverts reliably — joinMeeting → "Connected", endMeeting/leaveUser → "Call
-  //     compliance" (contracts/call-lifecycle.js). Best-effort; never blocks the call.
-  state.setField(STATE_KEYS.CALL_UI_STATE, CALL_UI.CONNECTING);
-  try {
-    showScreen(SCREEN.HOME);
-    reportDisplayDoc.sendResponse();
-  } catch (error) {
-    D.log({
-      message: "U-F15: Home 'Connecting…' re-render failed (non-fatal)",
-      data: { error: String(error) },
-    });
-  }
-
-  // 1b. Resolve the currently-available admins ONCE, up-front. Their emails are passed as
-  //     meeting `participants` (step 2) so the Loft/Daily backend TRACKS them and fires the
-  //     endMeeting/leaveUser lifecycle intents that free an admin's presence on hang-up
-  //     (SeaMedix pattern — without participants the admin stays BUSY). The SAME list is
-  //     reused for the ring fan-out (step 4) — no second query. Identity-free of the
+  // 1b. Resolve the currently-available admins ONCE, up-front — BEFORE any "Connecting…"
+  //     feedback, so we never show "Connecting…" when no call will be placed. Their emails
+  //     are passed as meeting `participants` (step 2) so the Loft/Daily backend TRACKS them
+  //     and fires the endMeeting/leaveUser lifecycle intents that free an admin's presence on
+  //     hang-up (SeaMedix pattern — without participants the admin stays BUSY). The SAME list
+  //     is reused for the ring fan-out (step 4) — no second query. Identity-free of the
   //     reporter (admins only; the reporter stays a masked guest). Best-effort.
   let availableAdmins = [];
   try {
@@ -146,6 +136,50 @@ startAnonymousCall.onResolution = async () => {
     message: "U-F15: available admins resolved",
     data: { count: availableAdmins.length, withEmail: adminEmails.length },
   });
+
+  // 1c. NO ADMIN AVAILABLE → do NOT place a dead call that just rings into the void for the
+  //     no-answer window, and do NOT show "Connecting…" (no call is placed). When every
+  //     compliance officer is busy/offline, short-circuit straight to the voicemail-capture
+  //     form (the SAME form the 30s no-answer timeout opens). The reporter leaves a short
+  //     audio message that becomes a source=CALL report via voicemailDoc.onSubmit
+  //     (call-timeout.js). No call-queue row is created — the audio stands alone as the
+  //     report (the chosen busy-path behaviour). Home stays on "Call compliance" (idle).
+  if (!adminEmails.length) {
+    D.log({
+      message:
+        "U-F15: no admin available — routing to voicemail (busy short-circuit)",
+    });
+    // voicemailDoc.onSubmit REQUIRES STATE_KEYS.CURRENT_CALL_REF to key the report — stash a
+    // fresh callRef even though no call was placed. Reset the transient capture Doc in place
+    // (rule 26 — never cloneAndInit): new docId FIRST, then clear values, so a warm container
+    // cannot leak a prior recording's envelope onto this popup.
+    const voicemailCallRef = generateCallRef();
+    state.setField(STATE_KEYS.CURRENT_CALL_REF, voicemailCallRef);
+    voicemailDoc.docId = state.getUniqueId();
+    for (const field of voicemailDoc.fields) {
+      field.value = null;
+    }
+    voicemailDoc.sendQuickFormResponse();
+    D.log({
+      message: "U-F15: voicemail form opened (all admins busy)",
+      data: { voicemailCallRef },
+    });
+    return;
+  }
+
+  // 1d. An admin IS available → we ARE placing a call. NOW flip the Home Call CTA to
+  //     "Connecting…". It reverts reliably — joinMeeting → "Connected", endMeeting/leaveUser
+  //     → "Call compliance" (contracts/call-lifecycle.js). Best-effort; never blocks the call.
+  state.setField(STATE_KEYS.CALL_UI_STATE, CALL_UI.CONNECTING);
+  try {
+    showScreen(SCREEN.HOME);
+    reportDisplayDoc.sendResponse();
+  } catch (error) {
+    D.log({
+      message: "U-F15: Home 'Connecting…' re-render failed (non-fatal)",
+      data: { error: String(error) },
+    });
+  }
 
   // 2. Create the masked voice-only meeting + mint the masked guest token. On a
   //    non-200 from the video-call capability, createMeeting pushes a system error

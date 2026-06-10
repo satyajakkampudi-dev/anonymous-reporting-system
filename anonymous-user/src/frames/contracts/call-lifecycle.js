@@ -33,6 +33,7 @@ import {
   sendBotMessage,
   resolvePeerBotId,
 } from "../../../../lib/notifications";
+import { resolveAdminByEmail } from "../../../../lib/calling";
 import {
   CALL_STATUS,
   MSG,
@@ -86,53 +87,72 @@ meetingJoinedReceiver.onResolution = async () => {
   let attendedBy = callQueueDoc.f[attendedByField.id]?.value || "";
   const callRef = callQueueDoc.f[callRefField.id]?.value || "";
 
-  // Who joined. The reporter is state.user (this app runs as the reporter); anyone else is
-  // an admin. We log both id/email to confirm what joinMeeting provides on onship.
-  const joinerId = state.messageFromUser?.userId || "";
-  const joinerEmail = state.messageFromUser?.userEmail || "";
-  const reporterId = state.user?.userId || "";
+  // Who joined. The "joinMeeting" lifecycle event populates the joiner's EMAIL
+  // (state.messageFromUser.userEmail) — NOT a reliable userId. healthMariner's
+  // joinMeetingIntent keys off the same userEmail field. We log userId too, but it is
+  // typically empty on lifecycle dispatch (the old `if (joinerId && …)` guard never fired,
+  // which is why the MOBILE claim silently never happened).
+  const joinerId = state.messageFromUser?.userId || ""; // logged only — usually empty here
+  const joinerEmail =
+    state.messageFromUser?.userEmail ||
+    state.messageFromUser?.data?.userEmail ||
+    "";
+  const reporterEmail = state.user?.userEmail || "";
   D.log({
     message: "U-CALL-LIFECYCLE: joinMeeting joiner",
-    data: { meetingId, joinerId, joinerEmail, attendedBy },
+    data: { meetingId, joinerId, joinerEmail, reporterEmail, attendedBy },
   });
 
   // JOIN-DRIVEN CLAIM (healthMariner joinMeetingIntent). On WEB the Answer button (A-F21)
-  // already claimed (attendedBy set) → this is a guarded no-op. On MOBILE, lifting CallKit
-  // does NOT run A-F21, so the claim must happen here when an admin joins: an admin joiner
-  // (not the reporter) + not yet claimed → RINGING/-> ACTIVE + stamp attendedBy, then tell
-  // the admin to go busy (MSG_CALL_CLAIMED).
-  if (joinerId && joinerId !== reporterId && !attendedBy) {
-    const now = Date.now();
-    callQueueDoc.f[callStatusField.id].value = CALL_STATUS.ACTIVE;
-    callQueueDoc.f[attendedByField.id].value = joinerId;
-    callQueueDoc.f[answeredOnField.id].value = now;
-    try {
-      await callQueueDoc.save();
-      attendedBy = joinerId;
+  // already claimed (attendedBy set) → guarded no-op. On MOBILE, lifting CallKit does NOT
+  // run A-F21, so the claim happens HERE when an ADMIN joins. Identify the admin by EMAIL
+  // (the field the lifecycle event actually carries; ≠ the reporter's own email) and map it
+  // to the admin's userId via the seeded registry — our queue/notify path is userId-keyed.
+  const joinerIsAdmin = joinerEmail && joinerEmail !== reporterEmail;
+  if (joinerIsAdmin && !attendedBy) {
+    const admin = await resolveAdminByEmail(joinerEmail);
+    const adminUserId = admin?.adminUserId || "";
+    if (!adminUserId) {
       D.log({
-        message: "U-CALL-LIFECYCLE: join-driven claim (-> ACTIVE)",
-        data: { meetingId, callRef, attendedBy },
+        message: "U-CALL-LIFECYCLE: joiner email not a known admin — no claim",
+        data: { meetingId, joinerEmail },
       });
-    } catch (error) {
-      D.log({
-        message: "U-CALL-LIFECYCLE: claim save failed (non-fatal)",
-        data: { meetingId, callRef, error: String(error) },
-      });
-    }
-    try {
-      const adminBotId = await resolvePeerBotId(STATIC_DATA_KEYS.ADMIN_BOT_ID);
-      await sendBotMessage({
-        type: MSG.CALL_CLAIMED,
-        payload: { meetingId, attendedBy: joinerId, callRef },
-        userIds: [joinerId],
-        botId: adminBotId,
-        userDomain: state.currentUserDomain,
-      });
-    } catch (error) {
-      D.log({
-        message: "U-CALL-LIFECYCLE: notify-admin (claimed) failed (non-fatal)",
-        data: { meetingId, error: String(error) },
-      });
+    } else {
+      const now = Date.now();
+      callQueueDoc.f[callStatusField.id].value = CALL_STATUS.ACTIVE;
+      callQueueDoc.f[attendedByField.id].value = adminUserId;
+      callQueueDoc.f[answeredOnField.id].value = now;
+      try {
+        await callQueueDoc.save();
+        attendedBy = adminUserId;
+        D.log({
+          message: "U-CALL-LIFECYCLE: join-driven claim (-> ACTIVE)",
+          data: { meetingId, callRef, attendedBy, joinerEmail },
+        });
+      } catch (error) {
+        D.log({
+          message: "U-CALL-LIFECYCLE: claim save failed (non-fatal)",
+          data: { meetingId, callRef, error: String(error) },
+        });
+      }
+      try {
+        const adminBotId = await resolvePeerBotId(
+          STATIC_DATA_KEYS.ADMIN_BOT_ID
+        );
+        await sendBotMessage({
+          type: MSG.CALL_CLAIMED,
+          payload: { meetingId, attendedBy: adminUserId, callRef },
+          userIds: [adminUserId],
+          botId: adminBotId,
+          userDomain: state.currentUserDomain,
+        });
+      } catch (error) {
+        D.log({
+          message:
+            "U-CALL-LIFECYCLE: notify-admin (claimed) failed (non-fatal)",
+          data: { meetingId, error: String(error) },
+        });
+      }
     }
   }
 

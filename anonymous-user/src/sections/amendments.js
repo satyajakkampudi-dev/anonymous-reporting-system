@@ -74,6 +74,9 @@ export const amendmentEvidenceKeyField = new Field(
     type: FormFieldTypes.FILE_FIELD,
     mandatory: false,
     includeInQuickEdit: true,
+    // DOMAIN scope so an admin (different conversation) can open amendment evidence too —
+    // same rationale as reporter evidence (sections/evidence.js). Anonymity-safe path.
+    fileScope: "domain",
     dbName: "amendmentEvidenceKey",
     state,
   }

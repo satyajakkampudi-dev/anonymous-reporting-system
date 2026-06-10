@@ -131,9 +131,8 @@ export const prepareAmendmentsEvidence = async () => {
   const attached = collectAttachments();
   if (!attached.length) return;
 
-  const bucket = await state.getStaticData(
-    STATIC_DATA_KEYS.CONVERSATIONS_BUCKET
-  );
+  // DOMAIN-scoped amendment evidence lands in the CONTENT bucket (not conversationsBucket).
+  const bucket = await state.getStaticData(STATIC_DATA_KEYS.CONTENT_BUCKET);
   if (!bucket) {
     // No bucket configured — keep the filename, never embed a key (broken link).
     D.log({
@@ -151,9 +150,11 @@ export const prepareAmendmentsEvidence = async () => {
 
   for (const item of attached) {
     try {
+      // DOMAIN-scoped amendment evidence: object at `${currentUserDomain}/${key}`.
+      const keyPath = `${state.currentUserDomain}/${item.key}`;
       const url = await state.frontmlib.getS3SignedUrl(
         bucket,
-        `${state.conversationId}/${item.key}`,
+        keyPath,
         SIGNED_URL_EXPIRY_SECONDS
       );
       D.log({
@@ -161,7 +162,7 @@ export const prepareAmendmentsEvidence = async () => {
         data: {
           amendmentId: item.amendmentId,
           fileName: item.fileName,
-          keyPath: `${state.conversationId}/${item.key}`,
+          keyPath,
           signed: !!url,
         },
       });

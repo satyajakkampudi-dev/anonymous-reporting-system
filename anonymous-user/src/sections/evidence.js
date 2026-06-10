@@ -40,17 +40,15 @@ const makeEvidenceFileField = (index, hidden) =>
     section: evidenceSection,
     type: FormFieldTypes.FILE_FIELD,
     mandatory: false,
-    // CONVERSATION scope — the FrontM default for user-uploaded media and the ONLY
-    // scope proven to round-trip (myProfile profilePhoto, sailors-cart product photos:
-    // both fileScope "conversation", signed at `${conversationId}/${key}`). A
-    // "domain"-scoped FILE_FIELD uploads to a non-standard location our signing cannot
-    // reach (verified live: NoSuchKey at BOTH `${domain}/${key}` and
-    // `${conversationId}/${key}`), which broke the reporter's OWN download. The earlier
-    // "domain" choice (MP-FIX-EVIDENCE-FILESCOPE) aimed to let admins read evidence
-    // cross-conversation, but that goal needs a custom domain-path upload on submit
-    // (healthMariner pattern), NOT a FILE_FIELD scope flag. Reverted to conversation so
-    // the reporter can download their own evidence; admin cross-access is a separate task.
-    fileScope: "conversation",
+    // DOMAIN scope (per FrontM platform team — Jaswanth, 2026-06-10): a FILE_FIELD must
+    // be DOMAIN-scoped so the bytes land at a domain-shared S3 path readable by ANY user
+    // in the domain — which is exactly what we need (a reporter uploads; a compliance
+    // admin in a DIFFERENT conversation must open it). The object lives at
+    // `${currentUserDomain}/${key}`; readers sign that path (detail-content +
+    // nav-manage-report). Anonymity-safe: the path carries the domain + a random key, NO
+    // reporter conversationId/identity (rule 30). (Supersedes the earlier conversation
+    // revert; the prior "domain NoSuchKey" was a stale/conversation-scoped test file.)
+    fileScope: "domain",
     dbName: `evidenceFile${index}`,
     hidden,
     state,

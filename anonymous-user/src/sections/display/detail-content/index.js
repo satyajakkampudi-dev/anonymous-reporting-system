@@ -9,7 +9,8 @@
 //      (openReportDetail) MUST `await` it BEFORE reportDisplayDoc.sendResponse().
 //      It drills each evidenceFile envelope (.value?.value = S3 key — NEVER the
 //      raw key in HTML, rule 11/18), signs it via state.frontmlib.getS3SignedUrl
-//      against the conversations bucket, and caches { fileName, url } in a
+//      against the CONTENT bucket at `${currentUserDomain}/${key}` (domain-scoped
+//      FILE_FIELD), and caches { fileName, url } in a
 //      module-local for the synchronous render. Signing here (cloud-only AWS creds)
 //      is the ONLY correct place — it cannot live in onResponse (the framework
 //      calls section.onResponse synchronously and discards an async return; S3 guide
@@ -135,53 +136,28 @@ export const prepareDetailContentEvidence = async () => {
   }
   if (!attached.length) return;
 
-  const bucket = await state.getStaticData(
-    STATIC_DATA_KEYS.CONVERSATIONS_BUCKET
-  );
+  // DOMAIN-scoped evidence (fileScope:"domain") lands in the CONTENT bucket at
+  // `${currentUserDomain}/${key}` — NOT conversationsBucket (that's IMAGE_FIELD /
+  // conversation-scoped media). Sign against the content bucket (healthMariner pattern).
+  const bucket = await state.getStaticData(STATIC_DATA_KEYS.CONTENT_BUCKET);
   if (!bucket) {
-    // No bucket configured — render the count without broken links (never embed keys).
     D.log({
-      message: "detailContent: no conversations bucket configured",
+      message:
+        "detailContent: content bucket not configured (cannot sign evidence)",
       data: { reportId, attachedCount: attached.length },
     });
     signedEvidence = attached.map((a) => ({ fileName: a.fileName, url: "" }));
     return;
   }
 
-  // DIAGNOSTIC PROBE (temporary) — FILE_FIELD upload prefix is unknown (sailors/myProfile
-  // only download IMAGE_FIELD). Try candidate S3 paths for the first key via getS3Object
-  // and log which one actually exists, so we can match the signing exactly. Remove after.
-  if (attached[0]) {
-    const k = attached[0].key;
-    const candidates = {
-      bare: k,
-      conversation: `${state.conversationId}/${k}`,
-      domain: `${state.currentUserDomain}/${k}`,
-      user: `${state.user?.userId}/${k}`,
-      bot: `${state.botId}/${k}`,
-    };
-    for (const [label, key] of Object.entries(candidates)) {
-      try {
-        const res = await state.frontmlib.getS3Object({ bucket, key });
-        const ok = !!res && (res.statusCode === 200 || res.Body || res.body);
-        D.log({
-          message: "detailContent: S3 probe",
-          data: { label, key, exists: ok, statusCode: res?.statusCode },
-        });
-      } catch (e) {
-        D.log({
-          message: "detailContent: S3 probe miss",
-          data: { label, key, error: String(e?.message || e).slice(0, 80) },
-        });
-      }
-    }
-  }
-
   for (const item of attached) {
     try {
+      // DOMAIN-scoped evidence (sections/evidence.js): the object lives at
+      // `${currentUserDomain}/${key}` — NOT the conversation path. Sign that.
+      const keyPath = `${state.currentUserDomain}/${item.key}`;
       const url = await state.frontmlib.getS3SignedUrl(
         bucket,
-        `${state.conversationId}/${item.key}`,
+        keyPath,
         SIGNED_URL_EXPIRY_SECONDS
       );
       D.log({
@@ -189,7 +165,7 @@ export const prepareDetailContentEvidence = async () => {
         data: {
           reportId,
           fileName: item.fileName,
-          keyPath: `${state.conversationId}/${item.key}`,
+          keyPath,
           signed: !!url,
         },
       });

@@ -58,9 +58,9 @@ const buildEvidenceSignedUrls = async (report) => {
   const stash = {};
   if (!report) return stash;
 
-  const bucket = await state.getStaticData(
-    STATIC_DATA_KEYS.CONVERSATIONS_BUCKET
-  );
+  // DOMAIN-scoped evidence lands in the CONTENT bucket at `${currentUserDomain}/${key}`
+  // (not conversationsBucket) — readable by any admin in the domain (healthMariner pattern).
+  const bucket = await state.getStaticData(STATIC_DATA_KEYS.CONTENT_BUCKET);
   if (!bucket) {
     // No bucket configured → cannot sign anything; render filenames without links.
     D.log({ message: "openManageReport: no conversations bucket configured" });
@@ -72,29 +72,30 @@ const buildEvidenceSignedUrls = async (report) => {
     const s3Key = envelope?.value; // drill the envelope — NEVER the bare envelope
     if (!s3Key) continue; // empty slot
 
-    const scope = envelope?.fileScopeValue;
-
-    // ARCHITECTURE LIMITATION (verified live — NoSuchKey on `${domain}/${key}`):
-    // setting fileScope:"domain" on a FILE_FIELD records fileScopeValue = the domain
-    // name ("onship") as METADATA, but the super-app still uploads the bytes to the
-    // UPLOADER's conversation path — `${reporterConversationId}/${key}` (same path
-    // myProfile signs for its photo field). It does NOT relocate the object to
-    // `${domain}/${key}`. So the admin — a DIFFERENT conversation, with no access to
-    // (and, by anonymity, no right to) the reporter's conversationId — literally
-    // cannot construct a working key for reporter evidence. Every reporter-uploaded
-    // file is therefore OMITTED here → the consumer shows "(link unavailable)".
-    //
-    // The only proven cross-conversation pattern (healthMarinerCommonLib/crewApi.js)
-    // is a CUSTOM server-side `state.frontmlib.uploadToS3Bucket` to `${domain}/${key}`
-    // at write time, NOT FILE_FIELD scope. Making admin evidence access work requires
-    // copying each evidence object to a domain-shared path on report submit and
-    // storing that domain key — a deliberate change (see the open MP-FIX for evidence
-    // S3 access). Until then, omit + flag; NEVER emit a 404 link.
-    D.log({
-      message:
-        "openManageReport: reporter evidence not admin-accessible (stored under reporter conversation, not a domain path)",
-      data: { fieldKey, scope: scope || "unset" },
-    });
+    // DOMAIN-scoped evidence (sections/evidence.js, fileScope:"domain", per FrontM
+    // platform team): the bytes live at `${currentUserDomain}/${key}` — a domain-shared
+    // path readable by ANY admin in the domain, with NO reporter conversationId in it
+    // (anonymity-safe, rule 30). Sign that path; stash keyed by the raw s3Key so the
+    // manage-content renderer overlays it by key. Per-key failure degrades to omission
+    // ("(link unavailable)"), never an exception out of the handler.
+    const keyPath = `${state.currentUserDomain}/${s3Key}`;
+    try {
+      const url = await state.frontmlib.getS3SignedUrl(
+        bucket,
+        keyPath,
+        SIGNED_URL_EXPIRY_SECONDS
+      );
+      if (url) stash[s3Key] = url;
+      D.log({
+        message: "openManageReport: evidence signed",
+        data: { fieldKey, keyPath, signed: !!url },
+      });
+    } catch (error) {
+      D.log({
+        message: "openManageReport: evidence signing failed (degraded)",
+        data: { fieldKey, keyPath, error: String(error) },
+      });
+    }
   }
 
   return stash;
