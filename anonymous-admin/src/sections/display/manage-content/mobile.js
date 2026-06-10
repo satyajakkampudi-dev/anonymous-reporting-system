@@ -87,6 +87,25 @@ const evidenceBlock = (evidence) => {
   return heading + items + riskNote;
 };
 
+// Reporter contact block — shown ONLY when the reporter chose to identify themselves
+// (open reporting, MP-FIX-CONTACT-OPEN-REPORTING). INFO tone; reporter free-text → escaped.
+const contactBlock = (data) => {
+  if (!data.hasContact) return "";
+  const c = toneColors(TONE.INFO);
+  const method = data.contactMethod
+    ? `${escapeHtml(data.contactMethod)}: `
+    : "";
+  return (
+    `<div style="margin-top:${SPACING.MD}px;padding:${SPACING.SM}px ${SPACING.MD}px;` +
+    `background:${c.bg};border:1px solid ${c.border};border-radius:6px;">` +
+    `<div style="font-size:${TYPOGRAPHY.SIZE_XS}px;text-transform:uppercase;letter-spacing:0.04em;` +
+    `color:${c.fg};margin-bottom:2px;">Reporter contact (shared voluntarily)</div>` +
+    `<div style="font-size:${TYPOGRAPHY.SIZE_SM}px;color:${COLORS.TEXT};` +
+    `font-weight:${TYPOGRAPHY.WEIGHT_MEDIUM};word-break:break-word;">${method}${escapeHtml(data.contactValue)}</div>` +
+    `</div>`
+  );
+};
+
 export const renderMobile = (data) => {
   // No report open (Dashboard / Queue screens, or not found) — emit nothing (empty-safe).
   if (!data.hasReport) return "";
@@ -124,6 +143,8 @@ export const renderMobile = (data) => {
     evidenceBlock(data.evidence) +
     notes +
     `</div>` +
+    // Reporter contact (open reporting) — only when the reporter chose to identify themselves.
+    contactBlock(data) +
     `</div>`
   );
 };

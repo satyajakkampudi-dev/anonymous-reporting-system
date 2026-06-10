@@ -1,23 +1,24 @@
-// Navigation intent: openQueue — the report queue (role-filtered + recused + priority).
+// Navigation intent: openQueue — the report queue (role-filtered + recused + priority),
+// SERVER-PAGINATED (MP-FIX-QUEUE-SERVER-PAGINATION).
 //
-// Independent intent (Context B). Context.Create preserves the buffer (rule 22). Loads
-// reports ONLY through the anonymity gateway (rule 15) — never a direct query.
+// Independent intent (Context B). Loads reports ONLY through the anonymity gateway
+// (rule 15) — never a direct query.
 //
 // PRODUCER (A-F4 role filter + recusal, A-F5 priority surfacing/sort/quick-filter). This
-// frame is the SINGLE producer of the two queue stashes the Display-Doc renderer consumes:
-//   STATE_KEYS.QUEUE_REPORTS       — the identity-free, role-filtered, recused,
-//                                    priority-sorted, quick-filtered report list.
-//   STATE_KEYS.QUEUE_ACTIVE_FILTER — the active quick-filter chip (so the renderer
-//                                    highlights it).
-// The filter/recusal/sort logic lives in the PURE, testable lib/queue.js (mirroring
-// lib/sla.js / lib/dashboard-stats.js) so it is single-sourced and verifiable. Routing/role
-// come ONLY from lib/access (resolveTargetRoleFor inside lib/queue, rule 14); the priority
-// predicate is the SHARED isPriority (lib/dashboard-stats, identical to the A-F2 dashboard
-// 'Priority / Escalated' count — no drift).
+// frame is the SINGLE producer of the queue stashes the Display-Doc renderer consumes:
+//   STATE_KEYS.QUEUE_REPORTS       — the identity-free, recused, projected ROW of the
+//                                    current page (role + filter + priority sort applied
+//                                    server-side in the Mongo query).
+//   STATE_KEYS.QUEUE_ACTIVE_FILTER — the active quick-filter chip (renderer highlights it).
+//   STATE_KEYS.QUEUE_PAGE / QUEUE_HAS_MORE — the prev/next control state.
+// The query + sort builders live in the PURE, testable lib/queue.js (buildQueueQuery), the
+// recusal page-filter + projection in projectQueueRows. Role → assignedTo query and the
+// priority float → the STORED priorityRank sort key (reportDoc.onSave / priorityRankFor) —
+// the SAME isPriority the A-F2 dashboard uses, so no drift. Each page click is ONE bounded
+// DB read (limit PAGE_SIZE+1, skip) — the queue never loads the full set.
 //
-// The Display-Doc render swap (showing the queue section instead of this placeholder) is
-// the SEPARATE nav-display-routing fix — this frame ONLY produces the stashes, then keeps
-// the existing placeholder sendResponse. The queue renderer (A-D-queue) reads the stashes.
+// Free-text recusal (accusedParty) is NOT a query, so it trims the fetched page in-code;
+// a page may therefore render < PAGE_SIZE rows in the rare recusal case (D9).
 
 import { Intent } from "@frontmltd/frontmjs/core/Intent";
 import { Context } from "@frontmltd/frontmjs/core/Context";
@@ -27,7 +28,7 @@ import {
   resolveAdminRole,
   resolveAdminIdentity,
 } from "../../../lib/access";
-import { buildQueueReports } from "../../../lib/queue";
+import { buildQueueQuery, projectQueueRows } from "../../../lib/queue";
 import { LIST_PAGE_SIZE, userTab } from "../../../lib/constants";
 import { adminDisplayDoc } from "../docs/admin-display-doc";
 import { showScreen, SCREEN } from "./display-nav";
@@ -53,36 +54,44 @@ openQueue.onResolution = async () => {
   // level deep under .payload — rule "Custom HTML Payloads").
   const activeFilter = normaliseFilter(state.messageFromUser?.payload?.filter);
 
-  // Read ONLY through the gateway (rule 15) — identity-free, projection-applied.
-  const reports = await loadReportsForAdmin({});
-
   // Resolve the viewing admin's role (role filter) + own identity (recusal). Both come
   // from lib/access (the single gating source); identity.adminEmail is used SOLELY to
   // recuse and is never written or sent (rule 30). A caller who is somehow not in the
   // admin registry (the access gate A-F1 should have stopped them) resolves to null →
-  // buildQueueReports treats the role as "not secondary" (primary set only) and recusal
-  // as a no-op, so we fail closed to the narrowest non-erroring view.
+  // buildQueueQuery treats the role as "not secondary" (PRIMARY-routed set only) and
+  // recusal is a no-op, so we fail closed to the narrowest non-erroring view.
   const viewingRole = await resolveAdminRole();
   const identity = await resolveAdminIdentity();
 
-  const queueReports = buildQueueReports({
-    reports,
+  // SERVER-SIDE pagination (MP-FIX-QUEUE-SERVER-PAGINATION). Build the Mongo query + sort
+  // for this role + quick-filter (priority float = the stored priorityRank sort), then read
+  // ONE bounded page through the gateway (rule 15) — over-fetch by 1 to detect a next page.
+  // Every page click is its own DB read; the queue never loads the full set.
+  const { query, sort } = buildQueueQuery({
     viewingRole,
-    identity,
     filter: activeFilter,
   });
-
-  // Pagination (rule 36) — IN-MEMORY slice of the role-filtered + recused + priority-sorted
-  // list (the priority-float sort + free-text recusal can't be a Mongo sort/query, and the
-  // full set is already loaded for the dashboard, so we slice here). A filter chip emits
-  // { filter } (no page) → page 0; the prev/next control emits { page, filter }.
   const page =
     Number(state.messageFromUser?.payload?.page) >= 0
       ? Number(state.messageFromUser.payload.page)
       : 0;
-  const start = page * LIST_PAGE_SIZE;
-  const pageReports = queueReports.slice(start, start + LIST_PAGE_SIZE);
-  const hasMore = queueReports.length > start + LIST_PAGE_SIZE;
+  const skip = page * LIST_PAGE_SIZE;
+  const fetched = await loadReportsForAdmin({
+    query,
+    sort,
+    skip,
+    limit: LIST_PAGE_SIZE + 1, // over-fetch by 1 → hasMore without a count query
+  });
+
+  // hasMore from the raw DB over-fetch (before recusal — recusal only trims the displayed
+  // page, it does not change whether more rows exist in the DB beyond this page).
+  const hasMore = fetched.length > LIST_PAGE_SIZE;
+  // Recuse + project the page IN-CODE (free-text accusedParty match is not a query). The
+  // page therefore renders ≤ LIST_PAGE_SIZE rows — fewer in the rare recusal case (D9).
+  const pageReports = projectQueueRows({
+    reports: fetched.slice(0, LIST_PAGE_SIZE),
+    identity,
+  });
 
   // Stash the PAGE (+ page/hasMore for the control) BEFORE the render (the renderer's
   // onResponse is not awaited and cannot load — rule 11/18). Empty → empty state.
@@ -92,14 +101,21 @@ openQueue.onResolution = async () => {
   state.setField(STATE_KEYS.QUEUE_HAS_MORE, hasMore);
 
   D.log({
-    message: "openQueue produced queue stash",
+    message: "openQueue produced queue stash (server-paginated)",
     data: {
-      loaded: reports.length,
-      total: queueReports.length,
+      // The actual Mongo query + sort sent this page click (TRACE — confirms server-side
+      // paging: a per-page skip/limit read, role/filter in the query, priorityRank float).
+      query,
+      sort,
+      limit: LIST_PAGE_SIZE + 1,
+      fetched: fetched.length,
       page,
+      skip,
       shown: pageReports.length,
       hasMore,
       filter: activeFilter,
+      // identity-free reportIds returned this page (no reporterId/contact — anonymity).
+      reportIds: pageReports.map((r) => r.reportId),
       // role token only — never an email/id (anonymity; identity used solely to recuse).
       viewingRole: viewingRole || "UNKNOWN",
     },

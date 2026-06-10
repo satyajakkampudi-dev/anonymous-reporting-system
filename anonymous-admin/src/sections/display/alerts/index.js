@@ -106,12 +106,19 @@ export const alertsDigestDisplayPlaceholderCard = new Card(
 // approach as the queue / manage-content / amendments display sections).
 const toPlainReport = (row) => applyAdminProjection(extractRowData(row));
 
-// Read the gateway-loaded report set (app-start's loadReportsForAdmin), stripped again.
-// NEVER queries `reports` directly (ER-A3). Empty when nothing is loaded (empty-safe).
-const readReports = () =>
-  (reportsCollection.rows || [])
+// Read the ROLE-VISIBLE report set the dashboard producer stashed (app-start /
+// nav-dashboard → roleVisibleReports, MP-FIX-DASHBOARD-ALERTS-ROLE-SCOPE) so breaches are
+// scoped to what THIS admin can see (PRIMARY ≠ SECONDARY). Those stashed rows are already
+// identity-free, plain objects. Falls back to the gateway-loaded collection (full set,
+// stripped) if the stash is absent, so the panel never renders empty. NEVER queries
+// `reports` directly (ER-A3). Empty-safe.
+const readReports = () => {
+  const stash = state.getField(STATE_KEYS.ALERTS_REPORTS);
+  if (Array.isArray(stash)) return stash.filter((r) => r && r.reportId);
+  return (reportsCollection.rows || [])
     .map(toPlainReport)
     .filter((r) => r && r.reportId);
+};
 
 // The SLA-breach predicate (slaForReport + buildBreaches) now lives in the shared
 // lib/sla.js (imported above), so the email digest job (A-F18) and this in-app twin

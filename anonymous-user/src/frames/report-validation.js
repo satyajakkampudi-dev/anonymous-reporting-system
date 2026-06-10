@@ -30,7 +30,7 @@
 // U-F7 (contact-method conditional validation) adds its per-method checks to
 // this same reportDoc.onSave handler (see the "U-F7" block below).
 
-import { state } from "@frontmltd/frontmjs/core/State";
+import { D, state } from "@frontmltd/frontmjs/core/State";
 import { reportDoc } from "../collections/reports";
 import {
   evidenceFile1Field,
@@ -40,6 +40,14 @@ import {
   evidenceFile5Field,
 } from "../sections/evidence";
 import { contactMethodField, contactValueField } from "../sections/contact";
+import {
+  reportIdField,
+  severityField,
+  urgencyField,
+  statusField,
+  priorityRankField,
+} from "../sections/report-details";
+import { priorityRankFor } from "../../../lib/dashboard-stats";
 import {
   validateEvidenceEnvelope,
   isWithinEvidenceFileCount,
@@ -179,4 +187,28 @@ reportDoc.onSave = async (self) => {
       self.f[contactValueField.id].value = v.trim();
     }
   }
+
+  // Stamp the stored priority sort key on every persist (MP-FIX-QUEUE-SERVER-PAGINATION).
+  // Derived from the live severity/urgency/status via the SHARED predicate, so the admin
+  // queue's server-side sort { priorityRank: 1, createdOn: -1 } floats CRITICAL/IMMEDIATE/
+  // ESCALATED reports to the top. Set here (the universal save chokepoint) so it can never
+  // drift from isPriority — a re-submit, amendment, accept/reject all re-stamp it.
+  self.f[priorityRankField.id].value = priorityRankFor({
+    severity: self.f[severityField.id].value,
+    urgency: self.f[urgencyField.id].value,
+    status: self.f[statusField.id].value,
+  });
+  // TRACE (MP-FIX-QUEUE-SERVER-PAGINATION): confirm priorityRank is stamped on the USER
+  // submit path before persist. If this logs but the queue shows nothing, the issue is
+  // the admin read; if priorityRank is undefined here, the onSave gate is not reached.
+  D.log({
+    message: "USER onSave: priorityRank stamped",
+    data: {
+      reportId: self.f[reportIdField.id].value,
+      severity: self.f[severityField.id].value,
+      urgency: self.f[urgencyField.id].value,
+      status: self.f[statusField.id].value,
+      priorityRank: self.f[priorityRankField.id].value,
+    },
+  });
 };

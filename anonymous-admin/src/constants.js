@@ -190,15 +190,21 @@ export const STATE_KEYS = {
   // openQueue invoke_intent payload; READ by the queue renderer to highlight the
   // active chip. Absent → QUEUE_FILTER.ALL (no filter applied yet).
   QUEUE_ACTIVE_FILTER: "QUEUE_ACTIVE_FILTER",
-  // Queue pagination (MP-FIX-QUEUE-PAGINATION, framework-mapping rule 36). The queue is
-  // paginated IN-MEMORY (the priority-float sort + free-text recusal don't translate to a
-  // Mongo sort/query; the full set is already loaded for dashboard stats). nav-queue slices
-  // buildQueueReports' result to LIST_PAGE_SIZE and stashes the current 0-indexed page +
-  // whether a next page exists, for the prev/next control.
+  // Queue pagination (MP-FIX-QUEUE-SERVER-PAGINATION, framework-mapping rule 36). The queue
+  // is now SERVER-paginated: nav-queue builds a Mongo query+sort (role + quick-filter +
+  // the stored priorityRank float), reads ONE page (limit PAGE_SIZE+1, skip = page*PAGE_SIZE),
+  // applies the free-text recusal in-code to that page, and stashes the 0-indexed page +
+  // whether a next page exists (the +1 over-fetch), for the prev/next control.
   QUEUE_PAGE: "QUEUE_PAGE",
   QUEUE_HAS_MORE: "QUEUE_HAS_MORE",
   // Alerts (A-F19) breach-list pagination — in-memory slice of the buildBreaches array.
   ALERTS_PAGE: "ALERTS_PAGE",
+  // Role-VISIBLE report set for the Alerts breach list (MP-FIX-DASHBOARD-ALERTS-ROLE-SCOPE).
+  // The dashboard producer (app-start / nav-dashboard) filters the gateway-loaded set through
+  // roleVisibleReports and stashes it here so the alerts onResponse (sync — cannot resolve the
+  // role/identity itself) computes breaches over the role-scoped set, NOT the full set. Absent
+  // → the renderer falls back to the loaded collection (full set) so it never renders empty.
+  ALERTS_REPORTS: "ALERTS_REPORTS",
   // Notification-failure list for the Alerts / Digest fallback banner (A-D-alerts,
   // ER-D15). A SYNCHRONOUS render stash consumed by the alerts onResponse (which is
   // not awaited and so cannot read the durable sharedField directly — same constraint,
@@ -234,7 +240,16 @@ export const SHARED_KEYS = {
   // Shape MUST match the alerts consumer: an ARRAY of [{ reportId, failedOn }] (reportId
   // only — never a recipient address or reporter id; rule 30).
   NOTIFICATION_FAILURES: "SHARED_NOTIFICATION_FAILURES",
+  // Run-once latch for the legacy priorityRank backfill (MP-FIX-QUEUE-SERVER-PAGINATION).
+  // Cross-admin + durable so the one-time migration runs on the FIRST admin session after
+  // deploy and never again (any admin, any container). Set only AFTER the backfill succeeds,
+  // so a transient failure simply retries on the next session rather than latching as "done".
+  PRIORITY_RANK_BACKFILL_DONE: "SHARED_PRIORITY_RANK_BACKFILL_DONE",
 };
+
+// TTL (seconds) for the priorityRank backfill latch. Long-lived (90 days) — the backfill is
+// permanent once done; the TTL is just a safety so a stale latch can never wedge forever.
+export const PRIORITY_RANK_BACKFILL_TTL_SECONDS = 90 * 24 * 60 * 60;
 
 // TTL (seconds) for the durable notification-failure list. Generous so a failure is
 // not silently dropped before the daily SLA digest / alerts banner can surface it

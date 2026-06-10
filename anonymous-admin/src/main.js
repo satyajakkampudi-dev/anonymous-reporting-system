@@ -68,6 +68,9 @@ import "./frames/evidence-slots";
 // dispatcher's registry at module load. Import order is immaterial — registration happens
 // at module load, dispatch at runtime, so both are loaded before any popup submits.
 import "./frames/note-transition";
+// Binds adminReportDoc.onSave to stamp the stored priorityRank on every admin persist
+// (MP-FIX-QUEUE-SERVER-PAGINATION). Side-effect import — registers the handler at load.
+import "./frames/priority-rank-writer";
 import "./frames/escalate-report";
 import "./frames/close-rejected";
 // overrideSeverity owns severityCaptureDoc.onSubmit DIRECTLY (single-owner capture Doc —

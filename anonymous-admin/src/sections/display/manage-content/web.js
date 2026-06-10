@@ -91,6 +91,26 @@ const evidenceBlock = (evidence) => {
   );
 };
 
+// Reporter contact block — shown ONLY when the reporter chose to identify themselves
+// (open reporting, MP-FIX-CONTACT-OPEN-REPORTING). INFO tone so the officer registers that
+// this report is NOT anonymous. Both values are reporter free-text → escaped (rule 10/NFR-2).
+const contactBlock = (data) => {
+  if (!data.hasContact) return "";
+  const c = toneColors(TONE.INFO);
+  const method = data.contactMethod
+    ? `${escapeHtml(data.contactMethod)}: `
+    : "";
+  return (
+    `<div style="margin-top:${SPACING.LG}px;padding:${SPACING.SM}px ${SPACING.MD}px;` +
+    `background:${c.bg};border:1px solid ${c.border};border-radius:6px;">` +
+    `<div style="font-size:${TYPOGRAPHY.SIZE_XS}px;text-transform:uppercase;letter-spacing:0.04em;` +
+    `color:${c.fg};margin-bottom:2px;">Reporter contact (shared voluntarily)</div>` +
+    `<div style="font-size:${TYPOGRAPHY.SIZE_SM}px;color:${COLORS.TEXT};` +
+    `font-weight:${TYPOGRAPHY.WEIGHT_MEDIUM};word-break:break-word;">${method}${escapeHtml(data.contactValue)}</div>` +
+    `</div>`
+  );
+};
+
 export const renderWeb = (data) => {
   // No report open (Dashboard / Queue screens, or not found) — emit nothing (empty-safe).
   if (!data.hasReport) return "";
@@ -130,6 +150,8 @@ export const renderWeb = (data) => {
     evidenceBlock(data.evidence) +
     notes +
     `</div>` +
+    // Reporter contact (open reporting) — only when the reporter chose to identify themselves.
+    contactBlock(data) +
     `</div>`
   );
 };

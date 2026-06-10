@@ -156,6 +156,13 @@ manageContentDisplaySection.onResponse = () => {
     evidenceNotes: report?.evidenceNotes || "",
     // Pre-signed by A-F7 (frame, before sendResponse); [] until then (empty-safe).
     evidence: buildEvidence(report),
+    // Reporter open-reporting contact (MP-FIX-CONTACT-OPEN-REPORTING). Shown ONLY when the
+    // reporter chose to identify (a non-empty contactValue). contactMethod stores the label
+    // ("Email"/"Phone"/"Cabin"); contactValue is the decrypted detail. The reporter's PLATFORM
+    // identity (reporterId) is still excluded — this is only what they voluntarily typed.
+    hasContact: !!(report && report.contactValue),
+    contactMethod: report?.contactMethod || "",
+    contactValue: report?.contactValue || "",
   };
 
   manageContentDisplayPlaceholderCard.content = renderForPlatform(data, {

@@ -19,13 +19,24 @@
 
 import { Context } from "@frontmltd/frontmjs/core/Context";
 import { D, state } from "@frontmltd/frontmjs/core/State";
-import { resolveAdminRole, loadReportsForAdmin } from "../../../lib/access";
+import {
+  resolveAdminRole,
+  resolveAdminIdentity,
+  loadReportsForAdmin,
+  backfillPriorityRank,
+} from "../../../lib/access";
 import { frontmAdminRole, userTab } from "../../../lib/constants";
 import { buildDashboardStats } from "../../../lib/dashboard-stats";
+import { roleVisibleReports } from "../../../lib/queue";
 import { adminDisplayDoc } from "../docs/admin-display-doc";
 import { hydrateNotificationFailureStash } from "./admin-notify";
 import { showScreen, SCREEN } from "./display-nav";
-import { CONTEXT, STATE_KEYS } from "../constants";
+import {
+  CONTEXT,
+  STATE_KEYS,
+  SHARED_KEYS,
+  PRIORITY_RANK_BACKFILL_TTL_SECONDS,
+} from "../constants";
 
 // Side-effect imports: register every Section + Field on adminReportDoc, the two
 // embedded sub-collections, the per-action popups, and the aux-doc field schemas so
@@ -119,6 +130,32 @@ export const appStart = async () => {
   const role = frontmRole || registryRole;
   state.setField(STATE_KEYS.ADMIN_ROLE, role);
 
+  // 3b. One-time legacy priorityRank backfill (MP-FIX-QUEUE-SERVER-PAGINATION). The queue
+  //     now sorts on the STORED priorityRank column; rows predating it have none and would
+  //     mis-sort (missing < 0 in an ascending sort → false float to the top). Stamp them
+  //     ONCE, latched cross-admin in a sharedField so only the first session after deploy
+  //     pays it. Best-effort: a failure logs and is NOT latched (retries next session) and
+  //     never blocks the shell. Set the latch only on success.
+  try {
+    const done = await state.getSharedField(
+      SHARED_KEYS.PRIORITY_RANK_BACKFILL_DONE
+    );
+    if (!done) {
+      await backfillPriorityRank();
+      await state.setSharedField(
+        SHARED_KEYS.PRIORITY_RANK_BACKFILL_DONE,
+        true,
+        PRIORITY_RANK_BACKFILL_TTL_SECONDS
+      );
+    }
+  } catch (error) {
+    D.log({
+      message:
+        "app-start: priorityRank backfill skipped (will retry next session)",
+      data: { error: String(error) },
+    });
+  }
+
   // 4. Gateway load only (rule 15): identity-free, projection applied.
   const reports = await loadReportsForAdmin({});
 
@@ -138,12 +175,16 @@ export const appStart = async () => {
     },
   });
 
-  // 4a. Dashboard aggregation (A-F2) — compute counts + small-cell suppression over
-  //     the SAME gateway rows the consumer expects, and stash for the A-D-dashboard
-  //     renderer (rule 28, ER-A6). buildDashboardStats is pure + empty-safe; the
-  //     renderer NEVER aggregates raw rows itself (per-ship counts must arrive already
-  //     suppressed). DASHBOARD_STATS is the single contract between the two tasks.
-  state.setField(STATE_KEYS.DASHBOARD_STATS, buildDashboardStats(reports));
+  // 4a. ROLE-SCOPED dashboard (REQUIREMENTS §3 / A-F4 — dashboard + queue are role-filtered).
+  //     PRIMARY counts only PRIMARY-routed reports; SECONDARY counts everything. `role` is the
+  //     viewing role resolved above; identity drives recusal. Filter via the shared
+  //     roleVisibleReports (same routing + recusal as the queue), then aggregate.
+  //     buildDashboardStats is pure + empty-safe; the renderer NEVER aggregates raw rows itself.
+  const identity = await resolveAdminIdentity();
+  const visible = roleVisibleReports({ reports, viewingRole: role, identity });
+  state.setField(STATE_KEYS.DASHBOARD_STATS, buildDashboardStats(visible));
+  // Stash the role-visible set for the Alerts breach renderer (sync — can't role-filter itself).
+  state.setField(STATE_KEYS.ALERTS_REPORTS, visible);
 
   // 4b. Notification-failure bridge (A-F19, MP-FIX-ALERTS-FAILURE-BRIDGE). Hydrate the
   //     synchronous render stash (STATE_KEYS.NOTIFICATION_FAILURES) from the durable

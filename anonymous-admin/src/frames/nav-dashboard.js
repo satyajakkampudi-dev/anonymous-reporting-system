@@ -8,8 +8,13 @@
 import { Intent } from "@frontmltd/frontmjs/core/Intent";
 import { Context } from "@frontmltd/frontmjs/core/Context";
 import { state } from "@frontmltd/frontmjs/core/State";
-import { loadReportsForAdmin } from "../../../lib/access";
+import {
+  loadReportsForAdmin,
+  resolveAdminRole,
+  resolveAdminIdentity,
+} from "../../../lib/access";
 import { buildDashboardStats } from "../../../lib/dashboard-stats";
+import { roleVisibleReports } from "../../../lib/queue";
 import { adminDisplayDoc } from "../docs/admin-display-doc";
 import { showScreen, SCREEN } from "./display-nav";
 import { userTab } from "../../../lib/constants";
@@ -37,11 +42,16 @@ openDashboard.onResolution = async () => {
 
   const reports = await loadReportsForAdmin({});
 
-  // A-F2: aggregate + small-cell suppress over the SAME gateway set and stash, so the
-  // dashboard is correct on nav as well as first paint (app-start), via ONE shared pure
-  // helper (no duplicated counting/suppression). The dashboard renderer reads
-  // STATE_KEYS.DASHBOARD_STATS (rule 28, ER-A6).
-  state.setField(STATE_KEYS.DASHBOARD_STATS, buildDashboardStats(reports));
+  // A-F2: ROLE-SCOPED dashboard (REQUIREMENTS §3 / A-F4 — dashboard + queue are role-filtered).
+  // PRIMARY counts only PRIMARY-routed reports; SECONDARY counts everything (superset). Filter the
+  // gateway set through the shared roleVisibleReports (same routing + recusal as the queue), then
+  // aggregate. The dashboard renderer reads STATE_KEYS.DASHBOARD_STATS (rule 28, ER-A6).
+  const viewingRole = await resolveAdminRole();
+  const identity = await resolveAdminIdentity();
+  const visible = roleVisibleReports({ reports, viewingRole, identity });
+  state.setField(STATE_KEYS.DASHBOARD_STATS, buildDashboardStats(visible));
+  // Stash the role-visible set for the Alerts breach renderer (sync — can't role-filter itself).
+  state.setField(STATE_KEYS.ALERTS_REPORTS, visible);
 
   // Route to the Dashboard screen (dashboard + alerts/digest visible; all other
   // exclusive sections hidden) and render the Display Doc (rule 4/8). The DASHBOARD_STATS

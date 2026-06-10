@@ -151,6 +151,23 @@ export const resolvedOnField = new Field("resolvedOnField", {
   state,
 });
 
+// Priority sort key (MP-FIX-QUEUE-SERVER-PAGINATION). 0 = priority, 1 = normal.
+// Mirror of the user app's priorityRankField — same dbName "priorityRank". Written on
+// every admin transition via adminReportDoc.onSave (frames/priority-rank-writer.js) so
+// an escalate/override-severity flips the rank and the report re-floats. Powers the
+// server-side queue sort { priorityRank: 1, createdOn: -1 } (no framework aggregation,
+// so the priority float must be a stored, sortable column).
+export const priorityRankField = new Field("priorityRankField", {
+  title: "Priority rank",
+  doc: adminReportDoc,
+  section: manualLogSection,
+  type: FormFieldTypes.NUMBER_FIELD,
+  mandatory: false,
+  hidden: true,
+  dbName: "priorityRank",
+  state,
+});
+
 // Admin-written resolution text (A-E-resolveReport). Persisted `reports` column,
 // read by the Manage-resolution display renderer (sections/display/manage-resolution
 // reads report.resolution) — dbName MUST stay "resolution" for that read to work.
@@ -384,5 +401,35 @@ export const evidenceNotesField = new Field("evidenceNotesField", {
   type: FormFieldTypes.TEXT_AREA,
   mandatory: false,
   dbName: "evidenceNotes",
+  state,
+});
+
+// Reporter open-reporting contact (MP-FIX-CONTACT-OPEN-REPORTING). When a reporter chooses
+// to be identifiable they fill these on the submit form; they are now admin-visible (removed
+// from ADMIN_EXCLUDED_FIELDS) and rendered in the admin manage report view. Bound here so the
+// loaded report rows carry the values (extractRowData reads field values by dbName — an unbound
+// field would be dropped). HIDDEN on the manual-log CREATE form (a manual log has no reporter to
+// contact). dbNames MUST match the user app: "contactMethod" / "contactValue". contactValue
+// stays encrypted: true so the read lambda decrypts it (must match the writer's secured field).
+export const contactMethodField = new Field("contactMethodField", {
+  title: "Reporter contact method",
+  doc: adminReportDoc,
+  section: manualLogSection,
+  type: FormFieldTypes.TEXT_FIELD,
+  mandatory: false,
+  hidden: true,
+  dbName: "contactMethod",
+  state,
+});
+
+export const contactValueField = new Field("contactValueField", {
+  title: "Reporter contact details",
+  doc: adminReportDoc,
+  section: manualLogSection,
+  type: FormFieldTypes.TEXT_FIELD,
+  mandatory: false,
+  hidden: true,
+  encrypted: true,
+  dbName: "contactValue",
   state,
 });

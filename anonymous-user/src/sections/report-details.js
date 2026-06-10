@@ -154,6 +154,23 @@ export const reopenCountField = new Field("reopenCountField", {
   state,
 });
 
+// Priority sort key (MP-FIX-QUEUE-SERVER-PAGINATION). 0 = priority (floats to the
+// top of the admin queue), 1 = normal. Derived from severity/urgency/status by the
+// SHARED priorityRankFor predicate, written on EVERY save via reportDoc.onSave so it
+// can never drift from isPriority. Hidden infra column — enables the server-side
+// queue sort { priorityRank: 1, createdOn: -1 } (the framework has no aggregation, so
+// the computed priority float must be a stored, sortable field).
+export const priorityRankField = new Field("priorityRankField", {
+  title: "Priority rank",
+  doc: reportDoc,
+  section: reportDetailsSection,
+  type: FormFieldTypes.NUMBER_FIELD,
+  mandatory: false,
+  hidden: true,
+  dbName: "priorityRank",
+  state,
+});
+
 export const withdrawnOnField = new Field("withdrawnOnField", {
   title: "Withdrawn on",
   doc: reportDoc,

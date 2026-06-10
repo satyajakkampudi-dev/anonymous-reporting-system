@@ -208,7 +208,13 @@ Two further shared collections support **anonymous calling** (full detail in `sp
 `call-queue` (call entries: `callRef` PK, `status` `RINGING|ACTIVE|ENDED|MISSED`, `meetingId`,
 `attendedBy`, timestamps, duration — **identity-free**) and `admin-users` (admin registry:
 `userId`, `email`, `role`, `available|busy|unavailable` availability — D3).
-- **Reporter-private (never shown to admin):** `reporterId`, `contactMethod`, `contactValue`.
+- **Reporter-private (never shown to admin):** `reporterId` and the reporter-create audit
+  identity (`createdBy`/`modifiedBy`). The reporter's PLATFORM identity is never revealed.
+- **Open-reporting contact (admin-visible by reporter choice — MP-FIX-CONTACT-OPEN-REPORTING):**
+  `contactMethod`, `contactValue` are optional; if the reporter provides them (informed by the
+  submit-form hint + the U-F5 preview), the compliance team sees them in the report view. Leaving
+  them blank keeps the report anonymous. This is a deliberate, consent-based relaxation of NFR-1 —
+  it reveals only what the reporter typed, never `reporterId`.
 - **Reporter-entered content:** `category`, `urgency`, `shipName`, `location`, `incidentDate`,
   `description`, `accusedParty`, `againstAdmin` (routes to Secondary).
 - **Evidence:** up to N file references (domain-scoped S3 keys) + `evidenceNotes`.
