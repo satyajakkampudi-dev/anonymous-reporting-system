@@ -1,8 +1,8 @@
-// Report detail header — WEB renderer (wireframes §4 "Web" header card): the
+// Report detail header - WEB renderer (wireframes §4 "Web" header card): the
 // tracking id as the title anchor, status pill + severity pill on the same line,
 // then a compact meta row (Category · Urgency · Submitted). Composes shared theme
 // tokens (theme.js) and the escapeHtml / statusPillHtml / tonePillHtml / formatDate
-// primitives (format.js) — every interpolated value is escaped at the primitive
+// primitives (format.js) - every interpolated value is escaped at the primitive
 // boundary (NFR-2, rule 10). Pure presentation: index.js owns the data + label maps.
 
 import {
@@ -26,7 +26,7 @@ const metaItem = (label, value) =>
   `</span>`;
 
 export const renderWeb = (data) => {
-  // No report loaded (Home / My-Reports screens) — emit nothing (empty-safe).
+  // No report loaded (Home / My-Reports screens) - emit nothing (empty-safe).
   if (!data.hasReport) return "";
 
   return (
@@ -52,7 +52,7 @@ export const renderWeb = (data) => {
     `flex-wrap:wrap;align-items:center;">` +
     metaItem("Category", data.category) +
     metaItem("Urgency", data.urgency) +
-    metaItem("Submitted", formatDate(data.createdOn) || "—") +
+    metaItem("Submitted", formatDate(data.createdOn) || "-") +
     `</div>` +
     `</div>`
   );

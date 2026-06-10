@@ -1,4 +1,4 @@
-// Status-history writer (admin side) — the append half of "the transition path"
+// Status-history writer (admin side) - the append half of "the transition path"
 // (framework-mapping rule 12). The admin analogue of the committed user-side
 // src/frames/status-history-writer.js; same contract, admin-local imports.
 //
@@ -7,7 +7,7 @@
 // display-only on the admin side. Every admin transition (takeReview / resolve /
 // escalate / closeRejected) adds exactly ONE row recording
 // { fromStatus, toStatus, actorRole, changedOn, note }. actorRole is a ROLE token
-// only — NEVER an id (anonymity; SPEC.md / rule 16). It passes through
+// only - NEVER an id (anonymity; SPEC.md / rule 16). It passes through
 // adminProjection unchanged.
 //
 // WHY the live sub-collection (rule 21 / CLAUDE.md "Collection and parent-Doc
@@ -15,7 +15,7 @@
 // `$set` of the WHOLE `statusHistory` array (Doc.js _dbDocument →
 // updateDataInCollection updateOperator "$set"). So a transition MUST first
 // loadDocument({ reportId }) to hydrate the prior rows into the live
-// sub-collection, then append to THAT instance — otherwise the $set would
+// sub-collection, then append to THAT instance - otherwise the $set would
 // replace the timeline with just the new row. We reach the live collection via
 // the loaded parent's own `subCollections` (the instance the framework will
 // serialise), NOT the module-singleton, falling back to the singleton only if the
@@ -49,7 +49,7 @@ export const getStatusHistoryCollection = (parentDoc) => {
 };
 
 // Append a single status-history row to parentDoc's live embedded collection.
-// Does NOT persist — the caller saves the parent (adminReportDoc.save()) so the
+// Does NOT persist - the caller saves the parent (adminReportDoc.save()) so the
 // append is atomic with the rest of the report write. Returns the appended row.
 export const appendStatusHistoryRow = (
   parentDoc,

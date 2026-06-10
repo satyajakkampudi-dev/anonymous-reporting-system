@@ -1,9 +1,9 @@
-// Dashboard — WEB renderer (wireframes §1 "Web": multi-column grid). Priority/
+// Dashboard - WEB renderer (wireframes §1 "Web": multi-column grid). Priority/
 // Escalated card leads (highlighted, clickable → priority queue); then By status /
-// By severity side by side; then By age / Per ship. Plain stat cards — NO charts
+// By severity side by side; then By age / Per ship. Plain stat cards - NO charts
 // (D4). Composes shared theme tokens (theme.js) + the escapeHtml / emptyStateHtml /
 // payloadAttr primitives (format.js); every interpolated value is escaped at the
-// boundary (NFR-2, rule 10). Pure presentation — index.js owns the stash read.
+// boundary (NFR-2, rule 10). Pure presentation - index.js owns the stash read.
 //
 // Counts come pre-aggregated and per-ship-suppressed from the A-F2 stash; this file
 // only lays them out. No reporter identity is present in the stash (rule 30).
@@ -47,7 +47,7 @@ const statCell = (label, count, accent) => {
   );
 };
 
-// A titled group of stat cells, laid out as a wrapping flex row. Empty → muted "—".
+// A titled group of stat cells, laid out as a wrapping flex row. Empty → muted "-".
 const statGroup = (title, cells, extraNote = "") =>
   `<div style="margin-bottom:${SPACING.XL}px;">` +
   `<div style="font-size:${TYPOGRAPHY.SIZE_SM}px;font-weight:${TYPOGRAPHY.WEIGHT_MEDIUM};` +
@@ -60,10 +60,10 @@ const statGroup = (title, cells, extraNote = "") =>
   `</div>` +
   (cells.length
     ? `<div style="display:flex;gap:${SPACING.MD}px;flex-wrap:wrap;">${cells.join("")}</div>`
-    : `<div style="color:${COLORS.TEXT_FAINT};font-size:${TYPOGRAPHY.SIZE_SM}px;">—</div>`) +
+    : `<div style="color:${COLORS.TEXT_FAINT};font-size:${TYPOGRAPHY.SIZE_SM}px;">-</div>`) +
   `</div>`;
 
-// The highlighted, clickable Priority / Escalated card — a single intent button so
+// The highlighted, clickable Priority / Escalated card - a single intent button so
 // the whole surface navigates to the priority-filtered queue. Inner content carries
 // pointer-events:none so nested nodes never swallow the click (format.js convention).
 const priorityCardHtml = (data) =>
@@ -84,7 +84,7 @@ const priorityCardHtml = (data) =>
   `</button>`;
 
 export const renderWeb = (data) => {
-  // Top navigation bar (wireframes §1) — the dashboard is the nav hub. Each button
+  // Top navigation bar (wireframes §1) - the dashboard is the nav hub. Each button
   // opens that screen (in its own tab; the tab strip lets the admin switch back).
   // Rendered in EVERY shell state so navigation never depends on there being reports.
   const navBtnStyle =
@@ -107,7 +107,7 @@ export const renderWeb = (data) => {
     `<div style="padding:${SPACING.LG}px ${SPACING.XL}px;border-bottom:1px solid ${COLORS.BORDER};` +
     `display:flex;align-items:center;justify-content:space-between;gap:${SPACING.LG}px;flex-wrap:wrap;">` +
     `<span style="font-size:${TYPOGRAPHY.SIZE_LG}px;font-weight:${TYPOGRAPHY.WEIGHT_BOLD};` +
-    `color:${COLORS.TEXT};">Anonymous Reporting — Admin</span>` +
+    `color:${COLORS.TEXT};">Anonymous Reporting - Admin</span>` +
     navBarHtml(data.nav) +
     `</div>` +
     `<div style="padding:${SPACING.XL}px;">${inner}</div>` +

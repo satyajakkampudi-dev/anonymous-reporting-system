@@ -1,10 +1,10 @@
-// Meeting-lifecycle receivers on the USER (reporter) app — the meeting OWNER.
+// Meeting-lifecycle receivers on the USER (reporter) app - the meeting OWNER.
 //
 // The reporter app CREATES the Daily meeting (U-F15), so the Loft/Daily BACKEND fires its
 // framework-convention lifecycle intents on THIS (owner) bot:
-//   joinMeeting — a participant joined   → when the ADMIN joins, the call is CONNECTED
-//   leaveUser   — a participant left     → the call is over
-//   endMeeting  — the whole meeting ended
+//   joinMeeting - a participant joined   → when the ADMIN joins, the call is CONNECTED
+//   leaveUser   - a participant left     → the call is over
+//   endMeeting  - the whole meeting ended
 // This mirrors healthMariner (joinMeeting / leaveUser / endMeeting + medicalMeetingEnded).
 //
 // Two jobs:
@@ -88,11 +88,11 @@ meetingJoinedReceiver.onResolution = async () => {
   const callRef = callQueueDoc.f[callRefField.id]?.value || "";
 
   // Who joined. The "joinMeeting" lifecycle event populates the joiner's EMAIL
-  // (state.messageFromUser.userEmail) — NOT a reliable userId. healthMariner's
+  // (state.messageFromUser.userEmail) - NOT a reliable userId. healthMariner's
   // joinMeetingIntent keys off the same userEmail field. We log userId too, but it is
   // typically empty on lifecycle dispatch (the old `if (joinerId && …)` guard never fired,
   // which is why the MOBILE claim silently never happened).
-  const joinerId = state.messageFromUser?.userId || ""; // logged only — usually empty here
+  const joinerId = state.messageFromUser?.userId || ""; // logged only - usually empty here
   const joinerEmail =
     state.messageFromUser?.userEmail ||
     state.messageFromUser?.data?.userEmail ||
@@ -107,14 +107,14 @@ meetingJoinedReceiver.onResolution = async () => {
   // already claimed (attendedBy set) → guarded no-op. On MOBILE, lifting CallKit does NOT
   // run A-F21, so the claim happens HERE when an ADMIN joins. Identify the admin by EMAIL
   // (the field the lifecycle event actually carries; ≠ the reporter's own email) and map it
-  // to the admin's userId via the seeded registry — our queue/notify path is userId-keyed.
+  // to the admin's userId via the seeded registry - our queue/notify path is userId-keyed.
   const joinerIsAdmin = joinerEmail && joinerEmail !== reporterEmail;
   if (joinerIsAdmin && !attendedBy) {
     const admin = await resolveAdminByEmail(joinerEmail);
     const adminUserId = admin?.adminUserId || "";
     if (!adminUserId) {
       D.log({
-        message: "U-CALL-LIFECYCLE: joiner email not a known admin — no claim",
+        message: "U-CALL-LIFECYCLE: joiner email not a known admin - no claim",
         data: { meetingId, joinerEmail },
       });
     } else {

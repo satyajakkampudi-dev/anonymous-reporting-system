@@ -1,8 +1,8 @@
-// adminReportDoc — "Amendments" embedded sub-collection (display_only, READ-ONLY).
+// adminReportDoc - "Amendments" embedded sub-collection (display_only, READ-ONLY).
 //
 // forCollection: true on adminReportDoc → stored as the embedded array `amendments`
 // on the parent report. READ-ONLY on the admin side (rule 30): the reporter appends
-// rows (U-F13) — there is NO add/edit/delete intent here, and allowEdit/allowDelete
+// rows (U-F13) - there is NO add/edit/delete intent here, and allowEdit/allowDelete
 // are false. The read-only table view is a separate Display Doc section (A-D-amendments).
 // forCollection sections CANNOT carry a CardsSet (rule 7). All fields hidden (data-only);
 // no includeInQuickEdit (no popup on the admin side).

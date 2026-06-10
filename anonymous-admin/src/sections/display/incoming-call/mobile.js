@@ -1,10 +1,10 @@
-// Incoming call (ring banner) — MOBILE renderer (wireframes §7: same content as web,
-// restacked for narrow widths — a 📞 icon + the GENERIC "Incoming anonymous call" line, then
+// Incoming call (ring banner) - MOBILE renderer (wireframes §7: same content as web,
+// restacked for narrow widths - a 📞 icon + the GENERIC "Incoming anonymous call" line, then
 // the Answer and Dismiss buttons full-width stacked for one-handed, on-deck use). Composes the
 // shared theme tokens (theme.js) + the intentButtonHtml primitive (format.js). Pure
-// presentation — index.js owns the read of the loaded call + the RINGING gate.
+// presentation - index.js owns the read of the loaded call + the RINGING gate.
 //
-// ANONYMITY (rule 30, ER-A5/A2/A3, C1): the banner reveals NOTHING about the caller — the
+// ANONYMITY (rule 30, ER-A5/A2/A3, C1): the banner reveals NOTHING about the caller - the
 // title is a STATIC string and there is no caller datum on this card. The only values present
 // are the opaque callRef + Daily meetingId, carried ONLY inside the Answer button's
 // data-payload (consumed by the A-F21 atomic claim), never shown as text. Every interpolated
@@ -25,7 +25,7 @@ import { TONE } from "../../../../../lib/ticket-status";
 
 const FONT = TYPOGRAPHY.FONT_FAMILY;
 
-// Full-width Answer button — success-toned (claim the call). Carries {callRef, meetingId}.
+// Full-width Answer button - success-toned (claim the call). Carries {callRef, meetingId}.
 const answerButtonHtml = (data) => {
   const c = toneColors(TONE.SUCCESS);
   const style =
@@ -42,7 +42,7 @@ const answerButtonHtml = (data) => {
   );
 };
 
-// Full-width Dismiss button — neutral outline (local dismiss; others keep ringing).
+// Full-width Dismiss button - neutral outline (local dismiss; others keep ringing).
 const dismissButtonHtml = (data) => {
   const style =
     `display:block;width:100%;text-align:center;box-sizing:border-box;` +
@@ -67,7 +67,7 @@ export const renderMobile = (data) => {
     `border:1px solid ${COLORS.BORDER};border-left:4px solid ${COLORS.SUCCESS};` +
     `border-radius:${TYPOGRAPHY.RADIUS}px;overflow:hidden;">` +
     `<div style="padding:${SPACING.LG}px;">` +
-    // Generic banner — NO caller identity, ever (ER-A5).
+    // Generic banner - NO caller identity, ever (ER-A5).
     `<div style="display:flex;align-items:center;gap:${SPACING.SM}px;` +
     `margin-bottom:${SPACING.XS}px;">` +
     `<span style="font-size:${TYPOGRAPHY.SIZE_XL}px;line-height:1;">📞</span>` +
@@ -76,7 +76,7 @@ export const renderMobile = (data) => {
     `</div>` +
     `<div style="margin-bottom:${SPACING.LG}px;font-size:${TYPOGRAPHY.SIZE_SM}px;` +
     `color:${COLORS.TEXT_MUTED};">No caller details are shared. ` +
-    `Voice only — the call is not recorded.</div>` +
+    `Voice only - the call is not recorded.</div>` +
     `<div>` +
     answerButtonHtml(data) +
     dismissButtonHtml(data) +

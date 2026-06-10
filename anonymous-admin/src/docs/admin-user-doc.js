@@ -1,4 +1,4 @@
-// Aux Data Doc: adminUserDoc (admin-users registry) — on-call availability (A-F20).
+// Aux Data Doc: adminUserDoc (admin-users registry) - on-call availability (A-F20).
 //
 // Shared Doc registered once in lib/collections/admin-users.js, re-exported here so
 // src/sections/admin-user.js attaches the field schema to one local import. The

@@ -1,34 +1,34 @@
-// A-F21 — Answer call: atomic claim (first writer wins) + join + STOP_RING.
+// A-F21 - Answer call: atomic claim (first writer wins) + join + STOP_RING.
 //
-// Independent intent (Context B — object graph EMPTY on entry; CLAUDE.md "Invocation
+// Independent intent (Context B - object graph EMPTY on entry; CLAUDE.md "Invocation
 // Lifecycle"). Fired by the "Answer" button in the Incoming-call ring banner
 // (A-D-incomingcall): data-action="intent", intentId = answerCall, data-payload
-// '{"callRef":"...","meetingId":"..."}' — both fields ONE LEVEL DEEP under
+// '{"callRef":"...","meetingId":"..."}' - both fields ONE LEVEL DEEP under
 // state.messageFromUser.payload (CLAUDE.md "Custom HTML Payloads").
 //
-// ATOMIC CLAIM (framework-mapping rule 13 — status-conditional transition). Multiple
+// ATOMIC CLAIM (framework-mapping rule 13 - status-conditional transition). Multiple
 // admins ring at once; the FIRST to flip RINGING -> ACTIVE (and stamp attendedBy) wins.
 // We re-read the call-queue row FRESH by callRef and proceed ONLY if it is still
 // RINGING AND unclaimed (!attendedBy). Concurrent answers lose CLEANLY: the loser reads
 // a non-RINGING / already-attended row and short-circuits with a calm "already answered"
-// message — no join, no STOP_RING, no busy-flip.
+// message - no join, no STOP_RING, no busy-flip.
 //
 // TOCTOU RESIDUAL (documented, accepted by ER-B8). The guard is read-then-write, not a
 // DB-level compare-and-swap. callQueueDoc is loaded by callRef (its primaryKey), so
-// save() is an UPDATE, not an upsert — there is NO save(false, { version }) optimistic-
+// save() is an UPDATE, not an upsert - there is NO save(false, { version }) optimistic-
 // concurrency path on this Doc (the call-queue carries no version field; adding one and
 // passing a stale version would make save() attempt an INSERT and corrupt the row). The
 // residual window is the few milliseconds between the read and the save in two truly
 // simultaneous Lambdas: both could read RINGING and both write ACTIVE, the second
-// overwriting attendedBy. ER-B8 accepts this — the cost is cosmetic (attendedBy reflects
+// overwriting attendedBy. ER-B8 accepts this - the cost is cosmetic (attendedBy reflects
 // the last writer; both admins still land in the SAME meeting, which is harmless for a
 // voice call), and the STOP_RING fan-out plus the human reality of "two people answered
 // the same call" resolves it. A heavier CAS is explicitly NOT warranted here (D-calling).
 //
 // ANONYMITY (NON-NEGOTIABLE, ER-A5): attendedBy is the ADMIN'S OWN userId (admin-side
-// only — NEVER a reporter). The meeting is voice-only with NO recording (the meeting was
+// only - NEVER a reporter). The meeting is voice-only with NO recording (the meeting was
 // created startVideoOff + enableRecording:false in U-F15; the admin merely JOINS it). The
-// STOP_RING payload carries ONLY { callRef, meetingId } — identity-free (lib/calling).
+// STOP_RING payload carries ONLY { callRef, meetingId } - identity-free (lib/calling).
 
 import { VideoCall } from "@frontmltd/frontmjs/core/VideoCall";
 import { Context } from "@frontmltd/frontmjs/core/Context";
@@ -58,10 +58,10 @@ import {
 import { showScreen, SCREEN } from "./display-nav";
 import { INTENT, CALL, CONTEXT } from "../constants";
 
-// VideoCall instance — MUST be exported so the framework can route JOIN_MEETING (docs:
+// VideoCall instance - MUST be exported so the framework can route JOIN_MEETING (docs:
 // "the VideoCall instance must be exported to be accessible by the framework"; video-call
 // ref § getAccessToken/sendResponse). Mirrors the user app's anonymousVideoCall. Distinct
-// control id (VIDEO_CALL.CONTROL_ID = "adminVideoCall") — each app exports its own.
+// control id (VIDEO_CALL.CONTROL_ID = "adminVideoCall") - each app exports its own.
 export const adminVideoCall = new VideoCall("adminVideoCall", state);
 
 export const answerCall = Intent.Create({
@@ -74,7 +74,7 @@ answerCall.onResolution = async () => {
   // 1. Payload (one level deep). callRef is mandatory; meetingId is needed to join.
   const { callRef, meetingId } = state.messageFromUser?.payload || {};
   D.log({
-    message: "A-F21: ENTER — Answer clicked",
+    message: "A-F21: ENTER - Answer clicked",
     data: {
       callRef,
       meetingId,
@@ -87,7 +87,7 @@ answerCall.onResolution = async () => {
     return;
   }
 
-  // 2. Attach to the existing context (Redis buffer, no MongoDB-clobbering reload —
+  // 2. Attach to the existing context (Redis buffer, no MongoDB-clobbering reload -
   //    rule 22) and re-read THIS call-queue row fresh by callRef.
   // Stable per-user On-call tab (rule 37): the Answer click carries no tabId, so a
   // `getUniqueId()` context spawned a new broken tab on the banner-clear render (step 6b).
@@ -95,7 +95,7 @@ answerCall.onResolution = async () => {
 
   // 2b. Stop the web ring IMMEDIATELY on answer (before the async claim/save below). The
   //     reference (callCentreQueueDataModel.attendCall) calls stopRing() FIRST and AGAIN
-  //     before join — one RING_STOP can be missed, and the user reported the ring kept
+  //     before join - one RING_STOP can be missed, and the user reported the ring kept
   //     sounding after answering. Early + late (step 5b) RING_STOP, both on the On-call tab.
   try {
     adminVideoCall.sendResponse(ALL_CONSTANTS.VIDEO_CALL_ACTIONS.RING_STOP);
@@ -133,14 +133,14 @@ answerCall.onResolution = async () => {
     return;
   }
 
-  // 4. WIN — claim it. RINGING -> ACTIVE, stamp the answering admin + answer time. (See
+  // 4. WIN - claim it. RINGING -> ACTIVE, stamp the answering admin + answer time. (See
   //    the header for the accepted TOCTOU residual: no version/CAS on this Doc.)
   const now = Date.now();
   callQueueDoc.f[callStatusField.id].value = CALL_STATUS.ACTIVE;
   callQueueDoc.f[attendedByField.id].value = state.user.userId;
   callQueueDoc.f[answeredOnField.id].value = now;
 
-  // Persist. save() can abort WITHOUT throwing by stacking an error — detect that the
+  // Persist. save() can abort WITHOUT throwing by stacking an error - detect that the
   // same way the other transition frames do and do not claim the win.
   const errorsBefore = (state.errorStack || []).length;
   try {
@@ -157,12 +157,12 @@ answerCall.onResolution = async () => {
     return;
   }
   if ((state.errorStack || []).length > errorsBefore) {
-    return; // save aborted via the error stack — do not proceed as the winner
+    return; // save aborted via the error stack - do not proceed as the winner
   }
 
-  // 5. Busy-on-answer (OQ-12) via the SHARED writer (rule 14 — no duplication; the
+  // 5. Busy-on-answer (OQ-12) via the SHARED writer (rule 14 - no duplication; the
   //    context is already attached so attach:false). BEST-EFFORT: a failure to flip
-  //    presence must NOT strand a successfully-claimed call — log and continue.
+  //    presence must NOT strand a successfully-claimed call - log and continue.
   const busy = await setOwnAvailability(AVAILABILITY.BUSY, { attach: false });
   if (!busy.ok) {
     D.log({
@@ -183,11 +183,11 @@ answerCall.onResolution = async () => {
     });
   }
 
-  // 6. JOIN the EXISTING meeting (video-call ref § getAccessToken / sendResponse — the
+  // 6. JOIN the EXISTING meeting (video-call ref § getAccessToken / sendResponse - the
   //    canonical "join an existing meeting by meetingId" pattern: mint an access token
   //    for the already-created meetingId, then sendResponse(JOIN_MEETING)). Voice-only /
   //    no recording is enforced by the MEETING itself (created startVideoOff +
-  //    enableRecording:false in U-F15, ER-A5) — the admin only joins it; nothing here
+  //    enableRecording:false in U-F15, ER-A5) - the admin only joins it; nothing here
   //    enables video or recording. If the join fails AFTER the claim we DO NOT revert:
   //    reverting to RINGING would re-ring every admin for a call that is already claimed
   //    (worse UX, and the meeting may well be live for the reporter). The call stays
@@ -196,14 +196,14 @@ answerCall.onResolution = async () => {
   //    best-effort follow-on.)
   if (!meetingId) {
     D.log({
-      message: "A-F21: claimed but no meetingId in payload — cannot join",
+      message: "A-F21: claimed but no meetingId in payload - cannot join",
       data: { callRef },
     });
     "You have answered the call, but we could not open the meeting automatically. Please try re-joining from your call screen.".sendResponse();
   } else {
     try {
       // useDaily MUST match the meeting (created useDaily:true in U-F15). The framework
-      // defaults getAccessToken's useDaily to FALSE — a non-Daily token for a Daily
+      // defaults getAccessToken's useDaily to FALSE - a non-Daily token for a Daily
       // meeting never validates, so the admin client hangs at "connecting" then drops
       // (the symptom observed live). Mirrors the reference answerer (healthMariner
       // queueRouting.joinCall: getAccessToken({ meetingId, guestEmail, useDaily:true })).
@@ -246,12 +246,12 @@ answerCall.onResolution = async () => {
     data: { callRef },
   });
 
-  // 7. STOP_RING (X7) — tell the OTHER currently-available admins to stop ringing. The
+  // 7. STOP_RING (X7) - tell the OTHER currently-available admins to stop ringing. The
   //    available set is the SAME set X3 rang (lib/calling.resolveAvailableAdmins);
   //    exclude SELF. Identity-free payload { callRef, meetingId }. botId/userDomain are
   //    OMITTED: this is an admin->admin message within the SAME bot + domain, and
   //    sendMessageToUserInBot defaults both to the current bot/domain (bot-to-bot guide
-  //    § sendMessageToUserInBot). No existing X3 caller exists yet to mirror — the
+  //    § sendMessageToUserInBot). No existing X3 caller exists yet to mirror - the
   //    default is correct here and documented. Best-effort (lib helper logs failures).
   try {
     const others = (await resolveAvailableAdmins())
@@ -273,7 +273,7 @@ answerCall.onResolution = async () => {
   //    guarded ACTIVE -> ENDED transition ONLY if the call is still ACTIVE (a clean prior
   //    hang-up makes it a no-op). Deterministic jobId per call so a re-arm overwrites
   //    rather than stacks (ER-B8). Best-effort: a scheduling failure must not strand the
-  //    claim — the worst case is a stuck-ACTIVE row, which a manual end still closes.
+  //    claim - the worst case is a stuck-ACTIVE row, which a manual end still closes.
   try {
     await state.jobScheduler.scheduleMessage({
       toUser: state.user.userId,

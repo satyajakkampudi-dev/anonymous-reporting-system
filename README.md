@@ -1,11 +1,11 @@
 # Anonymous Reporting System
 
 A FrontM.ai product that lets internal users **submit and track reports anonymously**, and lets
-authorised staff **triage, investigate, resolve, and escalate** them — **without ever seeing who
+authorised staff **triage, investigate, resolve, and escalate** them - **without ever seeing who
 reported**. Built as **two microapps + a shared library in one repository**, modelled on the
 `sailors-cart` monorepo architecture.
 
-> **Start here:** [`REQUIREMENTS.md`](REQUIREMENTS.md) — problem statement, personas, flows, and
+> **Start here:** [`REQUIREMENTS.md`](REQUIREMENTS.md) - problem statement, personas, flows, and
 > the full requirements. Data model: [`specs/SPEC.md`](specs/SPEC.md).
 
 ## Layout
@@ -30,14 +30,14 @@ anonymous-reporting-system/
 │       ├── reports.js          # the reports collection (audit: true)
 │       ├── call-queue.js       # anonymous call entries (identity-free)
 │       └── admin-users.js       # admin registry: role + availability (D3)
-├── anonymous-user/         # User microapp (submit + track) — own bot
-└── anonymous-admin/        # Admin microapp (triage + resolve) — own bot
+├── anonymous-user/         # User microapp (submit + track) - own bot
+└── anonymous-admin/        # Admin microapp (triage + resolve) - own bot
 ```
 
 Each app is built and deployed **independently** (its own `package.json`, `webpack.config.js`,
 `deployment.config.json`) but compiles the shared `../lib` (wired into each app's
 `webpack.config.js` babel `include`) and side-effect-imports it from `src/main.js`. All shared
-logic lives **only** in `lib/` — no duplication across the apps.
+logic lives **only** in `lib/` - no duplication across the apps.
 
 ## Develop
 

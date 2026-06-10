@@ -1,42 +1,42 @@
-// U-F12 — Withdraw report (OPEN / UNDER_REVIEW → WITHDRAWN, terminal).
+// U-F12 - Withdraw report (OPEN / UNDER_REVIEW → WITHDRAWN, terminal).
 //
-// Independent intent (Context B — object graph EMPTY on entry). Triggered by the
+// Independent intent (Context B - object graph EMPTY on entry). Triggered by the
 // "Withdraw" button in the detail-actions card (data-action="intent",
 // intentId = withdrawReport, data-payload {reportId}). The payload field lives ONE
 // LEVEL DEEP under state.messageFromUser.payload (CLAUDE.md "Custom HTML Payloads");
 // read it defensively. Withdraw is offered ONLY on OPEN / UNDER_REVIEW for the
 // REPORTER (lib/ticket-status STATUS_META allowedActionsByRole), so off-status
-// reports never render the button — but the authoritative guard is re-run here on a
+// reports never render the button - but the authoritative guard is re-run here on a
 // fresh read.
 //
 // Direct (no-popup) sibling of the committed U-F10 accept-resolution.js. Same
 // optimistic-concurrency contract (framework-mapping rule 12):
 //   1. Read reportId from the payload; missing → 400.
-//   2. Attach to the existing context (Context.Create — Redis-only, no buffer wipe;
+//   2. Attach to the existing context (Context.Create - Redis-only, no buffer wipe;
 //      rule 22) and re-read the report fresh from MongoDB by reportId (loadDocument).
 //   3. OWNERSHIP FIRST (acceptance criterion): a report the caller does not own is
-//      indistinguishable from "not found" — same message, no existence leak (ER-A3).
+//      indistinguishable from "not found" - same message, no existence leak (ER-A3).
 //   4. Concurrency + legality guard: validate the move against the CURRENT status via
 //      canTransition(current, WITHDRAWN, REPORTER). Because step 2 re-read fresh,
-//      `current` is the latest persisted status — so if an admin already moved the
+//      `current` is the latest persisted status - so if an admin already moved the
 //      report off OPEN/UNDER_REVIEW (e.g. resolved/escalated it), or a concurrent
 //      double-click already withdrew it, the move is illegal NOW and is REJECTED and
 //      surfaced, never overwritten. This fresh-read + canTransition check IS the
 //      concurrency guard: a true compare-and-swap via save(false, {reportId, version})
-//      is UNSAFE here — Doc.save() forces { upsert: true } (Doc.js), so a non-matching
+//      is UNSAFE here - Doc.save() forces { upsert: true } (Doc.js), so a non-matching
 //      version query would INSERT a corrupt duplicate report rather than no-op. version
 //      is still advanced monotonically (read → read+1) so other writers' guards and the
 //      audit trail stay coherent. Same reasoning as U-F10/U-F11.
 //   5. Apply: status = WITHDRAWN, bump version, stamp withdrawnOn + updatedOn, and
 //      append ONE statusHistory row via the transition path (rule 12; actorRole =
-//      REPORTER, never an id — anonymity). loadDocument hydrates the embedded
+//      REPORTER, never an id - anonymity). loadDocument hydrates the embedded
 //      statusHistory rows into the live sub-collection (hasSubDocs path), so the append
 //      preserves the prior timeline on save (it does not clobber the history).
-//   6. Persist (reportDoc.save() — re-runs the authoritative onSave gate, which the
+//   6. Persist (reportDoc.save() - re-runs the authoritative onSave gate, which the
 //      already-validated report passes; detect a gate abort via the error stack
 //      growing, mirroring U-F8/U-F10). On success, confirm clearly and reassuringly.
 //
-// No bot-to-bot/notification send here — WITHDRAWN has no cross-app contract in the
+// No bot-to-bot/notification send here - WITHDRAWN has no cross-app contract in the
 // task graph (the reporter initiates it; the admin sees it on next read). Do NOT
 // invent a sender.
 
@@ -65,7 +65,7 @@ export const withdrawReport = Intent.Create({
 });
 
 withdrawReport.onResolution = async () => {
-  // 1. Payload (one level deep under .payload — never the top level).
+  // 1. Payload (one level deep under .payload - never the top level).
   const { reportId } = state.messageFromUser?.payload || {};
   if (!reportId) {
     state.addErrorToStack(400, "Missing reportId for withdrawReport");
@@ -78,7 +78,7 @@ withdrawReport.onResolution = async () => {
   await Context.CreateAndInit(userTab(CONTEXT.REPORT_DETAIL, state), { state });
   await reportDoc.loadDocument({ reportId });
 
-  // 3. Ownership FIRST — a non-owned or non-existent report yields the SAME message
+  // 3. Ownership FIRST - a non-owned or non-existent report yields the SAME message
   //    (no existence leak; ER-A3). reporterId is empty on a miss → ownsReport false.
   if (!ownsReport({ reporterId: reportDoc.f[reporterIdField.id]?.value })) {
     state.addErrorToStack(
@@ -91,7 +91,7 @@ withdrawReport.onResolution = async () => {
   // 4. Concurrency + legality: the move must be legal from the CURRENT (just-read)
   //    status. canTransition allows WITHDRAWN only from OPEN / UNDER_REVIEW for the
   //    REPORTER. Catches an admin moving the report on (resolved/escalated) and a
-  //    double-click that already withdrew it — rejected and surfaced, not overwritten.
+  //    double-click that already withdrew it - rejected and surfaced, not overwritten.
   const current = reportDoc.f[statusField.id]?.value || "";
   D.log({
     message: "U-F12 withdraw: status read",
@@ -100,10 +100,10 @@ withdrawReport.onResolution = async () => {
   if (!canTransition(current, STATUS.WITHDRAWN, ACTOR_ROLE.REPORTER)) {
     state.addErrorToStack(
       ERROR_CODES.ILLEGAL_TRANSITION,
-      "This report can no longer be withdrawn — its status has changed. Please refresh to see the latest update."
+      "This report can no longer be withdrawn - its status has changed. Please refresh to see the latest update."
     );
     D.log({
-      message: "U-F12: withdraw rejected — illegal/stale transition",
+      message: "U-F12: withdraw rejected - illegal/stale transition",
       data: { reportId, current, to: STATUS.WITHDRAWN },
     });
     return;
@@ -131,7 +131,7 @@ withdrawReport.onResolution = async () => {
 
   // 6. Persist. save() re-runs reportDoc.onSave (the evidence/contact gate); the
   //    already-validated report passes. A gate abort adds to the error stack WITHOUT
-  //    throwing — detect it the same way U-F8/U-F10 do and do not claim success.
+  //    throwing - detect it the same way U-F8/U-F10 do and do not claim success.
   const errorsBefore = (state.errorStack || []).length;
   try {
     await saveDocWithSubCollections(reportDoc);
@@ -159,7 +159,7 @@ withdrawReport.onResolution = async () => {
   // Re-render the detail view so the UI reflects the new WITHDRAWN state: updated
   // status pill, the appended timeline row, and the Withdraw button GONE (it is no
   // longer a legal action from WITHDRAWN, so detail-actions won't render it). Chain to
-  // openReportDetail — it re-reads fresh, re-asserts ownership, reloads the
+  // openReportDetail - it re-reads fresh, re-asserts ownership, reloads the
   // sub-collections and re-signs evidence. continueWithIntentWithIdAndMessage carries
   // the reportId as messageFromUser.payload.reportId (the shape openReportDetail reads).
   D.log({

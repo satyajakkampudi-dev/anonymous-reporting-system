@@ -1,13 +1,13 @@
-// Manage detail actions — WEB renderer (wireframes §4 "Actions" bar, admin side, spanning the
+// Manage detail actions - WEB renderer (wireframes §4 "Actions" bar, admin side, spanning the
 // full width below the resolution card). A titled card: forward transitions (Take review / Resolve
 // / Escalate / Close as rejected) on the left, triage/export tools (Override severity / Export) on
-// the right. Buttons are pre-gated upstream (index.js, via STATUS_META.allowedActionsByRole) — this
+// the right. Buttons are pre-gated upstream (index.js, via STATUS_META.allowedActionsByRole) - this
 // renderer only lays out whatever it is handed; an empty set → it emits nothing (empty-safe). Pure
-// presentation: composes the shared intentButtonHtml primitive (format.js — escapes the label and
+// presentation: composes the shared intentButtonHtml primitive (format.js - escapes the label and
 // JSON-escapes the data-payload, NFR-2 / rule 10) and theme tokens (theme.js). No buttons are
 // invented here; the legal set is decided in index.js.
 //
-// NO reporter identity is present in the data (rule 30, ER-A2/A3, C1) — buttons carry only reportId.
+// NO reporter identity is present in the data (rule 30, ER-A2/A3, C1) - buttons carry only reportId.
 
 import { intentButtonHtml, escapeHtml } from "../../../../../lib/utils/format";
 import {
@@ -23,7 +23,7 @@ const sectionTitle = (text) =>
   `color:${COLORS.TEXT};margin-bottom:${SPACING.MD}px;">${text}</div>`;
 
 // Variant → inline button style. Composed from theme tokens only (no hardcoded colours):
-//   "primary" = filled positive (Take review / Resolve — advance the case)
+//   "primary" = filled positive (Take review / Resolve - advance the case)
 //   "warning" = soft amber (Escalate)
 //   "danger"  = soft red (Close as rejected)
 //   "neutral" = outline (Override severity / Export)
@@ -76,7 +76,7 @@ const buttonGroup = (reportId, buttons) =>
   `</div>`;
 
 // Disabled status chip (e.g. green "Resolved") shown where the forward-transition
-// buttons would be — the case outcome, not an action.
+// buttons would be - the case outcome, not an action.
 const completedChipHtml = (chip) => {
   if (!chip) return "";
   const t =
@@ -93,7 +93,7 @@ const completedChipHtml = (chip) => {
 };
 
 export const renderWeb = (data) => {
-  // No legal action and no completed chip — emit nothing.
+  // No legal action and no completed chip - emit nothing.
   if (!data.hasActions) return "";
 
   const left =

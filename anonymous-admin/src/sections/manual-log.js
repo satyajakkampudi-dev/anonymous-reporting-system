@@ -1,20 +1,20 @@
-// adminReportDoc — "Log a report" form section (rendering: standard, 2 columns)
+// adminReportDoc - "Log a report" form section (rendering: standard, 2 columns)
 // PLUS all hidden infrastructure fields and the read-only reporter-written fields.
 //
 // This single section hosts both (mirrors the user scaffold's report-details.js):
-//   • the visible manual-log content fields (A-F13 — source = MANUAL, no reporter to
+//   • the visible manual-log content fields (A-F13 - source = MANUAL, no reporter to
 //     contact, so NO contactMethod / contactValue here, D-L3-5);
 //   • the hidden adminProjection infrastructure fields the manage/queue views read.
 //
 // NON-NEGOTIABLE (rule 30, C1, ER-A2): NO reporterId / contactMethod / contactValue /
 // reporter-create audit field is bound anywhere on this Doc. severity lives in
-// severityPopup, resolution in resolvePopup, transitionNote in transitionNotePopup —
+// severityPopup, resolution in resolvePopup, transitionNote in transitionNotePopup -
 // each field has exactly one (doc, section) home.
 //
 // Choice DROPDOWNs render the human LABELS; the manual-log submit handler (A-F13, later
 // task) maps label→token before save so MongoDB + lib token logic stay token-based.
 // dbName tokens MUST match the shared `reports` schema and lib/access.js readers
-// (assignedRoleFor reads `againstAdmin`) — do not rename without updating lib.
+// (assignedRoleFor reads `againstAdmin`) - do not rename without updating lib.
 
 import { Section } from "@frontmltd/frontmjs/core/Section";
 import { Field } from "@frontmltd/frontmjs/core/Field";
@@ -40,7 +40,7 @@ export const manualLogSection = new Section("manualLogSection", {
 });
 
 // ---------------------------------------------------------------------------
-// Infrastructure fields (hidden/system — adminProjection set; field-spec §"adminReportDoc").
+// Infrastructure fields (hidden/system - adminProjection set; field-spec §"adminReportDoc").
 // NO reporterId / contactMethod / contactValue (rule 30). severity → severityPopup.
 // ---------------------------------------------------------------------------
 
@@ -152,7 +152,7 @@ export const resolvedOnField = new Field("resolvedOnField", {
 });
 
 // Priority sort key (MP-FIX-QUEUE-SERVER-PAGINATION). 0 = priority, 1 = normal.
-// Mirror of the user app's priorityRankField — same dbName "priorityRank". Written on
+// Mirror of the user app's priorityRankField - same dbName "priorityRank". Written on
 // every admin transition via adminReportDoc.onSave (frames/priority-rank-writer.js) so
 // an escalate/override-severity flips the rank and the report re-floats. Powers the
 // server-side queue sort { priorityRank: 1, createdOn: -1 } (no framework aggregation,
@@ -170,7 +170,7 @@ export const priorityRankField = new Field("priorityRankField", {
 
 // Admin-written resolution text (A-E-resolveReport). Persisted `reports` column,
 // read by the Manage-resolution display renderer (sections/display/manage-resolution
-// reads report.resolution) — dbName MUST stay "resolution" for that read to work.
+// reads report.resolution) - dbName MUST stay "resolution" for that read to work.
 // Captured in the resolve popup via the TRANSIENT resolutionInputField
 // (sections/resolve-popup.js); the resolve frame sanitises it and copies it HERE.
 // Hidden on the manual-log form, read-only (admins edit it only through the popup).
@@ -197,11 +197,11 @@ export const withdrawnOnField = new Field("withdrawnOnField", {
   state,
 });
 
-// Persisted `severity` report column — the SINGLE home of severity on adminReportDoc
+// Persisted `severity` report column - the SINGLE home of severity on adminReportDoc
 // (framework-mapping rule 29 / MP-FIX-ADMIN-POPUP-CAPTURE-DOCS). Initialised from
 // urgency on manual-log submit (A-F13, D6) and overwritten by overrideSeverity (A-F12,
 // which captures input through the TRANSIENT severityInputField on severityCaptureDoc
-// — sections/severity-popup.js — then copies the chosen value HERE). Hidden on this
+// - sections/severity-popup.js - then copies the chosen value HERE). Hidden on this
 // form; the manage/queue views read report.severity from the loaded projection row, so
 // dbName MUST stay "severity". Options are the raw SEVERITY tokens (no label mapping).
 export const severityField = new Field("severityField", {
@@ -259,7 +259,7 @@ export const urgencyField = new Field("urgencyField", {
   state,
 });
 
-// Free-text incident metadata — NOT a routing key (routing is resolveAssignees, D17).
+// Free-text incident metadata - NOT a routing key (routing is resolveAssignees, D17).
 export const shipNameField = new Field("shipNameField", {
   title: "Ship name",
   doc: adminReportDoc,
@@ -295,7 +295,7 @@ export const incidentDateField = new Field("incidentDateField", {
   state,
 });
 
-// Toggle — if on, routes assignedTo = SECONDARY_ADMIN (D9). Read by lib/access.js
+// Toggle - if on, routes assignedTo = SECONDARY_ADMIN (D9). Read by lib/access.js
 // assignedRoleFor → dbName MUST stay "againstAdmin".
 export const againstAdminField = new Field("againstAdminField", {
   title: "This concerns a member of the compliance team",
@@ -332,14 +332,14 @@ export const accusedPartyField = new Field("accusedPartyField", {
 
 // Up to 5 files, ≤ 25 MB each (D1). FILE_FIELD = upload control + S3. Same allow-list
 // + size validation as the reporter form (A-F13, lib/validation.js). The .value is an
-// envelope { value: <s3-key>, fileName, fileScopeValue } — display signs the key (rule 18).
+// envelope { value: <s3-key>, fileName, fileScopeValue } - display signs the key (rule 18).
 //
 // Progressive disclosure (mirror of the user-app evidence.js): only slot 1 is visible
 // initially; slots 2–5 start hidden and are revealed one at a time by the "+ Add another
 // file" button (frames/evidence-slots.js). The `hidden` flag is a module-level mutable
 // that resets on a Lambda cold start, so the live count is persisted in conversation
 // state (STATE_KEYS.EVIDENCE_SLOTS_VISIBLE) and re-applied by restoreEvidenceSlotVisibility.
-// The onClick handler lives in frames/ (AGENTS.md — handlers belong in frames, not in
+// The onClick handler lives in frames/ (AGENTS.md - handlers belong in frames, not in
 // sections), so this file holds definitions only.
 const makeEvidenceFileField = (index, hidden) =>
   new Field(`evidenceFile${index}Field`, {
@@ -364,7 +364,7 @@ export const evidenceFile3Field = makeEvidenceFileField(3, true);
 export const evidenceFile4Field = makeEvidenceFileField(4, true);
 export const evidenceFile5Field = makeEvidenceFileField(5, true);
 
-// All five slots in display order — used by resetEvidenceSlots (frames/evidence-slots).
+// All five slots in display order - used by resetEvidenceSlots (frames/evidence-slots).
 export const ATTACHMENT_FIELDS = [
   evidenceFile1Field,
   evidenceFile2Field,
@@ -373,7 +373,7 @@ export const ATTACHMENT_FIELDS = [
   evidenceFile5Field,
 ];
 
-// The four progressively-revealed slots (2–5) — used by restoreEvidenceSlotVisibility
+// The four progressively-revealed slots (2–5) - used by restoreEvidenceSlotVisibility
 // and revealNextEvidenceSlot to find the next hidden slot.
 export const EXTRA_ATTACHMENT_FIELDS = [
   evidenceFile2Field,
@@ -382,7 +382,7 @@ export const EXTRA_ATTACHMENT_FIELDS = [
   evidenceFile5Field,
 ];
 
-// "+ Add another file" — reveals the next hidden slot; hidden once all five are
+// "+ Add another file" - reveals the next hidden slot; hidden once all five are
 // visible. onClick is wired in frames/evidence-slots.js (handlers live in frames).
 export const addEvidenceSlotButtons = Buttons.Create({
   intentId: "addEvidenceSlotButtons",
@@ -407,7 +407,7 @@ export const evidenceNotesField = new Field("evidenceNotesField", {
 // Reporter open-reporting contact (MP-FIX-CONTACT-OPEN-REPORTING). When a reporter chooses
 // to be identifiable they fill these on the submit form; they are now admin-visible (removed
 // from ADMIN_EXCLUDED_FIELDS) and rendered in the admin manage report view. Bound here so the
-// loaded report rows carry the values (extractRowData reads field values by dbName — an unbound
+// loaded report rows carry the values (extractRowData reads field values by dbName - an unbound
 // field would be dropped). HIDDEN on the manual-log CREATE form (a manual log has no reporter to
 // contact). dbNames MUST match the user app: "contactMethod" / "contactValue". contactValue
 // stays encrypted: true so the read lambda decrypts it (must match the writer's secured field).

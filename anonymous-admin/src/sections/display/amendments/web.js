@@ -1,8 +1,8 @@
-// Amendments — WEB renderer (wireframes §4 "Amendments [RO]", admin side): a titled card
-// then a read-only HTML table — one row per amendment (When · Note · Evidence), newest
-// first. NO +Add / edit / delete control (admin is read-only — the reporter appends,
+// Amendments - WEB renderer (wireframes §4 "Amendments [RO]", admin side): a titled card
+// then a read-only HTML table - one row per amendment (When · Note · Evidence), newest
+// first. NO +Add / edit / delete control (admin is read-only - the reporter appends,
 // U-F13; rule 30). Composes the shared escapeHtml / formatDateTime / emptyStateHtml
-// primitives (format.js) with theme tokens (theme.js) — every interpolated value is
+// primitives (format.js) with theme tokens (theme.js) - every interpolated value is
 // escaped at the boundary (NFR-2, rule 10). Pure presentation: index.js owns the data,
 // the evidence overlay, and the sort.
 //
@@ -10,7 +10,7 @@
 // carries only its timestamp, free-text note, and an optional evidence descriptor.
 //
 // EVIDENCE cell: signed URL → a download link; key-but-unsigned → filename "(link
-// unavailable)"; no key → "—". The raw S3 key is NEVER embedded (index.js overlays the
+// unavailable)"; no key → "-". The raw S3 key is NEVER embedded (index.js overlays the
 // pre-signed URL by key).
 
 import {
@@ -36,9 +36,9 @@ const tdStyle =
   `border-bottom:1px solid ${COLORS.BORDER};vertical-align:top;`;
 
 // Evidence cell content. Signed URL → download link; unsigned key → name "(link
-// unavailable)"; no key → "—". Never embeds a raw S3 key.
+// unavailable)"; no key → "-". Never embeds a raw S3 key.
 const evidenceCell = (evidence) => {
-  if (!evidence) return `<span style="color:${COLORS.TEXT_FAINT};">—</span>`;
+  if (!evidence) return `<span style="color:${COLORS.TEXT_FAINT};">-</span>`;
   const name = escapeHtml(evidence.fileName || "Attachment");
   if (evidence.url) {
     return (
@@ -54,7 +54,7 @@ const rowHtml = (r) => {
   const when = escapeHtml(formatDateTime(r.amendedOn));
   const note = r.note
     ? `<span style="white-space:pre-wrap;word-break:break-word;">${escapeHtml(r.note)}</span>`
-    : `<span style="color:${COLORS.TEXT_FAINT};">—</span>`;
+    : `<span style="color:${COLORS.TEXT_FAINT};">-</span>`;
   return (
     `<tr>` +
     `<td style="${tdStyle}white-space:nowrap;color:${COLORS.TEXT_MUTED};">${when}</td>` +
@@ -65,7 +65,7 @@ const rowHtml = (r) => {
 };
 
 export const renderWeb = (data) => {
-  // No report open (Dashboard / Queue screens, or not found) — emit nothing (empty-safe).
+  // No report open (Dashboard / Queue screens, or not found) - emit nothing (empty-safe).
   if (!data.hasReport) return "";
 
   const body = data.rows.length

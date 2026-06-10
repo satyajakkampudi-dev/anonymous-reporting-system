@@ -1,12 +1,12 @@
-// adminReportDoc — "Status timeline" embedded sub-collection (display_only, read-only).
+// adminReportDoc - "Status timeline" embedded sub-collection (display_only, read-only).
 //
 // forCollection: true on adminReportDoc → stored as the embedded array `statusHistory`
 // on the parent report. WRITTEN BY THE TRANSITION PATH ONLY (lib/ticket-status.js
-// transitions) — never a popup; pure display on the admin side (no add/edit/delete,
+// transitions) - never a popup; pure display on the admin side (no add/edit/delete,
 // rule 25/30). The timeline HTML view is a separate Display Doc section (A-D-statushistory).
 // forCollection sections CANNOT carry a CardsSet (rule 7).
 //
-// actorRole is ROLE ONLY, never an id (anonymity, SPEC.md) — passes through
+// actorRole is ROLE ONLY, never an id (anonymity, SPEC.md) - passes through
 // adminProjection unchanged. All fields hidden (data-only).
 
 import { Section } from "@frontmltd/frontmjs/core/Section";
@@ -69,7 +69,7 @@ export const toStatusField = new Field("toStatusField", {
   state,
 });
 
-// Role only — NEVER an id (anonymity).
+// Role only - NEVER an id (anonymity).
 export const actorRoleField = new Field("actorRoleField", {
   title: "Actor role",
   doc: statusHistoryDoc,

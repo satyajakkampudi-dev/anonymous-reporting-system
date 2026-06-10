@@ -1,9 +1,9 @@
-// Status timeline — WEB renderer (wireframes §4 "Status timeline"): a titled card,
-// then a vertical timeline — one entry per status change (dot + connecting rail),
+// Status timeline - WEB renderer (wireframes §4 "Status timeline"): a titled card,
+// then a vertical timeline - one entry per status change (dot + connecting rail),
 // newest first. Each entry shows the status pill (label+tone from ticket-status meta),
-// the change time, the actor ROLE label (never an id — anonymity, rule 16), and the
+// the change time, the actor ROLE label (never an id - anonymity, rule 16), and the
 // optional note. Composes the shared statusPillHtml / escapeHtml / formatDateTime /
-// emptyStateHtml primitives (format.js) with theme tokens (theme.js) — every
+// emptyStateHtml primitives (format.js) with theme tokens (theme.js) - every
 // interpolated value is escaped at the primitive boundary (NFR-2, rule 10). Pure
 // presentation: index.js owns the data, the role mapping, and the sort.
 
@@ -55,7 +55,7 @@ const entryHtml = (r, isLast) => {
 };
 
 export const renderWeb = (data) => {
-  // No report loaded (Home / My-Reports screens) — emit nothing (empty-safe).
+  // No report loaded (Home / My-Reports screens) - emit nothing (empty-safe).
   if (!data.hasReport) return "";
 
   const body = data.rows.length

@@ -1,11 +1,11 @@
-// Status timeline — MOBILE renderer (wireframes §4 "Status timeline", admin side): same
+// Status timeline - MOBILE renderer (wireframes §4 "Status timeline", admin side): same
 // data as web, restacked for narrow widths. A titled card, then one stacked block per
 // status change (pill, then change time + actor role on its own line, then the optional
 // note), newest first. Generous vertical rhythm for touch. Each block carries the status
-// pill (label+tone from ticket-status meta), the actor ROLE label only (never an id —
+// pill (label+tone from ticket-status meta), the actor ROLE label only (never an id -
 // anonymity, rule 30), and the transition note. Composes the shared statusPillHtml /
 // escapeHtml / formatDateTime / emptyStateHtml primitives (format.js) with theme tokens
-// (theme.js) — every interpolated value is escaped at the boundary (NFR-2, rule 10). Pure
+// (theme.js) - every interpolated value is escaped at the boundary (NFR-2, rule 10). Pure
 // presentation: index.js owns the data, the role mapping, and the sort.
 //
 // NO reporter identity is present in the data (rule 30, ER-A2/A3, C1).
@@ -44,7 +44,7 @@ const entryBlock = (r) => {
 };
 
 export const renderMobile = (data) => {
-  // No report open (Dashboard / Queue screens, or not found) — emit nothing (empty-safe).
+  // No report open (Dashboard / Queue screens, or not found) - emit nothing (empty-safe).
   if (!data.hasReport) return "";
 
   const body = data.rows.length

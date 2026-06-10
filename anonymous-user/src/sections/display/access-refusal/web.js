@@ -1,8 +1,8 @@
-// U-F0a access-refused guard — WEB renderer (wireframes-anonymous-user §0;
+// U-F0a access-refused guard - WEB renderer (wireframes-anonymous-user §0;
 // "Mobile / Web (identical, single card)"). Content is identical to mobile; web
 // constrains the card to a centred, narrow column so it reads as a deliberate wall
 // rather than a stretched banner on a wide screen. Composes shared theme tokens
-// (lib/utils/theme.js) + escapeHtml (lib/utils/format.js) — the copy is static but
+// (lib/utils/theme.js) + escapeHtml (lib/utils/format.js) - the copy is static but
 // still escaped at the boundary (NFR-2, rule 10).
 
 import { escapeHtml } from "../../../../../lib/utils/format";
@@ -12,7 +12,7 @@ export const renderWeb = (data) => {
   const { title, body, redirect } = data;
 
   return (
-    // Centred wrapper — narrow card, not full-width.
+    // Centred wrapper - narrow card, not full-width.
     `<div style="font-family:${TYPOGRAPHY.FONT_FAMILY};display:flex;` +
     `justify-content:center;padding:${SPACING.XL}px ${SPACING.LG}px;">` +
     `<div style="max-width:420px;width:100%;background:${COLORS.SURFACE};` +

@@ -1,8 +1,8 @@
 // Display section: Status timeline (schema id: statusHistory, row 6). A-D-statushistory
 // fills the card with the timeline rows (status label+tone from lib/ticket-status.js via
-// statusPillHtml, changedOn, actorRole — NEVER an id — and an optional transition note)
+// statusPillHtml, changedOn, actorRole - NEVER an id - and an optional transition note)
 // read from the report's embedded statusHistory array. The CardsSet + placeholder were
-// built in DISPLAY-SHELL — content only here. Pure display, read-only → readOnly omitted.
+// built in DISPLAY-SHELL - content only here. Pure display, read-only → readOnly omitted.
 // Distinct ids from the Data Doc's statusHistorySection (src/sections/status-history.js):
 // the Data Doc owns the forCollection rows; this Display Doc section owns the CardsSet
 // (framework-mapping rule 7).
@@ -11,17 +11,17 @@
 // onResponse is a Context-A render handler called SYNCHRONOUSLY during
 // adminDisplayDoc.sendResponse() (CLAUDE.md "Render handlers are NOT awaited"), so it cannot
 // await a load. The openManageReport nav frame (Context B) has already run the anonymity
-// gateway — loadReportForAdmin({ reportId }) → loadReportsForAdmin, which populates
-// reportsCollection.rows — and stashed the reportId (STATE_KEYS.CURRENT_REPORT_ID) in the
+// gateway - loadReportForAdmin({ reportId }) → loadReportsForAdmin, which populates
+// reportsCollection.rows - and stashed the reportId (STATE_KEYS.CURRENT_REPORT_ID) in the
 // SAME invocation. This handler reads that id, finds the matching loaded row, re-strips it
 // through applyAdminProjection (second anonymity layer), and reads its embedded
-// `statusHistory` array. No async work, no S3 — so unlike detail-content / amendments the
+// `statusHistory` array. No async work, no S3 - so unlike detail-content / amendments the
 // handler stays synchronous (no prepare() helper).
 //
 // ANONYMITY (the dominant constraint, C1 / rule 30 / ER-A2/A3): this section binds NO
-// reporter-identity field and NEVER queries `reports` itself — its only source is the
+// reporter-identity field and NEVER queries `reports` itself - its only source is the
 // gateway-loaded rows, identity-free by construction and stripped again here. Each
-// statusHistory row carries actorRole (a ROLE, never an id) — mapped to a friendly,
+// statusHistory row carries actorRole (a ROLE, never an id) - mapped to a friendly,
 // identity-free label below (Reporter / Compliance / System); the primary/secondary
 // distinction is deliberately collapsed so even the role granularity leaks nothing.
 //
@@ -78,7 +78,7 @@ export const statusHistoryDisplayPlaceholderCard = new Card(
 );
 
 // Friendly, role-ONLY actor label (anonymity, rule 30). Both admin roles collapse to a
-// single "Compliance" label — the officer never needs (and the audit must never expose)
+// single "Compliance" label - the officer never needs (and the audit must never expose)
 // the primary/secondary distinction or any id. Unknown/missing role degrades to "".
 const ACTOR_LABEL = {
   [ACTOR_ROLE.REPORTER]: "Reporter",
@@ -103,13 +103,13 @@ const readOpenedReport = () => {
   return rows.find((r) => r && r.reportId === reportId) || null;
 };
 
-// Build the card content on every render (empty-safe — no report open → no card).
+// Build the card content on every render (empty-safe - no report open → no card).
 statusHistoryDisplaySection.onResponse = () => {
   const report = readOpenedReport();
 
   // The transition log is the embedded `statusHistory` array on the report (dbName-keyed
   // rows, written by the transition path only). Defensive against a missing/non-array
-  // value. Each row carries ROLE only — mapped to a friendly label (never an id).
+  // value. Each row carries ROLE only - mapped to a friendly label (never an id).
   const history = Array.isArray(report?.statusHistory)
     ? report.statusHistory
     : [];
@@ -120,7 +120,7 @@ statusHistoryDisplaySection.onResponse = () => {
     note: row?.note || "",
   }));
 
-  // Newest first — the most recent transition leads the timeline (wireframe §4).
+  // Newest first - the most recent transition leads the timeline (wireframe §4).
   rows.sort((a, b) => (Number(b.changedOn) || 0) - (Number(a.changedOn) || 0));
 
   const data = {

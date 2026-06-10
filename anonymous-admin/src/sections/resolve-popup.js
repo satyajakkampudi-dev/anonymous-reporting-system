@@ -1,4 +1,4 @@
-// resolveCaptureDoc — "Resolve report" capture popup section (rendering: standard, 1 column).
+// resolveCaptureDoc - "Resolve report" capture popup section (rendering: standard, 1 column).
 //
 // Per-action CAPTURE Doc, NOT the shared adminReportDoc (framework-mapping rule 29,
 // MP-FIX-ADMIN-POPUP-CAPTURE-DOCS): a Doc has one onSubmit slot, so binding every
@@ -10,13 +10,13 @@
 // resolve-report.js), which sets resolveCaptureDoc.title before the call (rule 29).
 // includeInQuickEdit: true so it appears in the quick-form popup; mandatory + TEXT_AREA.
 //
-// This is a TRANSIENT capture field — resolveCaptureDoc is never save()d, so the value
+// This is a TRANSIENT capture field - resolveCaptureDoc is never save()d, so the value
 // never becomes a `reports` column here. On confirm, frames/resolve-report.js sanitises
 // it and copies it onto adminReportDoc's hidden `resolution` column (sections/manual-log.js)
 // + statusHistory. Mirror of the user app's transient rejectReasonInputField (rule 29).
 //
 // dbName is "resolutionInput" (NOT "resolution") and is inert (the Doc is never
-// persisted); the persisted `resolution` column lives on adminReportDoc — collision
+// persisted); the persisted `resolution` column lives on adminReportDoc - collision
 // with that column is exactly what the per-action capture-Doc design avoids.
 
 import { Section } from "@frontmltd/frontmjs/core/Section";

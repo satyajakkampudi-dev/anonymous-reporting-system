@@ -1,4 +1,4 @@
-# Data Model Spec — Anonymous Reporting System
+# Data Model Spec - Anonymous Reporting System
 
 > Companion to [`../REQUIREMENTS.md`](../REQUIREMENTS.md). Defines the `Report` entity, its
 > fields, enumerations, the status state machine, and the admin field-projection that enforces
@@ -26,7 +26,7 @@
 | `reopenCount` | number | Increment on reject→reopen; capped (OQ-10). Default 0. |
 | `withdrawnOn` | number (ms) | Set on `WITHDRAWN`. |
 
-### Reporter-private — **NEVER exposed to Admin app** (excluded from `adminProjection`)
+### Reporter-private - **NEVER exposed to Admin app** (excluded from `adminProjection`)
 | Field (`dbName`) | Type | Notes |
 |---|---|---|
 | `reporterId` | string | FrontM `userId` of submitter. Scoping + notifications only. Empty for `MANUAL`. |
@@ -57,9 +57,9 @@
 | `resolution` | text | Admin resolution. Sanitised. |
 | `resolvedOn` | number (ms) | Set on RESOLVED. |
 | `rejectReason` | text | Reporter's reason on reject. Sanitised. |
-| audit fields | — | `createdBy`/`modifiedBy`/`createdOn`/`modifiedOn` via `audit: true` — **admin actions only**; ensure the reporter-create path does not stamp reporter identity here, or exclude it from `adminProjection` (ER-A2). |
+| audit fields | - | `createdBy`/`modifiedBy`/`createdOn`/`modifiedOn` via `audit: true` - **admin actions only**; ensure the reporter-create path does not stamp reporter identity here, or exclude it from `adminProjection` (ER-A2). |
 
-### Report history sub-collections (added Layer 3 — D-L3-1)
+### Report history sub-collections (added Layer 3 - D-L3-1)
 The report's **status timeline** (U-F2/A-F6) and **append-only amendment trail** (U-F13) are
 modelled as two embedded sub-collections on the report Doc (`forCollection: true`), since `audit:
 true` records only the *last* modifier and cannot reconstruct a timeline.
@@ -68,7 +68,7 @@ true` records only the *last* modifier and cannot reconstruct a timeline.
 |---|---|---|---|
 | `statusHistory` | `historyId` | string (PK) | Generated per entry. |
 | | `fromStatus` / `toStatus` | enum | STATUS values. |
-| | `actorRole` | enum | `REPORTER \| PRIMARY_ADMIN \| SECONDARY_ADMIN \| SYSTEM`. Identity-free (role only — never admin/reporter id on the reporter-visible side). |
+| | `actorRole` | enum | `REPORTER \| PRIMARY_ADMIN \| SECONDARY_ADMIN \| SYSTEM`. Identity-free (role only - never admin/reporter id on the reporter-visible side). |
 | | `changedOn` | number (ms) | Transition timestamp. |
 | | `note` | text | Optional, sanitised (e.g. reject reason, escalate note). |
 | `amendments` | `amendmentId` | string (PK) | Generated per entry. |
@@ -79,11 +79,11 @@ true` records only the *last* modifier and cannot reconstruct a timeline.
 Both are **append-only** (no edit/delete of existing rows). `statusHistory` is written by every
 status transition in `lib/ticket-status.js`'s transition path (both apps); `amendments` is written
 by U-F13 only. On the admin side both sub-collections pass through `adminProjection` unchanged (they
-already carry **no** reporter identity — `actorRole` not `actorId`).
+already carry **no** reporter identity - `actorRole` not `actorId`).
 
 ## Enumerations (canonical values in `lib/constants.js`)
 - `STATUS`: `OPEN, UNDER_REVIEW, ESCALATED, RESOLVED, REOPENED, CLOSED_BY_USER, CLOSED_BY_SYSTEM, CLOSED_REJECTED, WITHDRAWN`
-- `CATEGORY`, `URGENCY`, `SEVERITY`, `LOCATION`, `CONTACT_METHOD` — as in REQUIREMENTS §5.
+- `CATEGORY`, `URGENCY`, `SEVERITY`, `LOCATION`, `CONTACT_METHOD` - as in REQUIREMENTS §5.
 - `ROLE`: `PRIMARY_ADMIN, SECONDARY_ADMIN`
 - `SOURCE`: `REPORTER, MANUAL, CALL`
 - `MSG_*`: `MSG_NEW_REPORT, MSG_REPORT_REOPENED, MSG_REPORT_RESOLVED, MSG_REPORT_STATUS_CHANGED, MSG_REPORT_CLOSED, MSG_INCOMING_CALL, MSG_CALL_STOP_RING`
@@ -103,7 +103,7 @@ Defined in `lib/ticket-status.js` as `{ [status]: { transitions: [{ to, actor, a
 | ESCALATED | RESOLVED | secondary admin | resolve |
 | RESOLVED | CLOSED_BY_USER | reporter | accept |
 | RESOLVED | CLOSED_BY_SYSTEM | system | auto-close (+30d) |
-| RESOLVED | REOPENED | reporter | reject (reason) — once only, `reopenCount` 0→1 (D10) |
+| RESOLVED | REOPENED | reporter | reject (reason) - once only, `reopenCount` 0→1 (D10) |
 | REOPENED | UNDER_REVIEW | admin | take review |
 | REOPENED | ESCALATED | admin | escalate |
 | REOPENED | CLOSED_REJECTED | admin | close as rejected (or force-close past reopen cap) |
@@ -116,7 +116,7 @@ Status `meta`: `{ label, tone, allowedActionsByRole }` for consistent rendering/
 **Escalate is PRIMARY-only (MP-FIX-SECONDARY-NO-ESCALATE).** The "admin" actor on the
 OPEN/UNDER_REVIEW/REOPENED → ESCALATED transitions means the **PRIMARY** admin. The SECONDARY admin is
 the **top of the escalation chain** (escalation always routes PRIMARY → SECONDARY; no higher tier), so
-`ACTION.ESCALATE` is absent from `SECONDARY_ADMIN` in every status' `allowedActionsByRole` — the secondary
+`ACTION.ESCALATE` is absent from `SECONDARY_ADMIN` in every status' `allowedActionsByRole` - the secondary
 resolves/closes rather than escalates.
 
 **Concurrency (ER-B5):** every transition re-reads the report and checks the move is legal from the
@@ -129,20 +129,20 @@ omit reporter-driven transitions (accept/reject/withdraw) and reporter notificat
 The **only** field set the Admin app reads. Excludes `reporterId`, `contactMethod`, `contactValue`,
 and the audit `createdBy`/`modifiedBy` for the reporter-create path (ER-A2). All admin reads go
 through a **single gateway** `loadReportsForAdmin()` / `loadReportForAdmin()` that always applies
-`{ projection: adminProjection }` (ER-A3) — no admin code path queries the collection directly.
+`{ projection: adminProjection }` (ER-A3) - no admin code path queries the collection directly.
 Admin Display/Form Docs bind no identity field; bot-to-bot payloads and admin emails are built from
 this set only. Dashboard/analytics aggregations apply small-cell suppression (ER-A6).
 
-## Retention & export (ER-D14 — decision D15)
+## Retention & export (ER-D14 - decision D15)
 **v1:** 7-year retention for reports, evidence files, and voicemails; **CSV/PDF case export** from
 the `adminProjection` set only (no reporter identity). **Deferred to post-v1:** admin-initiated
-erasure on terminal reports (would also clear `reporterId`/contact + linked S3 objects) — irreversible,
+erasure on terminal reports (would also clear `reporterId`/contact + linked S3 objects) - irreversible,
 pending legal sign-off. Confirm retention against the org's legal policy before go-live.
 
 ## Anonymous calling data model
 
 ### Collection `call-queue` → `call_queue_${systemId}` (`shared: true`)
-One entry per call attempt. **Identity-free** — never stores reporter id/email/name.
+One entry per call attempt. **Identity-free** - never stores reporter id/email/name.
 
 | Field (`dbName`) | Type | Notes |
 |---|---|---|
@@ -158,7 +158,7 @@ One entry per call attempt. **Identity-free** — never stores reporter id/email
 | `linkedReportId` | string | Report auto-created from voicemail (`source=CALL`). |
 
 ### Collection `admin-users` → `admin_users_${systemId}` (`shared: true`)
-The **seeded admin registry** (D3) — single source for access gating, PRIMARY/SECONDARY role +
+The **seeded admin registry** (D3) - single source for access gating, PRIMARY/SECONDARY role +
 routing, recusal, on-call availability, and call ringing. Seeded out-of-band; admins update their
 own `availability`; calling reads `available` rows to ring.
 
@@ -177,11 +177,11 @@ later = populate `scope` + add a structured vessel→scope mapping + extend the 
 schema and admin queue are unchanged. `shipName` is incident metadata; a structured `vesselId` may
 be added then for the vessel→scope mapping (free-text `shipName` retained as fallback).
 
-### Masking (anonymity — `lib/calling.js`)
+### Masking (anonymity - `lib/calling.js`)
 - `hostUserEmail` = a masked/system account (never `state.user.userEmail`).
 - Reporter joins via `getAccessToken({ guestEmail: maskedGuestEmail(callRef) })` with display
   name "Anonymous Reporter"; meeting created `allowGuests: true`, video muted (voice-only).
-- Ring payloads (`MSG_INCOMING_CALL`, VoIP push) contain **only** `callRef` + `meetingId` — no
+- Ring payloads (`MSG_INCOMING_CALL`, VoIP push) contain **only** `callRef` + `meetingId` - no
   `callerName`/`callerId`/email. Generic ring message ("Incoming anonymous call").
 - Voicemail-derived report uses `source=CALL`, `reporterId` empty (no tracking owner).
 
@@ -189,7 +189,7 @@ be added then for the vessel→scope mapping (free-text `shipName` retained as f
 `RINGING` → (admin answers) `ACTIVE` → (hang-up) `ENDED`; or (no available admin / ring timeout,
 OQ-7) `MISSED` → voicemail recorded → auto-create report. Edge handling (ER-C12): reporter hangs up
 before answer → `ABANDONED`; network drop mid-call → inactivity timeout `ACTIVE → ENDED`. The answer
-is an **atomic claim** — first admin to set `ACTIVE`/`attendedBy` wins; others get
+is an **atomic claim** - first admin to set `ACTIVE`/`attendedBy` wins; others get
 `MSG_CALL_STOP_RING`. Recording stays **off** (ER-A5). Concurrent callers: an admin who answers is
 marked `busy` so they're skipped for other rings (OQ-12). No `audit`-style recording captures voice.
 
@@ -198,16 +198,16 @@ marked `busy` so they're skipped for other rings (OQ-12). No `audit`-style recor
 - **incidentDate:** parseable ISO date, not in the future.
 - **Evidence file:** allowed extensions **and** content type; size ≤ limit (OQ-1). Reject otherwise.
   - **Runtime-enforcement note (U-F6).** The FrontM `FILE_FIELD` value envelope is exactly
-    `{ value:<s3-key>, fileName, fileScopeValue }` — it carries **no content type and no byte size** —
+    `{ value:<s3-key>, fileName, fileScopeValue }` - it carries **no content type and no byte size** -
     and `state.frontmlib` exposes no S3 HEAD/metadata call (only `getS3SignedUrl` /
     `getS3UploadSignedUrl`). So from a Doc handler the server can enforce only **file count ≤ limit**
     and the **extension allow-list** (atomic abort in `reportDoc.onSave`). Content-type and size checks
-    (and orphaned-S3 cleanup on rejection) are **deferred** — see task `MP-FIX-EVIDENCE-METADATA`.
+    (and orphaned-S3 cleanup on rejection) are **deferred** - see task `MP-FIX-EVIDENCE-METADATA`.
     `validateEvidenceFile` (full extension+type+size check) remains for any caller that DOES have the
     metadata (e.g. a server-mediated upload pipeline).
 - **Sanitiser:** escape/strip HTML from all free-text fields before email/HTML-card rendering.
 
-## Verification surface (runtime — FrontM has no unit-test files)
+## Verification surface (runtime - FrontM has no unit-test files)
 Keep these `/lib` helpers **pure** so they can be exercised quickly via a `mock-data` toggle and
 verified on the live runtime (`/frontm-review`, `/verify`, `npm run build`): ID generator (format
 + uniqueness), status transition validator (allowed/denied per role), validators

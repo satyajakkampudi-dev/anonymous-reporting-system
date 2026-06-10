@@ -1,10 +1,10 @@
-// Report queue — WEB renderer (wireframes §2 "Web": table-style cards + filter bar).
+// Report queue - WEB renderer (wireframes §2 "Web": table-style cards + filter bar).
 // A scan-and-triage list: a quick-filter chip row, then one card per report showing
 // priority badge + severity tone + status pill + category · urgency · age, the
 // assigned role, and an "Open →" button. Composes shared theme tokens (theme.js) +
 // the escapeHtml / statusPillHtml / tonePillHtml / payloadAttr / emptyStateHtml /
 // formatRelative primitives (format.js); every interpolated value is escaped at the
-// boundary (NFR-2, rule 10). Pure presentation — index.js owns the read.
+// boundary (NFR-2, rule 10). Pure presentation - index.js owns the read.
 //
 // NO reporter identity is present in the data (rule 30, ER-A2/A3). Priority SORT is
 // A-F5's job; this file renders rows in the order index.js supplies them.
@@ -32,14 +32,14 @@ import {
 
 const FONT = TYPOGRAPHY.FONT_FAMILY;
 
-// Short assigned-role label for the queue ("PRIMARY" / "SECONDARY"); "—" if unset.
+// Short assigned-role label for the queue ("PRIMARY" / "SECONDARY"); "-" if unset.
 const ASSIGNED_SHORT = {
   [ROLE.PRIMARY_ADMIN]: "PRIMARY",
   [ROLE.SECONDARY_ADMIN]: "SECONDARY",
 };
-const assignedLabel = (assignedTo) => ASSIGNED_SHORT[assignedTo] || "—";
+const assignedLabel = (assignedTo) => ASSIGNED_SHORT[assignedTo] || "-";
 
-// A quick-filter chip — an openQueue intent button. The active chip is filled.
+// A quick-filter chip - an openQueue intent button. The active chip is filled.
 const chipHtml = (chip, activeFilter, filterIntent) => {
   const active = chip.key === activeFilter;
   return (
@@ -57,7 +57,7 @@ const chipHtml = (chip, activeFilter, filterIntent) => {
   );
 };
 
-// The priority badge — a small flagged pill, only for priority/escalated rows.
+// The priority badge - a small flagged pill, only for priority/escalated rows.
 const priorityBadgeHtml = () =>
   `<span style="display:inline-block;padding:2px 8px;border-radius:999px;` +
   `font-size:${TYPOGRAPHY.SIZE_XS}px;font-weight:${TYPOGRAPHY.WEIGHT_BOLD};` +
@@ -65,8 +65,8 @@ const priorityBadgeHtml = () =>
 
 // One report row (table-style card).
 const rowHtml = (r, openIntent) => {
-  const category = CATEGORY_LABELS[r.category] || r.category || "—";
-  const urgency = URGENCY_LABELS[r.urgency] || r.urgency || "—";
+  const category = CATEGORY_LABELS[r.category] || r.category || "-";
+  const urgency = URGENCY_LABELS[r.urgency] || r.urgency || "-";
   const severity = SEVERITY_LABELS[r.severity] || r.severity;
   const meta = [category, urgency, formatRelative(r.createdOn)]
     .filter(Boolean)

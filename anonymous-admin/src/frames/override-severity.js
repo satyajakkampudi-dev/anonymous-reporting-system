@@ -1,36 +1,36 @@
-// A-E-overrideSeverity — admin "Override severity" edit (A-F12).
+// A-E-overrideSeverity - admin "Override severity" edit (A-F12).
 //
 // This is NOT a status transition. It WRITES the report's `severity` infra column
-// (sections/manual-log.js) — the only edit to severity after submit-time
+// (sections/manual-log.js) - the only edit to severity after submit-time
 // initialisation from urgency (D6). No status changes. The new severity feeds
 // priority surfacing (A-F5) and auto-escalate timing (A-F16), which read the
 // column live; there is therefore NO reporter-facing MSG / X-task hook here
-// (severity is non-identity admin triage data — rule 30).
+// (severity is non-identity admin triage data - rule 30).
 //
 // Because severityCaptureDoc is SINGLE-OWNER (only this frame opens its popup),
-// this frame owns severityCaptureDoc.onSubmit DIRECTLY — unlike the shared
+// this frame owns severityCaptureDoc.onSubmit DIRECTLY - unlike the shared
 // noteCaptureDoc, no dispatcher is needed (framework-mapping rule 29).
 //
 // The action is gated by isActionAllowed(status, role, ACTION.OVERRIDE_SEVERITY)
-// — the ACTION gate, NOT canTransition (there is no status move). OVERRIDE_SEVERITY
+// - the ACTION gate, NOT canTransition (there is no status move). OVERRIDE_SEVERITY
 // is allowed for both admin roles on every NON-terminal status and is absent from
 // every terminal status (lib/ticket-status.js STATUS_META), so a report that moved
 // to a terminal state after the popup opened is rejected on submit (defence in depth).
 //
 // The two halves mirror resolve-report.js (rule 29 precedent) discipline:
-//   1. overrideSeverity.onResolution — trigger intent (Context B — graph EMPTY on
+//   1. overrideSeverity.onResolution - trigger intent (Context B - graph EMPTY on
 //      entry). Payload guard, authoritative role re-resolution (neutral retry on a
-//      thrown read), Context.Create attach (NOT loadDocument — rule 22), cheap
+//      thrown read), Context.Create attach (NOT loadDocument - rule 22), cheap
 //      pre-popup ACTION guard off the buffer, stash reportId, reset the capture Doc
-//      in place (rule 26 — docId first, then clear; NEVER cloneAndInit), pre-select
+//      in place (rule 26 - docId first, then clear; NEVER cloneAndInit), pre-select
 //      the current severity into the dropdown, open the popup.
-//   2. severityCaptureDoc.onSubmit — validate the chosen severity against the
+//   2. severityCaptureDoc.onSubmit - validate the chosen severity against the
 //      SEVERITY enum, re-read the stashed reportId, re-resolve role authoritatively,
-//      attach + loadDocument FRESH (the concurrency guard — version advances
+//      attach + loadDocument FRESH (the concurrency guard - version advances
 //      monotonically read -> read+1), existence 404, re-check the ACTION gate against
 //      the just-read status, apply severity + version + updatedOn, append ONE
-//      statusHistory row (fromStatus === toStatus because there is no status change —
-//      the timeline records the edit via the note; actorRole token only, no id —
+//      statusHistory row (fromStatus === toStatus because there is no status change -
+//      the timeline records the edit via the note; actorRole token only, no id -
 //      anonymity, rule 16), save with errorStack-length abort detection.
 //
 // ANONYMITY (rule 30). adminReportDoc declares no reporter-identity field; the
@@ -61,15 +61,15 @@ import {
 } from "../../../lib/constants";
 import { CONTEXT, INTENT, STATE_KEYS } from "../constants";
 
-// Valid severity tokens — the only values the dropdown may legitimately submit and
+// Valid severity tokens - the only values the dropdown may legitimately submit and
 // the only values the persisted column may take.
 const SEVERITY_TOKENS = Object.values(SEVERITY);
 
 // Shared copy so the pre-popup guard and the authoritative submit guard surface the
 // SAME message for the SAME condition (no drift). "Edit" rather than "transition"
-// wording — this is a severity edit, not a status move.
+// wording - this is a severity edit, not a status move.
 const ILLEGAL_MSG =
-  "Severity can no longer be changed on this report — its status has changed. Please refresh to see the latest update.";
+  "Severity can no longer be changed on this report - its status has changed. Please refresh to see the latest update.";
 
 const NOT_AN_ADMIN_MSG =
   "You do not have permission to change this report's severity.";
@@ -85,14 +85,14 @@ export const overrideSeverity = Intent.Create({
 
 // --- 1. Trigger intent: cheap pre-popup ACTION guard off the buffer, open popup ---
 overrideSeverity.onResolution = async () => {
-  // 1. Payload (one level deep under .payload — never the top level).
+  // 1. Payload (one level deep under .payload - never the top level).
   const { reportId } = state.messageFromUser?.payload || {};
   if (!reportId) {
     state.addErrorToStack(400, "Missing reportId for overrideSeverity");
     return;
   }
 
-  // 2. Authorise — authoritative role re-resolution (NOT the display stash). A thrown
+  // 2. Authorise - authoritative role re-resolution (NOT the display stash). A thrown
   //    read (poor maritime link) is a neutral retry, not a deny.
   let role;
   try {
@@ -110,7 +110,7 @@ overrideSeverity.onResolution = async () => {
     return;
   }
 
-  // 3. Attach to the manage tab (stable per-screen id, rule 37 — the re-render via
+  // 3. Attach to the manage tab (stable per-screen id, rule 37 - the re-render via
   //    openManageReport lands in the same tab), then re-read the report fresh (rule 22).
   await Context.CreateAndInit(userTab(CONTEXT.MANAGE_REPORT, state), { state });
   await adminReportDoc.loadDocument({ reportId });
@@ -127,7 +127,7 @@ overrideSeverity.onResolution = async () => {
   // 5. Stash the id for the submit handler (a separate invocation; survives via Redis).
   state.setField(STATE_KEYS.CURRENT_REPORT_ID, reportId);
 
-  // 6. Reset the REGISTERED capture Doc in place (rule 26 — never cloneAndInit). docId
+  // 6. Reset the REGISTERED capture Doc in place (rule 26 - never cloneAndInit). docId
   //    FIRST, then clear values, so the cleared buffer targets the new empty path.
   severityCaptureDoc.docId = state.getUniqueId();
   for (const field of severityCaptureDoc.fields) {
@@ -135,7 +135,7 @@ overrideSeverity.onResolution = async () => {
   }
 
   // 7. UX nicety: pre-select the report's CURRENT severity (read off the buffer) so the
-  //    dropdown defaults to the current value — but ONLY if it is a valid SEVERITY token
+  //    dropdown defaults to the current value - but ONLY if it is a valid SEVERITY token
   //    (an unset/legacy/garbage column leaves the dropdown empty rather than offering a
   //    non-enum default).
   const currentSeverity = adminReportDoc.f[severityField.id]?.value;
@@ -157,7 +157,7 @@ severityCaptureDoc.onSubmit = async (self) => {
     return;
   }
 
-  // 2. Which report — stashed by onResolution (the popup submit is a fresh invocation).
+  // 2. Which report - stashed by onResolution (the popup submit is a fresh invocation).
   const reportId = state.getField(STATE_KEYS.CURRENT_REPORT_ID);
   if (!reportId) {
     state.addSystemErrorToStack(
@@ -167,7 +167,7 @@ severityCaptureDoc.onSubmit = async (self) => {
     return;
   }
 
-  // 3. Authorise AUTHORITATIVELY on submit too (defence in depth — the popup was opened
+  // 3. Authorise AUTHORITATIVELY on submit too (defence in depth - the popup was opened
   //    in an earlier invocation). Neutral retry on a thrown read; refuse on null.
   let role;
   try {
@@ -188,7 +188,7 @@ severityCaptureDoc.onSubmit = async (self) => {
   // 4. Re-read the report FRESH (the concurrency guard).
   await adminReportDoc.loadDocument({ reportId });
 
-  // 5. Existence — no hydrated reportId means the report was not found.
+  // 5. Existence - no hydrated reportId means the report was not found.
   if (!adminReportDoc.f[reportIdField.id]?.value) {
     state.addErrorToStack(404, "Report not found.");
     return;
@@ -197,23 +197,23 @@ severityCaptureDoc.onSubmit = async (self) => {
   // 6. Re-check the ACTION gate against the CURRENT (just-read) status for THIS role.
   //    Defence: the status may have moved to a terminal state since the popup opened
   //    (OVERRIDE_SEVERITY is absent from every terminal status), in which case the
-  //    severity column is frozen — reject, never overwrite.
+  //    severity column is frozen - reject, never overwrite.
   const current = adminReportDoc.f[statusField.id]?.value || "";
   if (!isActionAllowed(current, role, ACTION.OVERRIDE_SEVERITY)) {
     state.addErrorToStack(ERROR_CODES.ILLEGAL_TRANSITION, ILLEGAL_MSG);
     D.log({
       message:
-        "A-F12: severity override rejected — action not allowed on current status",
+        "A-F12: severity override rejected - action not allowed on current status",
       data: { reportId, current, role },
     });
     return;
   }
 
-  // 7. Previous severity — captured for the audit note (before we overwrite it).
+  // 7. Previous severity - captured for the audit note (before we overwrite it).
   const prev = adminReportDoc.f[severityField.id]?.value || "";
 
   // Same-value decision: PROCEED and record even when next === prev (no short-circuit).
-  // Rationale — a deliberate "re-affirm CRITICAL" is a meaningful triage action and the
+  // Rationale - a deliberate "re-affirm CRITICAL" is a meaningful triage action and the
   // audit trail should reflect it honestly; the write is a cheap idempotent $set and
   // costs one extra statusHistory row, which is the correct, transparent behaviour for a
   // compliance system. The note below reads "unset to X" / "X to X" accordingly.
@@ -229,7 +229,7 @@ severityCaptureDoc.onSubmit = async (self) => {
   // 9. ONE statusHistory row, atomic with the report write (rule 12). There is NO status
   //    change, so fromStatus === toStatus === current; the severity edit is recorded via
   //    the note (the documented way to log a non-transition admin action). actorRole is
-  //    the admin's ROLE token — never an id (anonymity, rule 16).
+  //    the admin's ROLE token - never an id (anonymity, rule 16).
   appendStatusHistoryRow(adminReportDoc, {
     fromStatus: current,
     toStatus: current,
@@ -238,7 +238,7 @@ severityCaptureDoc.onSubmit = async (self) => {
   });
 
   // 10. Persist. save() (audit: true, NFR-3) re-runs the Doc/field onSave gates; a gate
-  //     abort adds to the error stack WITHOUT throwing — detect it the way
+  //     abort adds to the error stack WITHOUT throwing - detect it the way
   //     resolve-report.js does and do not claim success.
   const errorsBefore = (state.errorStack || []).length;
   try {
@@ -260,7 +260,7 @@ severityCaptureDoc.onSubmit = async (self) => {
 
   // 11. No deferred MSG / notify hook: severity override is not a reporter-facing
   //     contract and feeds no X task. A-F5 (priority surfacing) and A-F16 (auto-escalate)
-  //     read the `severity` column live — nothing to send.
+  //     read the `severity` column live - nothing to send.
 
   D.log({
     message: "A-F12: severity overridden",

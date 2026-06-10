@@ -1,26 +1,26 @@
-// U-F6 — Evidence upload validation + atomicity.
-// U-F7 — Contact-method conditional require/validate (added below the evidence
+// U-F6 - Evidence upload validation + atomicity.
+// U-F7 - Contact-method conditional require/validate (added below the evidence
 //        layers; shares the same authoritative reportDoc.onSave gate).
 //
-// Context A (framework events on reportDoc / its evidence Fields — object graph is
+// Context A (framework events on reportDoc / its evidence Fields - object graph is
 // live; rule 6 puts handlers in frames/, not docs/). Two layers:
 //
-//   1. Per-field `onValidation` — on-attach feedback. When a reporter attaches a
+//   1. Per-field `onValidation` - on-attach feedback. When a reporter attaches a
 //      single evidence file with a disallowed extension, reject it immediately via
 //      `sendValidationResponse` so they see the error before submitting. Best-effort
 //      UX only; NOT the authority.
 //
-//   2. `reportDoc.onSave` — the AUTHORITATIVE atomic gate (ER-C10). Fires before
+//   2. `reportDoc.onSave` - the AUTHORITATIVE atomic gate (ER-C10). Fires before
 //      every persist of reportDoc (form submit via U-F8 onSubmit → self.save(); the
 //      amendment append via self.collection.parentDoc.save()). On any failure it
 //      calls addErrorToStack + returns, which aborts the save so nothing partial
 //      persists. This is the documented before-save validation pattern
 //      (frontm-ai-doc-field-section-collection-data-modeling-guide § Doc events).
 //
-// DOCUMENTED-API LIMITATION (flagged, not worked around — see specs/4 task
+// DOCUMENTED-API LIMITATION (flagged, not worked around - see specs/4 task
 // MP-FIX-EVIDENCE-METADATA and SPEC.md § "Validation rules"): the FILE_FIELD value
-// envelope is exactly { value:<s3-key>, fileName, fileScopeValue } — it carries NO
-// content type and NO byte size — and `state.frontmlib` has no S3 HEAD/metadata
+// envelope is exactly { value:<s3-key>, fileName, fileScopeValue } - it carries NO
+// content type and NO byte size - and `state.frontmlib` has no S3 HEAD/metadata
 // call. So content-type and 25 MB size enforcement are NOT achievable server-side
 // here with documented APIs. What IS enforced: file count ≤ MAX_FILES and the
 // extension allow-list (lib/validation.js). Inventing a HEAD call or a metadata
@@ -69,8 +69,8 @@ const evidenceFields = [
   evidenceFile5Field,
 ];
 
-// Layer 1 — on-attach feedback (field-level). self.value is the media envelope
-// (or null when nothing is attached — an optional field, so silence is valid).
+// Layer 1 - on-attach feedback (field-level). self.value is the media envelope
+// (or null when nothing is attached - an optional field, so silence is valid).
 for (const field of evidenceFields) {
   field.onValidation = async (self) => {
     if (!self.value) return;
@@ -130,7 +130,7 @@ const evaluateContact = (methodLabel, rawValue) => {
   return { ok: true };
 };
 
-// Layer 1 (contact) — on-edit feedback. Read the sibling method via self.doc
+// Layer 1 (contact) - on-edit feedback. Read the sibling method via self.doc
 // (cross-field access in a Field handler; CLAUDE.md "Field Access Patterns").
 contactValueField.onValidation = async (self) => {
   const methodLabel = self.doc.f[contactMethodField.id].value;
@@ -140,7 +140,7 @@ contactValueField.onValidation = async (self) => {
   }
 };
 
-// Layer 2 — authoritative atomic gate (before persist).
+// Layer 2 - authoritative atomic gate (before persist).
 reportDoc.onSave = async (self) => {
   // Collect populated evidence envelopes (envelope present AND has an S3 key).
   const attached = evidenceFields
@@ -163,7 +163,7 @@ reportDoc.onSave = async (self) => {
     }
   }
 
-  // U-F7 — contact channel. Require + validate by method; abort on failure so
+  // U-F7 - contact channel. Require + validate by method; abort on failure so
   // nothing partial persists (same atomic-gate contract as evidence above).
   const contactMethodLabel = self.f[contactMethodField.id].value;
   const contact = evaluateContact(
@@ -175,7 +175,7 @@ reportDoc.onSave = async (self) => {
     return;
   }
 
-  // "None" (or unset) hides the value — clear any stray entry so nothing
+  // "None" (or unset) hides the value - clear any stray entry so nothing
   // reporter-private persists; otherwise persist the trimmed form. contactValue
   // is encrypted + excluded from adminProjection, so clearing also guarantees a
   // method-switch to None leaves no leaked detail behind.
@@ -192,7 +192,7 @@ reportDoc.onSave = async (self) => {
   // Derived from the live severity/urgency/status via the SHARED predicate, so the admin
   // queue's server-side sort { priorityRank: 1, createdOn: -1 } floats CRITICAL/IMMEDIATE/
   // ESCALATED reports to the top. Set here (the universal save chokepoint) so it can never
-  // drift from isPriority — a re-submit, amendment, accept/reject all re-stamp it.
+  // drift from isPriority - a re-submit, amendment, accept/reject all re-stamp it.
   self.f[priorityRankField.id].value = priorityRankFor({
     severity: self.f[severityField.id].value,
     urgency: self.f[urgencyField.id].value,

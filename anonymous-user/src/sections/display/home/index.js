@@ -5,11 +5,11 @@
 // readOnly: true so the card surface does not intercept the inline
 // data-action="intent" button clicks (cards guide).
 //
-// Home is display_only and purely navigational — it reads NO reportDoc field
+// Home is display_only and purely navigational - it reads NO reportDoc field
 // values, so onResponse is always safe for a brand-new user with no data
 // (U-D-home acceptance: "onResponse fires for every sendResponse() including
 // new users with no data"). onResponse is synchronous (the framework does NOT
-// await it — CLAUDE.md "Render handlers are NOT awaited"); nothing async here.
+// await it - CLAUDE.md "Render handlers are NOT awaited"); nothing async here.
 
 import { Section } from "@frontmltd/frontmjs/core/Section";
 import { Card, CardsSet } from "@frontmltd/frontmjs/core/Card";
@@ -48,7 +48,7 @@ export const homeLandingPlaceholderCard = new Card(
 );
 
 // Build the card content on every render. The renderers stay free of app
-// constants — index.js owns the navigation contract and passes the intent ids
+// constants - index.js owns the navigation contract and passes the intent ids
 // in. The string values are the public data-intent-id contract (constants.js).
 homeLandingSection.onResponse = () => {
   // Call-CTA lifecycle label (Call compliance → Connecting → Connected → Call compliance).

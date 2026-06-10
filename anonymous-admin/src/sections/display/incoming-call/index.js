@@ -1,34 +1,34 @@
 // Display section: Incoming call (schema id: incomingCall, row 10). A-D-incomingcall
-// fills the card with the GENERIC ring banner ("Incoming anonymous call" — NO caller
+// fills the card with the GENERIC ring banner ("Incoming anonymous call" - NO caller
 // name/id/email, ER-A5) + Answer / Dismiss buttons via renderForPlatform (wireframe §7).
-// The CardsSet + placeholder Card were built in A-DISPLAY-SHELL — content only here.
-// readOnly: true (on the shell card) — the card hosts the inline data-action="intent"
+// The CardsSet + placeholder Card were built in A-DISPLAY-SHELL - content only here.
+// readOnly: true (on the shell card) - the card hosts the inline data-action="intent"
 // buttons (Answer carries data-payload {callRef, meetingId}; Dismiss {callRef}), so the
 // card surface must not swallow the click. Distinct framework ids (ids are global, rule 7).
 //
 // DATA SOURCE. Like the On-call card (and unlike the queue/dashboard sections that read the
-// gateway-loaded reportsCollection), the ring banner's value comes from an AUX Doc —
-// callQueueDoc — NOT from `reports` (schema line 266: "data_doc: callQueueDoc"; wireframe
+// gateway-loaded reportsCollection), the ring banner's value comes from an AUX Doc -
+// callQueueDoc - NOT from `reports` (schema line 266: "data_doc: callQueueDoc"; wireframe
 // §7). The ring-trigger frame (A-F22, Context B) loads callQueueDoc({ callRef }) in the SAME
 // invocation, so by the time adminDisplayDoc.sendResponse() fires this SYNCHRONOUS onResponse
 // (CLAUDE.md "Render handlers are NOT awaited") the call's callRef/status/meetingId are
 // hydrated on the Doc. onResponse only READS the already-loaded value; it never loads.
 // The section lives on adminDisplayDoc (the only Doc sendResponse()d, rule 4/8), so `self`
-// here is NOT callQueueDoc — the cross-doc read goes through the module-imported
+// here is NOT callQueueDoc - the cross-doc read goes through the module-imported
 // callQueueDoc singleton, the same pattern the On-call section uses for adminUserDoc (there
 // is no `self` path from a Display-Doc section to an aux Doc).
 //
 // ANONYMITY (rule 30 / C1, ER-A5/A2/A3). callQueueDoc is IDENTITY-FREE by construction
-// (lib/collections/call-queue.js) — it NEVER stores a reporter id/email/name. This card
+// (lib/collections/call-queue.js) - it NEVER stores a reporter id/email/name. This card
 // binds NO reporter-identity field and NEVER queries `reports`. The banner is wholly
-// GENERIC: a static "Incoming anonymous call" line — no caller datum of any kind is read or
+// GENERIC: a static "Incoming anonymous call" line - no caller datum of any kind is read or
 // rendered. The ONLY values surfaced are the OPAQUE callRef + Daily meetingId, and those
 // travel only inside the Answer button's data-payload (consumed by the A-F21 atomic claim),
 // never as visible text. The renderers still escape every interpolated value at the boundary
 // (rule 10), though callRef/meetingId are framework-generated opaque tokens, not free text.
 //
 // EMPTY-SAFE + SCREEN-SCOPED. onResponse fires for EVERY adminDisplayDoc.sendResponse(), not
-// just a ring event. We gate on a LIVE ringing call — callRef present AND status === RINGING.
+// just a ring event. We gate on a LIVE ringing call - callRef present AND status === RINGING.
 // Not loaded (Dashboard / Queue / a report detail / On-call) → hasCall:false → the renderers
 // emit NOTHING, so the ring banner never appears on the wrong screen. A call already claimed
 // or ended (status ACTIVE/ENDED/MISSED/ABANDONED) likewise → hasCall:false, so a stale buffer
@@ -90,7 +90,7 @@ const readCallRef = () => callQueueDoc?.f?.[callRefField.id]?.value || "";
 // Read the call status; "" when unloaded. Only RINGING shows the banner (see header).
 const readCallStatus = () => callQueueDoc?.f?.[callStatusField.id]?.value || "";
 
-// Daily.co meeting id — passed to the Answer claim so the admin can join. "" when unloaded.
+// Daily.co meeting id - passed to the Answer claim so the admin can join. "" when unloaded.
 const readMeetingId = () => callQueueDoc?.f?.[meetingIdField.id]?.value || "";
 
 // The callRef this admin locally dismissed (A-F22 dismissCall). "" when none. Used to
@@ -110,7 +110,7 @@ incomingCallDisplaySection.onResponse = () => {
       !!callRef &&
       readCallStatus() === CALL_STATUS.RINGING &&
       readDismissedRef() !== callRef,
-    // Opaque ref + Daily meeting id — travel ONLY inside the Answer button's data-payload
+    // Opaque ref + Daily meeting id - travel ONLY inside the Answer button's data-payload
     // (consumed by the A-F21 atomic claim), never shown as text. Identity-free (rule 16/30).
     callRef,
     meetingId: readMeetingId(),

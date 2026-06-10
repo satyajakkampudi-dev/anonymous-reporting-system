@@ -1,11 +1,11 @@
-// Manage detail header — WEB renderer (wireframes §4 header card, admin side): the
+// Manage detail header - WEB renderer (wireframes §4 header card, admin side): the
 // tracking id as the title anchor, status pill + severity pill on the same line, then
 // a compact meta row (Assigned · Category · Urgency · Created). Composes shared theme
 // tokens (theme.js) and the escapeHtml / statusPillHtml / tonePillHtml / formatDate
-// primitives (format.js) — every interpolated value is escaped at the primitive
+// primitives (format.js) - every interpolated value is escaped at the primitive
 // boundary (NFR-2, rule 10). Pure presentation: index.js owns the data + label maps.
 //
-// NO reporter identity is present in the data (rule 30, ER-A2/A3) — the header binds
+// NO reporter identity is present in the data (rule 30, ER-A2/A3) - the header binds
 // only the report's own id / triage tokens / dates.
 
 import {
@@ -29,7 +29,7 @@ const metaItem = (label, value) =>
   `</span>`;
 
 export const renderWeb = (data) => {
-  // No report open (Dashboard / Queue screens, or not found) — emit nothing (empty-safe).
+  // No report open (Dashboard / Queue screens, or not found) - emit nothing (empty-safe).
   if (!data.hasReport) return "";
 
   return (
@@ -56,7 +56,7 @@ export const renderWeb = (data) => {
     metaItem("Assigned", data.assigned) +
     metaItem("Category", data.category) +
     metaItem("Urgency", data.urgency) +
-    metaItem("Created", formatDate(data.createdOn) || "—") +
+    metaItem("Created", formatDate(data.createdOn) || "-") +
     `</div>` +
     `</div>`
   );

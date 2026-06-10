@@ -1,8 +1,8 @@
-// Navigation intent: openOnCall — the on-call availability screen (A-F20).
+// Navigation intent: openOnCall - the on-call availability screen (A-F20).
 //
 // Independent intent (Context B). Context.Create preserves the buffer (rule 22). Loads
-// the caller's OWN admin-users row by adminUserId (their own identity — not a
-// reporter's — so reading it is fine). The availability toggle (setAvailability) and
+// the caller's OWN admin-users row by adminUserId (their own identity - not a
+// reporter's - so reading it is fine). The availability toggle (setAvailability) and
 // the On-call display card are later tasks; SCAFFOLD loads + placeholder render.
 
 import { Intent } from "@frontmltd/frontmjs/core/Intent";

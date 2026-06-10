@@ -1,40 +1,40 @@
-// A-F22 — End call: hang-up/drop -> ENDED + mid-call inactivity backstop + local dismiss.
+// A-F22 - End call: hang-up/drop -> ENDED + mid-call inactivity backstop + local dismiss.
 //
-// THREE independent intents (all Context B — object graph EMPTY on entry; CLAUDE.md
+// THREE independent intents (all Context B - object graph EMPTY on entry; CLAUDE.md
 // "Invocation Lifecycle"):
 //
-//   - endCall (INTENT.END_CALL) — the answering admin hangs up. Fired with { callRef }
+//   - endCall (INTENT.END_CALL) - the answering admin hangs up. Fired with { callRef }
 //     by the in-call hang-up control / an "End call" button (data-action="intent",
 //     payload ONE LEVEL DEEP under state.messageFromUser.payload). Guarded ACTIVE ->
 //     ENDED (records durationMs), then frees the admin (availability -> available).
 //
-//   - callInactivity (INTENT.CALL_INACTIVITY) — the mid-call inactivity backstop
+//   - callInactivity (INTENT.CALL_INACTIVITY) - the mid-call inactivity backstop
 //     (ER-C12). NOT a button: fired by the jobScheduler message A-F21 armed at claim
 //     time (now + CALL_INACTIVITY_TIMEOUT_MS, to the answering admin's OWN userId,
-//     payload delivered under state.messageFromUser.data — job-scheduler guide). Runs
+//     payload delivered under state.messageFromUser.data - job-scheduler guide). Runs
 //     the SAME guarded ACTIVE -> ENDED transition ONLY if the call is still ACTIVE; a
 //     clean prior hang-up makes it a no-op (rule 13). No sendResponse (system job).
 //
-//   - dismissCall (INTENT.DISMISS_CALL) — LOCAL dismiss only (per the A-D-incomingcall
+//   - dismissCall (INTENT.DISMISS_CALL) - LOCAL dismiss only (per the A-D-incomingcall
 //     display header: "Dismiss -> local dismiss only, others keep ringing"). It MUST NOT
-//     mutate the shared call-queue status — dismissing the banner on ONE admin's screen
+//     mutate the shared call-queue status - dismissing the banner on ONE admin's screen
 //     must not end/claim the call for everyone. Minimal: a calm acknowledgement; the
 //     banner is removed client-side. NO callQueueDoc write.
 //
-// SHARED TRANSITION HELPER (rule 14 — single chokepoint). endCall and callInactivity run
+// SHARED TRANSITION HELPER (rule 14 - single chokepoint). endCall and callInactivity run
 // the IDENTICAL guarded ACTIVE -> ENDED transition; `endActiveCall(callRef)` owns it once
 // so the two intents cannot drift. It re-reads fresh by callRef, guards on ACTIVE, stamps
 // ENDED/endedOn/durationMs, saves with abort detection, and frees the admin. It is a pure
 // no-op for any non-ACTIVE state (already ENDED/MISSED/ABANDONED, still RINGING, or not
-// found) — so duplicate fires (a hang-up AND the backstop, two backstop deliveries) are
+// found) - so duplicate fires (a hang-up AND the backstop, two backstop deliveries) are
 // safe and idempotent.
 //
 // durationMs = endedOn - answeredOn (the answer time A-F21 stamped). Clamped to >= 0
-// against any clock skew. NO recording (ER-A5) — this handler only stamps status/times.
+// against any clock skew. NO recording (ER-A5) - this handler only stamps status/times.
 //
 // ANONYMITY (NON-NEGOTIABLE, ER-A5): the call-queue row is identity-free; we stamp only
 // status/timestamps/duration. The only identity touched is the answering admin's OWN
-// availability (theirs to write — never a reporter's, via the shared setOwnAvailability).
+// availability (theirs to write - never a reporter's, via the shared setOwnAvailability).
 
 import { D, state } from "@frontmltd/frontmjs/core/State";
 import { Context } from "@frontmltd/frontmjs/core/Context";
@@ -64,7 +64,7 @@ const endActiveCall = async (callRef, { attached = false } = {}) => {
     return { ended: false };
   }
 
-  // Attach (Redis buffer, no MongoDB-clobbering reload — rule 22) and re-read fresh.
+  // Attach (Redis buffer, no MongoDB-clobbering reload - rule 22) and re-read fresh.
   if (!attached) {
     await Context.CreateAndInit(`admin_${state.getUniqueId()}`, { state });
   }
@@ -74,7 +74,7 @@ const endActiveCall = async (callRef, { attached = false } = {}) => {
   const status = callQueueDoc.f[callStatusField.id]?.value || "";
 
   // Guard (rule 13). End ONLY a call that is ours AND currently ACTIVE. Anything else
-  // (already terminal, still RINGING/unanswered, or not found) is an idempotent no-op —
+  // (already terminal, still RINGING/unanswered, or not found) is an idempotent no-op -
   // never overwrite a settled call or end a ringing one.
   if (loadedRef !== callRef || status !== CALL_STATUS.ACTIVE) {
     D.log({
@@ -107,9 +107,9 @@ const endActiveCall = async (callRef, { attached = false } = {}) => {
     return { ended: false };
   }
 
-  // Free the admin (busy -> available) via the SHARED writer (rule 14 — context already
+  // Free the admin (busy -> available) via the SHARED writer (rule 14 - context already
   // attached, so attach:false). Best-effort: a presence-flip failure must not undo a
-  // cleanly-ended call — log and continue.
+  // cleanly-ended call - log and continue.
   const free = await setOwnAvailability(AVAILABILITY.AVAILABLE, {
     attach: false,
   });
@@ -145,7 +145,7 @@ endCall.onResolution = async () => {
   if (ended) {
     "The call has ended. The reporter remained anonymous throughout.".sendResponse();
   } else {
-    // Already settled (or never ACTIVE) — idempotent. A calm, non-alarming close.
+    // Already settled (or never ACTIVE) - idempotent. A calm, non-alarming close.
     "This call is no longer active.".sendResponse();
   }
 };
@@ -159,7 +159,7 @@ export const callInactivity = Intent.Create({
 
 callInactivity.onResolution = async () => {
   // Scheduled-message payload arrives under .data; fall back to .payload defensively
-  // (mirrors U-F16/U-F17). No sendResponse — this is a silent system job.
+  // (mirrors U-F16/U-F17). No sendResponse - this is a silent system job.
   const { callRef } =
     state.messageFromUser?.data || state.messageFromUser?.payload || {};
   if (!callRef) {
@@ -177,15 +177,15 @@ export const dismissCall = Intent.Create({
 });
 
 dismissCall.onResolution = async () => {
-  // Per the A-D-incomingcall header, Dismiss is LOCAL ONLY — others keep ringing. We do
+  // Per the A-D-incomingcall header, Dismiss is LOCAL ONLY - others keep ringing. We do
   // NOT touch callQueueDoc status (no end / no claim): a dismiss on one admin's screen
   // must not end or claim the shared call. Instead we stash the dismissed callRef in this
-  // admin's own per-conversation state and re-render the shell — the incoming-call section
+  // admin's own per-conversation state and re-render the shell - the incoming-call section
   // AND-gates on STATE_KEYS.DISMISSED_CALL_REF, so the banner clears HERE while the shared
   // RINGING status (and other admins' banners) are untouched.
   const { callRef } = state.messageFromUser?.payload || {};
   D.log({
-    message: "A-F22: ENTER — Dismiss clicked (local dismiss only)",
+    message: "A-F22: ENTER - Dismiss clicked (local dismiss only)",
     data: {
       callRef,
       hasPayload: !!state.messageFromUser?.payload,
@@ -198,10 +198,10 @@ dismissCall.onResolution = async () => {
   }
 
   // Record the local dismissal, then re-render so the banner re-gates and clears on THIS
-  // screen. Context attach (preserve the buffer — rule 22) is needed for the render.
+  // screen. Context attach (preserve the buffer - rule 22) is needed for the render.
   state.setField(STATE_KEYS.DISMISSED_CALL_REF, callRef);
   // Stable per-user On-call tab + On-call screen (rule 37): re-render THIS admin's
-  // On-call tab so the banner re-gates and clears — not a new broken tab.
+  // On-call tab so the banner re-gates and clears - not a new broken tab.
   await Context.CreateAndInit(userTab(CONTEXT.ON_CALL, state), { state });
   showScreen(SCREEN.ON_CALL);
   adminDisplayDoc.sendResponse();
@@ -224,7 +224,7 @@ dismissCall.onResolution = async () => {
 
 // --- 4. Call ENDED / admin left the meeting → free the admin's presence ---
 // SHARED chokepoint. Given a meetingId: end the call (guarded ACTIVE->ENDED) AND
-// UNCONDITIONALLY free THIS admin (busy -> available) — they are no longer on a call.
+// UNCONDITIONALLY free THIS admin (busy -> available) - they are no longer on a call.
 // endActiveCall alone only frees when it found an ACTIVE row, so the unconditional
 // setOwnAvailability guarantees BUSY never sticks. Idempotent / safe to call repeatedly.
 const freeAdminOnMeetingEnd = async (meetingId, source) => {
@@ -255,7 +255,7 @@ const freeAdminOnMeetingEnd = async (meetingId, source) => {
 };
 
 // RELIABLE end signal: the Loft/Daily BACKEND fires these framework-convention intents on
-// the participant's bot when the meeting ends / they leave — the SAME mechanism SeaMedix
+// the participant's bot when the meeting ends / they leave - the SAME mechanism SeaMedix
 // uses (endMeeting / leaveUser → medicalMeetingEnded). This is what actually frees the
 // admin who answered; videoCall.onCallEnd (below) is kept as a belt-and-suspenders client
 // signal but did NOT fire on web in testing (admin stayed BUSY). Payload carries meetingId.

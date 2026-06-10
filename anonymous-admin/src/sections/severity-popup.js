@@ -1,4 +1,4 @@
-// severityCaptureDoc — "Override severity" capture popup section (rendering: standard, 1 column).
+// severityCaptureDoc - "Override severity" capture popup section (rendering: standard, 1 column).
 //
 // Per-action CAPTURE Doc, NOT the shared adminReportDoc (framework-mapping rule 29,
 // MP-FIX-ADMIN-POPUP-CAPTURE-DOCS): a Doc has one onSubmit slot, so binding every
@@ -10,12 +10,12 @@
 // severityCaptureDoc.title before the call (rule 29). includeInQuickEdit: true so it
 // appears in the quick-form popup; mandatory + DROPDOWN.
 //
-// This is a TRANSIENT capture field — severityCaptureDoc is never save()d, so the value
+// This is a TRANSIENT capture field - severityCaptureDoc is never save()d, so the value
 // never becomes a `reports` column here. On confirm, the overrideSeverity frame copies
 // the chosen value onto adminReportDoc's hidden `severity` infra column
 // (sections/manual-log.js). It therefore has NO dbName (the persisted column lives on
-// adminReportDoc — collision with that column is exactly what this design avoids).
-// Options are the raw SEVERITY tokens (LOW/MEDIUM/HIGH/CRITICAL) — written directly.
+// adminReportDoc - collision with that column is exactly what this design avoids).
+// Options are the raw SEVERITY tokens (LOW/MEDIUM/HIGH/CRITICAL) - written directly.
 
 import { Section } from "@frontmltd/frontmjs/core/Section";
 import { Field } from "@frontmltd/frontmjs/core/Field";

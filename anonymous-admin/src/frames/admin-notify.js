@@ -1,15 +1,15 @@
-// A-F15 — Admin notification dispatch (reusable frame helper).
+// A-F15 - Admin notification dispatch (reusable frame helper).
 //
 // The SINGLE reusable dispatch that notifies the admins a report is assigned to,
-// over the routing chokepoint (resolveAssignees, lib/access — rule 14) and the
-// best-effort senders (sendAdminEmail / sendPushToCurrentUser, lib/notifications — each
+// over the routing chokepoint (resolveAssignees, lib/access - rule 14) and the
+// best-effort senders (sendAdminEmail / sendPushToCurrentUser, lib/notifications - each
 // already swallows + D.log's its own failure). Called by the post-save hooks of the
 // admin transitions: the shared note-transition dispatcher (ESCALATED), auto-escalate
 // (ESCALATED), and manual-log (NEW). The cross-app X1 (new) / X2 (reopened) receivers
-// will call notifyAssignees when THEY are built — do NOT build X1/X2 here.
+// will call notifyAssignees when THEY are built - do NOT build X1/X2 here.
 //
 // BEST-EFFORT, NEVER THROWS (NFR-4, rule 16). Notification is a side-effect that runs
-// AFTER save() — a failed email/push must never fail or roll back the transition that
+// AFTER save() - a failed email/push must never fail or roll back the transition that
 // called it. Every send is wrapped (the lib senders already swallow, and we additionally
 // guard the whole function) so notifyAssignees ALWAYS resolves. The SLA digest (A-F18)
 // + in-app Alerts banner (A-D-alerts) are the fallback so a failed notification never
@@ -19,11 +19,11 @@
 // status, severity, category, urgency, age, and the ADMIN's OWN adminEmail/adminUserId
 // (resolved by resolveAssignees). NEVER reporterId / contactMethod / contactValue. The
 // caller builds the descriptor from adminReportDoc's bound fields (which declare no
-// reporter identity — rule 30), so nothing here can read a reporter. The push `data`
+// reporter identity - rule 30), so nothing here can read a reporter. The push `data`
 // carries { reportId } ONLY. Every HTML interpolation passes through escapeHtml.
 //
 // CROSS-ADMIN FAILURE RECORDING. A failure is recorded into a DURABLE, CROSS-ADMIN
-// sharedField (SHARED_KEYS.NOTIFICATION_FAILURES) — failures happen in whichever admin's
+// sharedField (SHARED_KEYS.NOTIFICATION_FAILURES) - failures happen in whichever admin's
 // invocation the transition fired in, so a per-conversation field cannot carry them to
 // the admin who later views the Alerts banner. The shape { reportId, failedOn } matches
 // the A-D-alerts consumer verbatim.
@@ -54,7 +54,7 @@ import {
   NOTIFICATION_FAILURE_TTL_SECONDS,
 } from "../constants";
 
-// The notify-worthy events this dispatch knows about — drives subject/body wording.
+// The notify-worthy events this dispatch knows about - drives subject/body wording.
 // NEW: a freshly-created report reached its assigned admins (manual-log; later X1).
 // REOPENED: a resolved report the reporter rejected (later X2). ESCALATED: routed to
 // the secondary compliance admins (manual + auto escalate).
@@ -85,12 +85,12 @@ const EVENT_COPY = {
 
 // Safe label lookups (fall back to the raw token / em-dash for an unknown value;
 // never throw on a missing/legacy enum value).
-const severityLabel = (token) => SEVERITY_LABELS[token] || token || "—";
-const categoryLabel = (token) => CATEGORY_LABELS[token] || token || "—";
-const urgencyLabel = (token) => URGENCY_LABELS[token] || token || "—";
+const severityLabel = (token) => SEVERITY_LABELS[token] || token || "-";
+const categoryLabel = (token) => CATEGORY_LABELS[token] || token || "-";
+const urgencyLabel = (token) => URGENCY_LABELS[token] || token || "-";
 
-// "age" — relative time since creation (identity-free). Falls back to em-dash.
-const ageLabel = (createdOn) => formatRelative(createdOn) || "—";
+// "age" - relative time since creation (identity-free). Falls back to em-dash.
+const ageLabel = (createdOn) => formatRelative(createdOn) || "-";
 
 // Build the identity-free email HTML body via the shared renderEmail shell (framework-
 // mapping rule 33): text wordmark, table layout, inline styles, no tracking pixel / no
@@ -114,7 +114,7 @@ const buildEmailHtml = (report, copy) =>
 
 // Record a notification failure into the durable, cross-admin sharedField (ER-D15).
 // Append-only with a TTL; defensive against a non-array existing value or a thrown
-// Redis read/write (a recording failure must itself never throw — log and move on).
+// Redis read/write (a recording failure must itself never throw - log and move on).
 const recordFailure = async (reportId) => {
   const failedOn = Date.now();
   try {
@@ -145,10 +145,10 @@ const recordFailure = async (reportId) => {
 // renderer reads the SYNCHRONOUS render stash STATE_KEYS.NOTIFICATION_FAILURES
 // (section.onResponse is not awaited, so it cannot read the async sharedField itself).
 // This helper bridges the two: read the shared list, drop entries older than the TTL
-// (defensive — Redis TTL covers whole-field expiry, not per-entry), and write the
+// (defensive - Redis TTL covers whole-field expiry, not per-entry), and write the
 // render stash. MUST run in a Context-B handler (app-start) BEFORE
 // adminDisplayDoc.sendResponse(). Best-effort: a thrown read leaves the stash empty
-// and logs (NFR-4) — never blocks the dashboard render. Identity-free: { reportId,
+// and logs (NFR-4) - never blocks the dashboard render. Identity-free: { reportId,
 // failedOn } only (rule 30).
 export const hydrateNotificationFailureStash = async () => {
   try {
@@ -168,20 +168,20 @@ export const hydrateNotificationFailureStash = async () => {
   }
 };
 
-// notifySelf — push (mobile+web) + email to the recipient admin whose session THIS
+// notifySelf - push (mobile+web) + email to the recipient admin whose session THIS
 // invocation runs as (framework-mapping rule 32). Used by the X1/X2 receivers (already
 // in the recipient's session) and by adminNotifyReceiver (the MSG_ADMIN_NOTIFY landing).
-// BEST-EFFORT — always resolves, NEVER throws.
+// BEST-EFFORT - always resolves, NEVER throws.
 //
-//   reportId — the report key. The descriptor is re-read FRESH through the single admin
-//              gateway (loadReportForAdmin — identity-free, adminProjection-stripped),
+//   reportId - the report key. The descriptor is re-read FRESH through the single admin
+//              gateway (loadReportForAdmin - identity-free, adminProjection-stripped),
 //              NOT trusted from any payload (rule 21/ER-A3).
-//   event    — one of NOTIFY_EVENT.* — drives subject/body wording.
+//   event    - one of NOTIFY_EVENT.* - drives subject/body wording.
 //
 // Push goes to the CURRENT user's own conversation (sendPushToCurrentUser → mobile+web).
 // Email goes to the caller's OWN seeded admin address (resolveAdminIdentity; fallback to
 // their account email). A send fault records ONE durable failure for the Alerts/digest
-// fallback (ER-D15). Identity-free throughout (push data { reportId } only — rule 16/30).
+// fallback (ER-D15). Identity-free throughout (push data { reportId } only - rule 16/30).
 export const notifySelf = async ({ reportId, event } = {}) => {
   if (!reportId) {
     D.log({
@@ -197,13 +197,13 @@ export const notifySelf = async ({ reportId, event } = {}) => {
     const report = await loadReportForAdmin({ reportId });
     if (!report) {
       D.log({
-        message: "A-F15: notifySelf — report not found on gateway load (no-op)",
+        message: "A-F15: notifySelf - report not found on gateway load (no-op)",
         data: { reportId, event },
       });
       return { ok: false };
     }
 
-    const subject = `${copy.subject} — ${reportId}`;
+    const subject = `${copy.subject} - ${reportId}`;
     const html = buildEmailHtml(report, copy);
     const title = copy.subject;
     const message = `Report ${reportId} has been ${copy.verb}.`;
@@ -216,7 +216,7 @@ export const notifySelf = async ({ reportId, event } = {}) => {
     });
 
     // Email to the recipient's OWN seeded admin address (their identity is permitted to
-    // read here — it is the caller's, never a reporter's; rule 30). Fallback: account email.
+    // read here - it is the caller's, never a reporter's; rule 30). Fallback: account email.
     const self = await resolveAdminIdentity();
     const to = (self && self.adminEmail) || state.user?.emailAddress || "";
     const emailResult = await sendAdminEmail({ to, subject, html });
@@ -236,7 +236,7 @@ export const notifySelf = async ({ reportId, event } = {}) => {
     });
     return { ok: !anyFailure };
   } catch (error) {
-    // Absolute backstop — notifySelf must NEVER throw into the receiver (rule 16).
+    // Absolute backstop - notifySelf must NEVER throw into the receiver (rule 16).
     D.log({
       message: "A-F15: notifySelf swallowed an unexpected error",
       data: { reportId, event, error: String(error) },
@@ -246,13 +246,13 @@ export const notifySelf = async ({ reportId, event } = {}) => {
   }
 };
 
-// dispatchAdminNotify — used by callers whose ACTING context is NOT the recipient's:
+// dispatchAdminNotify - used by callers whose ACTING context is NOT the recipient's:
 // escalate (note-transition), auto-escalate (scheduled job, no user session), manual-log.
-// Resolves the report's assignees (chokepoint — honours the LIVE assignedTo) and sends an
+// Resolves the report's assignees (chokepoint - honours the LIVE assignedTo) and sends an
 // intra-admin-bot MSG_ADMIN_NOTIFY { reportId, event } to their userIds. adminNotifyReceiver
 // then runs in EACH recipient's own session and notifySelf's (mobile+web push + email). This
 // is the ONLY way a session-less job can reach admins on mobile (framework-mapping rule 32).
-// BEST-EFFORT — never throws into the transition. Same (report, { event }) call shape as the
+// BEST-EFFORT - never throws into the transition. Same (report, { event }) call shape as the
 // former notifyAssignees, so callers only change the function name.
 export const dispatchAdminNotify = async (report, { event } = {}) => {
   try {
@@ -269,10 +269,10 @@ export const dispatchAdminNotify = async (report, { event } = {}) => {
     try {
       recipients = await resolveAssignees(report);
     } catch (error) {
-      // resolveAssignees does a MongoDB read — a thrown read is a notification failure,
+      // resolveAssignees does a MongoDB read - a thrown read is a notification failure,
       // recorded so the Alerts/digest fallback catches it. Never throw.
       D.log({
-        message: "A-F15: dispatchAdminNotify — resolveAssignees failed",
+        message: "A-F15: dispatchAdminNotify - resolveAssignees failed",
         data: { reportId, event, error: String(error) },
       });
       await recordFailure(reportId);
@@ -287,14 +287,14 @@ export const dispatchAdminNotify = async (report, { event } = {}) => {
       // digest + Alerts are the backstop; no per-report failure (no send to fail).
       D.log({
         message:
-          "A-F15: dispatchAdminNotify — no assignees (SLA digest + Alerts are the fallback, ER-B7)",
+          "A-F15: dispatchAdminNotify - no assignees (SLA digest + Alerts are the fallback, ER-B7)",
         data: { reportId, event, assignedTo: report.assignedTo },
       });
       return;
     }
 
     // Same-bot message: OMIT botId so sendMessageToUserInBot defaults to the CURRENT
-    // (admin) bot — the documented default and the proven X7 precedent (sendCallStopRing
+    // (admin) bot - the documented default and the proven X7 precedent (sendCallStopRing
     // is called with no toBotId). This is reliable in the scheduled-job context too (no
     // dependence on state.botId being set, no ADMIN_BOT_ID static-data dependency).
     await sendBotMessage({

@@ -1,6 +1,6 @@
-// Home / landing — WEB renderer (REQUIREMENTS §9.1; wireframes §1 "Web").
+// Home / landing - WEB renderer (REQUIREMENTS §9.1; wireframes §1 "Web").
 // Trust banner pinned top, anonymity intro, then three CTAs side-by-side.
-// Purely navigational (display_only) — no reportDoc field reads, so always
+// Purely navigational (display_only) - no reportDoc field reads, so always
 // safe for a brand-new user with no data. Composes the shared theme tokens
 // (lib/utils/theme.js) and the intent-button primitive (lib/utils/format.js).
 
@@ -35,7 +35,7 @@ export const renderWeb = (data) => {
   return (
     `<div style="font-family:${TYPOGRAPHY.FONT_FAMILY};background:${COLORS.SURFACE};` +
     `border:1px solid ${COLORS.BORDER};border-radius:${TYPOGRAPHY.RADIUS}px;overflow:hidden;">` +
-    // Trust banner — pinned top, trust tone.
+    // Trust banner - pinned top, trust tone.
     `<div style="display:flex;align-items:center;gap:${SPACING.SM}px;` +
     `padding:${SPACING.MD}px ${SPACING.XL}px;background:${COLORS.PRIMARY};` +
     `color:${COLORS.PRIMARY_CONTRAST};font-size:${TYPOGRAPHY.SIZE_MD}px;` +
@@ -43,11 +43,11 @@ export const renderWeb = (data) => {
     `<span style="font-size:${TYPOGRAPHY.SIZE_LG}px;">🛡</span>` +
     `<span>Your identity is never shown to the compliance team.</span>` +
     `</div>` +
-    // Body — intro copy + CTAs.
+    // Body - intro copy + CTAs.
     `<div style="padding:${SPACING.XL}px;">` +
     `<p style="margin:0 0 ${SPACING.XL}px;color:${COLORS.TEXT_MUTED};` +
     `font-size:${TYPOGRAPHY.SIZE_MD}px;line-height:1.6;">` +
-    `Report misconduct safely — anonymous by design, enforced in code. ` +
+    `Report misconduct safely - anonymous by design, enforced in code. ` +
     `Harassment · safety · fraud/ethics · bullying.` +
     `</p>` +
     `<div style="display:flex;gap:${SPACING.LG}px;flex-wrap:wrap;">` +

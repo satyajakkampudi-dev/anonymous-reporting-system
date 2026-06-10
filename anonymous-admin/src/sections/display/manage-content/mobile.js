@@ -1,7 +1,7 @@
-// Manage detail content — MOBILE renderer (wireframes §4 content card, admin side): same data
-// as web, restacked for narrow widths — the meta facts stack one-per-line, the against-admin
+// Manage detail content - MOBILE renderer (wireframes §4 content card, admin side): same data
+// as web, restacked for narrow widths - the meta facts stack one-per-line, the against-admin
 // banner, description and evidence follow full-width, and evidence links are generous tap
-// targets. Composes shared theme tokens (theme.js) and the escapeHtml / toneColors primitives —
+// targets. Composes shared theme tokens (theme.js) and the escapeHtml / toneColors primitives -
 // every interpolated value is escaped at the primitive boundary (NFR-2, rule 10). Evidence URLs
 // are PRE-SIGNED by A-F7 before sendResponse; this renderer never sees an S3 key (rule 11/18).
 // Pure presentation: index.js owns the data.
@@ -28,10 +28,10 @@ const metaLine = (label, value) =>
   `letter-spacing:0.04em;color:${COLORS.TEXT_FAINT};">${escapeHtml(label)}</div>` +
   `<div style="font-size:${TYPOGRAPHY.SIZE_MD}px;color:${COLORS.TEXT};` +
   `font-weight:${TYPOGRAPHY.WEIGHT_MEDIUM};margin-top:2px;word-break:break-word;">` +
-  `${escapeHtml(value || "—")}</div>` +
+  `${escapeHtml(value || "-")}</div>` +
   `</div>`;
 
-// Against-admin recusal banner — shown ONLY when the report concerns a compliance-team
+// Against-admin recusal banner - shown ONLY when the report concerns a compliance-team
 // member (D9). Amber WARNING tone.
 const againstAdminBanner = (against) => {
   if (!against) return "";
@@ -79,15 +79,15 @@ const evidenceBlock = (evidence) => {
     })
     .join("");
 
-  // D13 — files are reporter-supplied; warn the officer.
+  // D13 - files are reporter-supplied; warn the officer.
   const riskNote =
     `<div style="margin-top:${SPACING.XS}px;font-size:${TYPOGRAPHY.SIZE_XS}px;` +
-    `color:${COLORS.WARNING};">Evidence files are uploaded by the reporter — download at your own risk.</div>`;
+    `color:${COLORS.WARNING};">Evidence files are uploaded by the reporter - download at your own risk.</div>`;
 
   return heading + items + riskNote;
 };
 
-// Reporter contact block — shown ONLY when the reporter chose to identify themselves
+// Reporter contact block - shown ONLY when the reporter chose to identify themselves
 // (open reporting, MP-FIX-CONTACT-OPEN-REPORTING). INFO tone; reporter free-text → escaped.
 const contactBlock = (data) => {
   if (!data.hasContact) return "";
@@ -107,13 +107,13 @@ const contactBlock = (data) => {
 };
 
 export const renderMobile = (data) => {
-  // No report open (Dashboard / Queue screens, or not found) — emit nothing (empty-safe).
+  // No report open (Dashboard / Queue screens, or not found) - emit nothing (empty-safe).
   if (!data.hasReport) return "";
 
   const description = data.description
     ? `<div style="font-size:${TYPOGRAPHY.SIZE_SM}px;color:${COLORS.TEXT};` +
       `line-height:1.55;white-space:pre-wrap;word-break:break-word;">${escapeHtml(data.description)}</div>`
-    : `<div style="font-size:${TYPOGRAPHY.SIZE_SM}px;color:${COLORS.TEXT_MUTED};">—</div>`;
+    : `<div style="font-size:${TYPOGRAPHY.SIZE_SM}px;color:${COLORS.TEXT_MUTED};">-</div>`;
 
   const notes = data.evidenceNotes
     ? `<div style="margin-top:${SPACING.SM}px;font-size:${TYPOGRAPHY.SIZE_SM}px;` +
@@ -143,7 +143,7 @@ export const renderMobile = (data) => {
     evidenceBlock(data.evidence) +
     notes +
     `</div>` +
-    // Reporter contact (open reporting) — only when the reporter chose to identify themselves.
+    // Reporter contact (open reporting) - only when the reporter chose to identify themselves.
     contactBlock(data) +
     `</div>`
   );

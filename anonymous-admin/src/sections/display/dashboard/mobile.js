@@ -1,9 +1,9 @@
-// Dashboard — MOBILE renderer (wireframes §1 "Mobile": single column, priority
+// Dashboard - MOBILE renderer (wireframes §1 "Mobile": single column, priority
 // pinned top). Compact chip rows instead of the web grid: a full-width priority
 // card, then By status / By severity / By age / Per ship as wrapping chips. Plain
-// stat chips — NO charts (D4). Composes shared theme tokens (theme.js) + the
+// stat chips - NO charts (D4). Composes shared theme tokens (theme.js) + the
 // escapeHtml / emptyStateHtml / payloadAttr primitives (format.js); every value is
-// escaped at the boundary (NFR-2, rule 10). Pure presentation — index.js owns the
+// escaped at the boundary (NFR-2, rule 10). Pure presentation - index.js owns the
 // stash read. Counts arrive pre-aggregated + per-ship-suppressed (A-F2); no reporter
 // identity is present (rule 30).
 
@@ -44,7 +44,7 @@ const statChip = (label, count, accent) => {
   );
 };
 
-// A titled group of chips on one wrapping row. Empty → muted "—".
+// A titled group of chips on one wrapping row. Empty → muted "-".
 const chipGroup = (title, chips, extraNote = "") =>
   `<div style="margin-bottom:${SPACING.LG}px;">` +
   `<div style="font-size:${TYPOGRAPHY.SIZE_XS}px;font-weight:${TYPOGRAPHY.WEIGHT_MEDIUM};` +
@@ -57,7 +57,7 @@ const chipGroup = (title, chips, extraNote = "") =>
   `</div>` +
   (chips.length
     ? `<div style="display:flex;gap:${SPACING.SM}px;flex-wrap:wrap;">${chips.join("")}</div>`
-    : `<div style="color:${COLORS.TEXT_FAINT};font-size:${TYPOGRAPHY.SIZE_SM}px;">—</div>`) +
+    : `<div style="color:${COLORS.TEXT_FAINT};font-size:${TYPOGRAPHY.SIZE_SM}px;">-</div>`) +
   `</div>`;
 
 // Full-width clickable priority card; inner nodes carry pointer-events:none.
@@ -77,7 +77,7 @@ const priorityCardHtml = (data) =>
   `</button>`;
 
 export const renderMobile = (data) => {
-  // Nav buttons (wireframes §1 mobile ☰) — full-width stacked row; each opens that
+  // Nav buttons (wireframes §1 mobile ☰) - full-width stacked row; each opens that
   // screen in its own tab. Always rendered so navigation never depends on reports.
   const navBtnStyle =
     `flex:1 1 auto;background:${COLORS.SURFACE};border:1px solid ${COLORS.BORDER};` +

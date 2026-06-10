@@ -1,9 +1,9 @@
-// My Reports — MOBILE renderer (wireframes §3 "Mobile"): stacked cards, large tap
+// My Reports - MOBILE renderer (wireframes §3 "Mobile"): stacked cards, large tap
 // targets. Each card shows tracking id + status pill on top, category · urgency,
 // submitted date, and a full-width Open button. Filter chips wrap above the list.
 // Composes shared theme tokens (theme.js) + the escapeHtml / statusPillHtml /
 // intentButtonHtml / emptyStateHtml primitives (format.js); every interpolated
-// value is escaped at the primitive boundary (NFR-2, rule 10). Pure presentation —
+// value is escaped at the primitive boundary (NFR-2, rule 10). Pure presentation -
 // index.js owns the data + filter logic.
 
 import {
@@ -79,7 +79,7 @@ const reportCardHtml = (data, r) => {
 };
 
 export const renderMobile = (data) => {
-  // "Create report" CTA — top-right of the header (emits openSubmitReport).
+  // "Create report" CTA - top-right of the header (emits openSubmitReport).
   const createBtn = intentButtonHtml(
     data.intents.submit,
     "✚  Create",
@@ -101,7 +101,7 @@ export const renderMobile = (data) => {
     inner +
     `</div>`;
 
-  // No reports at all — first-time reporter. Empty state + a way forward.
+  // No reports at all - first-time reporter. Empty state + a way forward.
   if (!data.hasAnyReports) {
     const submit = intentButtonHtml(
       data.intents.submit,

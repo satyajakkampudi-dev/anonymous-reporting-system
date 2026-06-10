@@ -1,8 +1,8 @@
-// U-F5 anonymity guard — WEB renderer (REQUIREMENTS §9.1; wireframes §2 "Web").
+// U-F5 anonymity guard - WEB renderer (REQUIREMENTS §9.1; wireframes §2 "Web").
 // A compact warning banner above the form: a single faithful line of what the
 // compliance team sees vs never sees, the two field lists, and the ER-A1
 // guidance. Composes shared theme tokens (lib/utils/theme.js) and escapeHtml
-// (lib/utils/format.js) — every label is escaped before HTML use (rule 10).
+// (lib/utils/format.js) - every label is escaped before HTML use (rule 10).
 
 import { escapeHtml } from "../../../../../lib/utils/format";
 import { COLORS, SPACING, TYPOGRAPHY } from "../../../../../lib/utils/theme";

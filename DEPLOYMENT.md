@@ -1,4 +1,4 @@
-# Deployment Configuration — Anonymous Reporting System
+# Deployment Configuration - Anonymous Reporting System
 
 Two micro-apps that talk to each other (bot-to-bot) on domain **`onship`**:
 
@@ -7,11 +7,11 @@ Two micro-apps that talk to each other (bot-to-bot) on domain **`onship`**:
 | **anonymous-user** (reporter) | `QuitelineReportSubmission` | `cb35185f1c67335f73e92` | end users |
 | **anonymous-admin** (compliance) | `QuitelineReportAdmin` | `8d068c16b25f1ca38ac85` | admins |
 
-Everything below is **config, not code** — provisioned by devops per environment. The code falls back gracefully where noted, but cross-app delivery, calling, and evidence retrieval will silently no-op if these are missing.
+Everything below is **config, not code** - provisioned by devops per environment. The code falls back gracefully where noted, but cross-app delivery, calling, and evidence retrieval will silently no-op if these are missing.
 
 ---
 
-## Dev Domain (`onship`) — concrete values (current)
+## Dev Domain (`onship`) - concrete values (current)
 
 ```
 domain               | onship
@@ -23,14 +23,14 @@ anonymoususerbotid   | cb35185f1c67335f73e92
 anonCallLoftHost     | dailydev.frontm.ai        (bare host; client opens https://dailydev.frontm.ai/<roomId>)
 conversationsBucket  | <platform default>        (verify present)
 ContentS3Bucket      | <domain content bucket>   (verify getStaticData returns the bucket name)
-anonymousemail       | (unset — falls back to host@anonymous.invalid; optional)
+anonymousemail       | (unset - falls back to host@anonymous.invalid; optional)
 ```
 
 > Dev access is currently via the temporary `sailorscartadmin` test entitlement (`satya@frontm.com`); the real `quiteline*` roles are the production path.
 
 ---
 
-## QA Domain — config for the devops ticket (copy-paste)
+## QA Domain - config for the devops ticket (copy-paste)
 
 **License roles** (granted via license keys)
 
@@ -47,7 +47,7 @@ key                  | value
 ---------------------|------------------------------------------
 anonymousadminbotid  | <admin bot id deployed to QA>
 anonymoususerbotid   | <user bot id deployed to QA>
-anonCallLoftHost     | <QA Loft host, bare — confirm; e.g. dailystage.frontm.ai>
+anonCallLoftHost     | <QA Loft host, bare - confirm; e.g. dailystage.frontm.ai>
 ```
 
 **Check these are already on the domain (don't create if present)**
@@ -57,7 +57,7 @@ conversationsBucket  | platform default S3 bucket
 ContentS3Bucket      | domain content bucket  (confirm getStaticData returns the bucket NAME)
 ```
 
-**Seed the admin registry** — MongoDB collection `admin_users_<systemId>` (one row per admin)
+**Seed the admin registry** - MongoDB collection `admin_users_<systemId>` (one row per admin)
 
 ```
 adminUserId  | the admin's FrontM userId  (primary key)
@@ -87,7 +87,7 @@ Granted via license keys by devops. They gate **which app a user may open** and 
 | `quitelineprimaryadmin` | admin app | maps to PRIMARY routing role |
 | `quitelinesecondaryadmin` | admin app | maps to SECONDARY routing role |
 
-> ⚠️ **Remove before prod:** the temporary `sailorscartadmin` test entitlement (used by `satya@frontm.com` to test the admin app pre-provisioning). The `APP_ROLES.TEST_ADMIN` line is already commented out in `lib/constants.js` — confirm no test role is relied on.
+> ⚠️ **Remove before prod:** the temporary `sailorscartadmin` test entitlement (used by `satya@frontm.com` to test the admin app pre-provisioning). The `APP_ROLES.TEST_ADMIN` line is already commented out in `lib/constants.js` - confirm no test role is relied on.
 
 ---
 
@@ -101,16 +101,16 @@ Set on the **domain** (or per bot). Keys are defined in `lib/constants.js` → `
 | `ContentS3Bucket` | domain content bucket | **evidence + voicemail FILE_FIELD** (`fileScope:"domain"`) signing | evidence/voicemail can't be signed → broken downloads |
 | `anonymousadminbotid` | admin bot ID (`8d06…`) | user→admin delivery (new report, reopen, **incoming call**) | admin gets no reports/calls |
 | `anonymoususerbotid` | user bot ID (`cb35…`) | admin→user delivery (resolved / status change / closed) | reporter gets no status updates |
-| `anonymousemail` | a dedicated FrontM system user's email | masked voice-call **host** (never reporter/admin) | **optional** — falls back to a synthesized `host@<guest-domain>`; calls still work. Provision for a stable owned host identity. |
+| `anonymousemail` | a dedicated FrontM system user's email | masked voice-call **host** (never reporter/admin) | **optional** - falls back to a synthesized `host@<guest-domain>`; calls still work. Provision for a stable owned host identity. |
 | `anonCallLoftHost` | bare Loft host, e.g. `dailystage.frontm.ai` (no protocol, no path) | the web call window host (`https://<host>/<room>`) | **dev only** falls back to `dailydev.frontm.ai`; stage/prod MUST set it |
 
-> `anonCallLoftHost` must be the **bare host** — a full Daily room URL produces a broken `https://https//…` link.
+> `anonCallLoftHost` must be the **bare host** - a full Daily room URL produces a broken `https://https//…` link.
 
 ---
 
-## 3. Seed data — `admin_users` collection (MongoDB)
+## 3. Seed data - `admin_users` collection (MongoDB)
 
-The admin registry is **seeded out-of-band** (decision D3) — there is no UI to create admins. Shared collection `admin_users` → suffixed by `systemId`, so on dev (`systemId: "test"`) the collection is **`admin_users_test`**.
+The admin registry is **seeded out-of-band** (decision D3) - there is no UI to create admins. Shared collection `admin_users` → suffixed by `systemId`, so on dev (`systemId: "test"`) the collection is **`admin_users_test`**.
 
 One row per admin:
 
@@ -132,7 +132,7 @@ One row per admin:
 | Capability | Module | For | Status |
 |---|---|---|---|
 | Video call | (video-call capability) | placing/joining the anonymous call | **required** for calling |
-| **VoipCapability** | `voipCapability` | native CallKit ring-cancel (F1 — silence a losing/duplicate mobile ring) | **not yet enabled** — calling works without it, but the answering admin's own mobile ring lingers |
+| **VoipCapability** | `voipCapability` | native CallKit ring-cancel (F1 - silence a losing/duplicate mobile ring) | **not yet enabled** - calling works without it, but the answering admin's own mobile ring lingers |
 
 ---
 
@@ -163,5 +163,5 @@ cd ../anonymous-admin && npm run deploy
 
 ## Known external blockers (not code)
 
-1. **Anonymous guest token** — reporter currently joins under a real email (test only). Needs the FrontM guest-token / public-room path (Mukunda).
-2. **VoipCapability** — not enabled; F1 native ring-cancel stays open until it is.
+1. **Anonymous guest token** - reporter currently joins under a real email (test only). Needs the FrontM guest-token / public-room path (Mukunda).
+2. **VoipCapability** - not enabled; F1 native ring-cancel stays open until it is.

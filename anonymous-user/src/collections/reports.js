@@ -1,6 +1,6 @@
 // Side-effect import + re-export of the SHARED reports Doc + Collection.
 // The single definition lives in lib/collections/reports.js (registered once,
-// consumed by both microapps — SPEC.md "Collection"). This module simply makes
+// consumed by both microapps - SPEC.md "Collection"). This module simply makes
 // the shared instances available under the app's own collections/ folder so the
 // rest of src/ imports from one local path, and ensures registration at bundle
 // load (framework-mapping rule 6: one file per concern).

@@ -1,11 +1,11 @@
-// voicemailDoc — voice-message capture section (U-F16).
+// voicemailDoc - voice-message capture section (U-F16).
 //
 // ONE audio FILE_FIELD, the only thing the reporter supplies in the
 // sendQuickFormResponse() popup, so it carries includeInQuickEdit: true (only
-// includeInQuickEdit fields render in a quick form — CLAUDE.md "sendQuickFormResponse
+// includeInQuickEdit fields render in a quick form - CLAUDE.md "sendQuickFormResponse
 // popups"). The reporter records/uploads an audio file; the framework's upload
 // control is the ONLY documented file-capture primitive (VideoCall exposes no
-// voicemail-recording API — verified against ./docs/, so we do not invent one).
+// voicemail-recording API - verified against ./docs/, so we do not invent one).
 //
 // fileScope: "domain" (documented FILE_FIELD constructor option, field-class guide
 // § "Media Field Value Shape") stores the recording in DOMAIN-scoped S3, NOT the
@@ -19,7 +19,7 @@
 // dbName is inert (voicemailDoc is never persisted) but must NOT collide with a
 // reports/call_queue column name. Size/duration limits (VOICEMAIL_LIMITS, D7) are
 // NOT enforceable server-side from the FILE_FIELD envelope (it carries no byte size
-// and no duration, and state.frontmlib has no S3 HEAD call — the same documented
+// and no duration, and state.frontmlib has no S3 HEAD call - the same documented
 // limitation as evidence files, see report-validation.js / MP-FIX-EVIDENCE-METADATA).
 // What IS enforced on submit is the audio EXTENSION allow-list (lib/validation.js).
 

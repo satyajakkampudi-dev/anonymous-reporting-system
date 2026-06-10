@@ -1,16 +1,16 @@
 // Display section: My Reports list (schema id: myReportsList, row 1).
 // Shell (Section + CardsSet + placeholder Card + grid) was built in DISPLAY-SHELL;
 // U-D-myreports fills the card content. readOnly: true because each row hosts an
-// inline Open (openReportDetail) button — the card surface must not swallow clicks.
+// inline Open (openReportDetail) button - the card surface must not swallow clicks.
 //
 // This section is a custom_card collection list (framework-mapping § "custom_card
 // (regular section)" + rule 8). onResponse runs as a Context-A render handler
-// during reportDisplayDoc.sendResponse() — the same invocation in which app-start
+// during reportDisplayDoc.sendResponse() - the same invocation in which app-start
 // (and, post MP-FIX-NAV, the openMyReports loader) called
 // reportsCollection.loadCollectionWithQuery({ reporterId }), so reportsCollection.rows
 // is populated and reporter-scoped. It is ALSO empty-safe: a brand-new reporter has
 // zero rows and gets the empty state. onResponse is SYNCHRONOUS (the framework does
-// NOT await it — CLAUDE.md "Render handlers are NOT awaited"); nothing async here.
+// NOT await it - CLAUDE.md "Render handlers are NOT awaited"); nothing async here.
 //
 // Filters: the status-group and category chips are intent buttons that emit
 // openMyReports with a { statusGroup, category } data-payload; the active filter is
@@ -89,7 +89,7 @@ export const statusGroupOf = (status) => {
   return MY_REPORTS_STATUS_GROUP.IN_PROGRESS;
 };
 
-// INVERSE of statusGroupOf — the STATUS tokens in a chip group, for the server-side
+// INVERSE of statusGroupOf - the STATUS tokens in a chip group, for the server-side
 // query (`status: { $in: statusesForGroup(group) }`). Derived from statusGroupOf so the
 // query and the chip semantics can never drift. Returns null for ALL (no status filter).
 export const statusesForGroup = (group) => {
@@ -140,7 +140,7 @@ const buildCategoryChips = (activeGroup, activeCategory) => {
 
 // Build the card content on every render (reporter-scoped, empty-safe). The status/
 // category filtering + ordering + paging are done SERVER-SIDE by the openMyReports loader
-// (nav-my-reports.js) — `reportsCollection.rows` here is already the filtered, newest-first
+// (nav-my-reports.js) - `reportsCollection.rows` here is already the filtered, newest-first
 // page (over-fetched by 1 to detect "more"). This handler maps the page, slices the
 // over-fetch, and appends the prev/next control (framework-mapping rule 36).
 myReportsListSection.onResponse = () => {
@@ -150,7 +150,7 @@ myReportsListSection.onResponse = () => {
   const page = Number(activeFilter.page) >= 0 ? Number(activeFilter.page) : 0;
 
   // reportsCollection.rows are Doc objects (collection guide § "What is
-  // collection.rows") — read each field via row.f[field.id].value.
+  // collection.rows") - read each field via row.f[field.id].value.
   const loaded = (reportsCollection.rows || []).map((row) => {
     const statusToken = row.f[statusField.id]?.value || "";
     const categoryToken = row.f[categoryField.id]?.value || "";
@@ -160,8 +160,8 @@ myReportsListSection.onResponse = () => {
       status: statusToken,
       group: statusGroupOf(statusToken),
       categoryToken,
-      category: CATEGORY_LABELS[categoryToken] || categoryToken || "—",
-      urgency: URGENCY_LABELS[urgencyToken] || urgencyToken || "—",
+      category: CATEGORY_LABELS[categoryToken] || categoryToken || "-",
+      urgency: URGENCY_LABELS[urgencyToken] || urgencyToken || "-",
       createdOn: row.f[createdOnField.id]?.value || null,
     };
   });

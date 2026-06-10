@@ -1,31 +1,31 @@
-// X1 RECEIVER — MSG_NEW_REPORT (anonymous-user -> anonymous-admin).
+// X1 RECEIVER - MSG_NEW_REPORT (anonymous-user -> anonymous-admin).
 //
 // The RECEIVING half of the MSG_NEW_REPORT contract. The SENDER is the user app
 // (submit-report.js U-F8 + call-timeout.js U-F16) which, AFTER save(), emits an
 // identity-free { reportId, category, urgency, severity, assignedTo, createdOn } to the
 // report's assigned admins via state.notification.sendMessageToUserInBot.
 //
-// INDEPENDENT INTENT (Context B — object graph EMPTY on entry; CLAUDE.md "Invocation
+// INDEPENDENT INTENT (Context B - object graph EMPTY on entry; CLAUDE.md "Invocation
 // Lifecycle"). Matched by onMatching === MSG.NEW_REPORT and NOTHING else. The payload
 // arrives under state.messageFromUser (the bot-to-bot delivery slot; docs:
 // "payload becomes messageFromUser in receiver"). It runs in SANDBOX mode (bot-to-bot
-// messages are processed sandboxed — setField/autoSaveBuffer are in-memory only), but the
+// messages are processed sandboxed - setField/autoSaveBuffer are in-memory only), but the
 // two side-effects this handler performs are NOT sandboxed: notifyAssignees sends real
 // emails/web-push, and jobScheduler.scheduleMessage arms a real durable job.
 //
 // LOAD BEFORE READING (rule 21). The payload carries the reportId only as a trust anchor;
-// we DO NOT trust the payload's other fields for the auto-escalate timing — we re-read the
+// we DO NOT trust the payload's other fields for the auto-escalate timing - we re-read the
 // report FRESH through the SINGLE admin gateway loadReportForAdmin({ reportId }) (ER-A3),
 // which returns an identity-free, adminProjection-stripped plain object. createdOn +
 // severity for the SLA timer come from that authoritative read, not the wire.
 //
 // TWO ACTIONS (X1 acceptance criteria):
-//   (a) notify the assigned admins (A-F15 notifyAssignees, NOTIFY_EVENT.NEW) — identity-free
+//   (a) notify the assigned admins (A-F15 notifyAssignees, NOTIFY_EVENT.NEW) - identity-free
 //       descriptor built from the loaded projection row.
 //   (b) arm the auto-escalate job (A-F16): scheduleMessage at createdOn + the SLA delay,
 //       CRITICAL -> +1d, else +3d (D2); deterministic jobId `${AUTO_ESCALATE}-${reportId}`
 //       so a duplicate MSG_NEW_REPORT (re-delivery) re-arms rather than stacks (ER-B8); the
-//       scheduled payload is { reportId } ONLY (rule 30). toUser = state.user.userId — the
+//       scheduled payload is { reportId } ONLY (rule 30). toUser = state.user.userId - the
 //       admin in whose context this receiver fires; A-F16 re-reads the report by id
 //       regardless of whose context it runs in, so any stable admin id is correct, and the
 //       receiving admin is a guaranteed-present, stable choice.
@@ -35,7 +35,7 @@
 // identity; the job payload is { reportId } only. Nothing here reads or echoes a reporter.
 //
 // BEST-EFFORT. A missing reportId / not-found report / send fault is logged and the
-// handler returns calmly — a dropped cross-app message is caught by the SLA digest (A-F18)
+// handler returns calmly - a dropped cross-app message is caught by the SLA digest (A-F18)
 // + Alerts backstop. No sendResponse (no interactive user initiated this).
 
 import { Intent } from "@frontmltd/frontmjs/core/Intent";
@@ -66,12 +66,12 @@ newReportReceiver.onResolution = async () => {
     },
   });
 
-  // 1. Payload — { reportId, category, urgency, severity, assignedTo, createdOn },
+  // 1. Payload - { reportId, category, urgency, severity, assignedTo, createdOn },
   //    identity-free. reportId is the only field we trust as a key; the rest is re-read.
   const { reportId } = state.messageFromUser || {};
   if (!reportId) {
     D.log({
-      message: "X1 receiver: MSG_NEW_REPORT missing reportId — ignored",
+      message: "X1 receiver: MSG_NEW_REPORT missing reportId - ignored",
     });
     return;
   }
@@ -102,7 +102,7 @@ newReportReceiver.onResolution = async () => {
   //     admin's own session (MSG_NEW_REPORT was targeted to the assignees), so notifySelf
   //     push-to-self (mobile+web) + emails self. Each assignee runs their own receiver, so
   //     every admin is notified exactly once (no per-recipient fan-out duplication).
-  //     Best-effort — notifySelf never throws.
+  //     Best-effort - notifySelf never throws.
   try {
     await notifySelf({ reportId: report.reportId, event: NOTIFY_EVENT.NEW });
   } catch (error) {
@@ -134,7 +134,7 @@ newReportReceiver.onResolution = async () => {
       data: { reportId, severity: report.severity, schedule: base + delayMs },
     });
   } catch (error) {
-    // The SLA digest backstop (A-F18) catches an un-armed report — never throw.
+    // The SLA digest backstop (A-F18) catches an un-armed report - never throw.
     D.log({
       message: "X1 receiver: failed to arm auto-escalate (non-fatal)",
       data: { reportId, error: String(error) },

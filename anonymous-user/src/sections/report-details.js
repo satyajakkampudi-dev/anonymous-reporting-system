@@ -1,4 +1,4 @@
-// reportDoc — "Report details" submit section (rendering: standard, 2 columns)
+// reportDoc - "Report details" submit section (rendering: standard, 2 columns)
 // PLUS all hidden infrastructure fields + the admin-written read-only fields.
 //
 // Field types per the field-spec semantic review (§"Report details"):
@@ -9,7 +9,7 @@
 //
 // dbName tokens are deliberate: reporterId / contactMethod / contactValue /
 // againstAdmin must match the names lib/access.js reads (adminProjection exclusions,
-// ownsReport, assignedRoleFor) — do not rename without updating lib/access.js.
+// ownsReport, assignedRoleFor) - do not rename without updating lib/access.js.
 
 import { Section } from "@frontmltd/frontmjs/core/Section";
 import { Field } from "@frontmltd/frontmjs/core/Field";
@@ -33,7 +33,7 @@ export const reportDetailsSection = new Section("reportDetailsSection", {
 });
 
 // ---------------------------------------------------------------------------
-// Infrastructure fields (hidden/system — NON-NEGOTIABLE; field-spec §"Infrastructure")
+// Infrastructure fields (hidden/system - NON-NEGOTIABLE; field-spec §"Infrastructure")
 // Declared on the first section; all hidden so they never render in the form.
 // ---------------------------------------------------------------------------
 
@@ -52,7 +52,7 @@ export const reportIdField = new Field("reportIdField", {
 });
 
 // state.user.userId. Sets the My Reports query filter + ownership assertion.
-// Reporter-private — EXCLUDED from adminProjection (lib/access.js). NOT the PK.
+// Reporter-private - EXCLUDED from adminProjection (lib/access.js). NOT the PK.
 export const reporterIdField = new Field("reporterIdField", {
   title: "Reporter ID",
   doc: reportDoc,
@@ -157,7 +157,7 @@ export const reopenCountField = new Field("reopenCountField", {
 // Priority sort key (MP-FIX-QUEUE-SERVER-PAGINATION). 0 = priority (floats to the
 // top of the admin queue), 1 = normal. Derived from severity/urgency/status by the
 // SHARED priorityRankFor predicate, written on EVERY save via reportDoc.onSave so it
-// can never drift from isPriority. Hidden infra column — enables the server-side
+// can never drift from isPriority. Hidden infra column - enables the server-side
 // queue sort { priorityRank: 1, createdOn: -1 } (the framework has no aggregation, so
 // the computed priority float must be a stored, sortable field).
 export const priorityRankField = new Field("priorityRankField", {
@@ -193,11 +193,11 @@ export const resolvedOnField = new Field("resolvedOnField", {
   state,
 });
 
-// Admin-written. HIDDEN on the reporter's submit form — the reporter never enters a
+// Admin-written. HIDDEN on the reporter's submit form - the reporter never enters a
 // resolution and the report doesn't exist yet; showing an empty "Resolution" box on
 // the submit form was a bug. The reporter sees the resolution in the report DETAIL
 // view via the dedicated detail-resolution Display card (which reads .value), NOT via
-// this editable form field — so this field is purely the persisted/bound column.
+// this editable form field - so this field is purely the persisted/bound column.
 export const resolutionField = new Field("resolutionField", {
   title: "Resolution",
   doc: reportDoc,
@@ -250,7 +250,7 @@ export const urgencyField = new Field("urgencyField", {
   state,
 });
 
-// Free-text incident metadata — NOT a routing key (routing is resolveAssignees, D17).
+// Free-text incident metadata - NOT a routing key (routing is resolveAssignees, D17).
 export const shipNameField = new Field("shipNameField", {
   title: "Ship name",
   doc: reportDoc,
@@ -286,7 +286,7 @@ export const incidentDateField = new Field("incidentDateField", {
   state,
 });
 
-// Toggle — if on, routes assignedTo = SECONDARY_ADMIN (D9). Read by
+// Toggle - if on, routes assignedTo = SECONDARY_ADMIN (D9). Read by
 // lib/access.js assignedRoleFor → dbName MUST stay "againstAdmin".
 export const againstAdminField = new Field("againstAdminField", {
   title: "This concerns a member of the compliance team",

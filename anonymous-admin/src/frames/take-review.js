@@ -1,68 +1,68 @@
-// A-E-takeReview — admin "Take review" transition (A-F8).
+// A-E-takeReview - admin "Take review" transition (A-F8).
 //
 //   OPEN / REOPENED  --(any admin)-->      UNDER_REVIEW
 //   ESCALATED        --(secondary only)--> UNDER_REVIEW
 //
-// Direct transition — NO popup (framework-mapping rule 29; the escalate/resolve/
+// Direct transition - NO popup (framework-mapping rule 29; the escalate/resolve/
 // closeRejected siblings open a sendQuickFormResponse popup, takeReview does not).
 // Triggered by the "Take review" button in the Manage-actions card
 // (A-D-manageactions): data-action="intent", intentId = takeReview, data-payload
 // '{"reportId":"..."}'. The button is only RENDERED when allowedActions(status, role)
-// includes TAKE_REVIEW — but that is a visibility hint, never the authority. The
+// includes TAKE_REVIEW - but that is a visibility hint, never the authority. The
 // authoritative guard is re-run here on a fresh read (rule 12 / ER-B5).
 //
-// Independent intent (Context B — object graph EMPTY on entry; CLAUDE.md "Invocation
+// Independent intent (Context B - object graph EMPTY on entry; CLAUDE.md "Invocation
 // Lifecycle"). The admin analogue of the committed user-side withdraw-report.js, with
 // the same optimistic-concurrency contract (rule 12):
 //   1. Read reportId from the payload (one level deep under .payload, never the top
-//      level — CLAUDE.md "Custom HTML Payloads"); missing → 400.
+//      level - CLAUDE.md "Custom HTML Payloads"); missing → 400.
 //   2. Authorise: re-resolve the caller's admin ROLE authoritatively against the
-//      seeded admin-users registry (lib/access.resolveAdminRole — the SINGLE gating
+//      seeded admin-users registry (lib/access.resolveAdminRole - the SINGLE gating
 //      source, D3). We do NOT trust the STATE_KEYS.ADMIN_ROLE stash for an
 //      authorisation decision: it is a display hint, can be stale, and a transition
-//      is security-sensitive. A thrown read (poor maritime link) is NOT a deny — show
+//      is security-sensitive. A thrown read (poor maritime link) is NOT a deny - show
 //      a neutral retry and STOP (same reasoning as the A-F1 access gate). A null role
 //      (caller not an admin) → refuse; A-F1 should already have blocked them, this is
 //      defence in depth.
-//   3. Attach to the existing context (Context.Create — Redis-only, preserves the
+//   3. Attach to the existing context (Context.Create - Redis-only, preserves the
 //      buffer, rule 22) and re-read the report fresh from MongoDB by reportId
-//      (adminReportDoc.loadDocument). loadDocument — not the loadReportForAdmin
-//      gateway — is correct here because this is a WRITE path: the gateway returns
+//      (adminReportDoc.loadDocument). loadDocument - not the loadReportForAdmin
+//      gateway - is correct here because this is a WRITE path: the gateway returns
 //      identity-free PLAIN objects (good for display reads, rule 15), not the
 //      hydrated, saveable Doc graph a transition needs. Anonymity on this write path
 //      is guaranteed by the BINDING layer instead (rule 30): adminReportDoc declares
 //      NO reporterId / contactMethod / contactValue field, so loadDocument cannot
 //      surface them, and save() persists via a MongoDB `$set` of only the bound
-//      fields — leaving the reporter-identity columns in MongoDB untouched (verified:
+//      fields - leaving the reporter-identity columns in MongoDB untouched (verified:
 //      Doc.js _dbDocument → DB.js updateDataInCollection updateOperator "$set").
 //   4. Existence: a report that does not exist hydrates no fields → reportId empty →
 //      404 (mirrors openManageReport's not-found check). Role-gated, NOT owner-gated
 //      (admins manage any report).
 //   5. Concurrency + legality: the move must be legal from the CURRENT (just-read)
 //      status for THIS role via canTransition(current, UNDER_REVIEW, role). Because
-//      step 3 re-read fresh, `current` is the latest persisted status — so a stale
+//      step 3 re-read fresh, `current` is the latest persisted status - so a stale
 //      client (another admin already took/resolved/escalated it, or a double-click
 //      already moved it to UNDER_REVIEW) is REJECTED and surfaced, never overwritten.
 //      canTransition also enforces the role split: ESCALATED → UNDER_REVIEW is the
 //      SECONDARY admin's alone (actorSatisfies); a PRIMARY opening an escalated report
 //      never even sees the button, and is rejected here if they reach it. This
-//      fresh-read + canTransition check IS the concurrency guard — a true CAS via
+//      fresh-read + canTransition check IS the concurrency guard - a true CAS via
 //      save(false, { reportId, version }) is UNSAFE because Doc.save() forces
 //      { upsert: true }, so a non-matching version query would INSERT a corrupt
 //      duplicate report rather than no-op (same reasoning as the user-side
 //      transitions). version is still advanced monotonically (read → read+1) so other
 //      writers' guards and the audit trail stay coherent.
 //   6. Apply: status = UNDER_REVIEW, bump version, stamp updatedOn. assignedTo is NOT
-//      touched — taking review does not re-route the report (OPEN/REOPENED stay with
+//      touched - taking review does not re-route the report (OPEN/REOPENED stay with
 //      the primary, ESCALATED stays SECONDARY_ADMIN); only escalate re-assigns (A-F10,
 //      rule 14). Append ONE statusHistory row via the transition path (actorRole =
-//      the admin's ROLE token, never an id — anonymity, rule 16).
-//   7. Persist (adminReportDoc.save() — audit: true records the admin action, NFR-3).
-//      A save abort adds to the error stack WITHOUT throwing — detect it the same way
+//      the admin's ROLE token, never an id - anonymity, rule 16).
+//   7. Persist (adminReportDoc.save() - audit: true records the admin action, NFR-3).
+//      A save abort adds to the error stack WITHOUT throwing - detect it the same way
 //      the user-side transitions do and do not claim success.
-//   8. X5 hook (deferred — see the post-save comment below).
+//   8. X5 hook (deferred - see the post-save comment below).
 //
-// CROSS-APP X5 (deferred — NOT silently skipped). The acceptance criterion calls for
+// CROSS-APP X5 (deferred - NOT silently skipped). The acceptance criterion calls for
 // MSG_REPORT_STATUS_CHANGED to the reporter after save(). The admin app, by design,
 // CANNOT address the reporter: sendMessageToUserInBot REQUIRES a userIds array of
 // receiver-bot users (docs/frontm-ai-inter-intent-bot-to-bot-messaging-guide), and the
@@ -107,14 +107,14 @@ export const takeReview = Intent.Create({
 });
 
 takeReview.onResolution = async () => {
-  // 1. Payload (one level deep under .payload — never the top level).
+  // 1. Payload (one level deep under .payload - never the top level).
   const { reportId } = state.messageFromUser?.payload || {};
   if (!reportId) {
     state.addErrorToStack(400, "Missing reportId for takeReview");
     return;
   }
 
-  // 2. Authorise — authoritative role re-resolution (NOT the display stash). A thrown
+  // 2. Authorise - authoritative role re-resolution (NOT the display stash). A thrown
   //    read is a neutral retry, not a deny (never accuse a legitimate admin).
   let role;
   try {
@@ -135,12 +135,12 @@ takeReview.onResolution = async () => {
     return;
   }
 
-  // 3. Attach to the manage tab (stable per-screen id, rule 37 — the re-render via
+  // 3. Attach to the manage tab (stable per-screen id, rule 37 - the re-render via
   //    openManageReport lands in the same tab), then re-read the report fresh (rule 12).
   await Context.CreateAndInit(userTab(CONTEXT.MANAGE_REPORT, state), { state });
   await adminReportDoc.loadDocument({ reportId });
 
-  // 4. Existence — no hydrated reportId means the report was not found.
+  // 4. Existence - no hydrated reportId means the report was not found.
   if (!adminReportDoc.f[reportIdField.id]?.value) {
     state.addErrorToStack(404, "Report not found.");
     return;
@@ -148,16 +148,16 @@ takeReview.onResolution = async () => {
 
   // 5. Concurrency + legality: the move must be legal from the CURRENT (just-read)
   //    status for THIS role. Catches a concurrent move-on / double-click and enforces
-  //    the ESCALATED → UNDER_REVIEW secondary-only split — rejected and surfaced,
+  //    the ESCALATED → UNDER_REVIEW secondary-only split - rejected and surfaced,
   //    never overwritten.
   const current = adminReportDoc.f[statusField.id]?.value || "";
   if (!canTransition(current, STATUS.UNDER_REVIEW, role)) {
     state.addErrorToStack(
       ERROR_CODES.ILLEGAL_TRANSITION,
-      `This report can no longer be taken into review — it is now "${statusLabel(current)}". Please refresh to see the latest update.`
+      `This report can no longer be taken into review - it is now "${statusLabel(current)}". Please refresh to see the latest update.`
     );
     D.log({
-      message: "A-F8: takeReview rejected — illegal/stale transition",
+      message: "A-F8: takeReview rejected - illegal/stale transition",
       data: { reportId, current, to: STATUS.UNDER_REVIEW, role },
     });
     return;
@@ -172,7 +172,7 @@ takeReview.onResolution = async () => {
   adminReportDoc.f[updatedOnField.id].value = now;
 
   // One statusHistory row, atomic with the report write (rule 12). actorRole is the
-  // admin's ROLE token (== ACTOR_ROLE.PRIMARY_ADMIN / SECONDARY_ADMIN) — never an id.
+  // admin's ROLE token (== ACTOR_ROLE.PRIMARY_ADMIN / SECONDARY_ADMIN) - never an id.
   appendStatusHistoryRow(adminReportDoc, {
     fromStatus: current,
     toStatus: STATUS.UNDER_REVIEW,
@@ -180,7 +180,7 @@ takeReview.onResolution = async () => {
   });
 
   // 7. Persist. save() (audit: true, NFR-3) re-runs the Doc/field onSave gates; a gate
-  //    abort adds to the error stack WITHOUT throwing — detect it and do not claim
+  //    abort adds to the error stack WITHOUT throwing - detect it and do not claim
   //    success (mirrors the user-side transitions / U-F8).
   const errorsBefore = (state.errorStack || []).length;
   try {
@@ -200,11 +200,11 @@ takeReview.onResolution = async () => {
     return;
   }
 
-  // 8. Post-save hook (rule 16) — X5 MSG_REPORT_STATUS_CHANGED. The admin app holds NO
+  // 8. Post-save hook (rule 16) - X5 MSG_REPORT_STATUS_CHANGED. The admin app holds NO
   //    reporterId (rule 30) so it CANNOT address the reporter. We BROADCAST an
   //    identity-free { reportId, newStatus: UNDER_REVIEW } to the entire user bot; the
   //    user-side receiver (report-status-changed.js) loads by reportId and notifies ONLY
-  //    its owning reporter (reporterId === state.user.userId — the ownership filter).
+  //    its owning reporter (reporterId === state.user.userId - the ownership filter).
   //    Best-effort, AFTER save(); a broadcast failure NEVER rolls back the transition.
   try {
     const userBotId = await resolvePeerBotId(STATIC_DATA_KEYS.USER_BOT_ID);
@@ -226,11 +226,11 @@ takeReview.onResolution = async () => {
     data: { reportId, from: current, to: STATUS.UNDER_REVIEW, role },
   });
 
-  `Report **${reportId}** is now **${statusLabel(STATUS.UNDER_REVIEW)}**. It is yours to action — the change has been recorded in the report's timeline.`.sendResponse();
+  `Report **${reportId}** is now **${statusLabel(STATUS.UNDER_REVIEW)}**. It is yours to action - the change has been recorded in the report's timeline.`.sendResponse();
 
   // Re-render the Manage view so the UI reflects the new status WITHOUT the admin
   // closing/reopening the tab: updated status pill, the new timeline row, and the
-  // action set re-gated (Resolve now appears). Chain to openManageReport — it re-reads
+  // action set re-gated (Resolve now appears). Chain to openManageReport - it re-reads
   // fresh via the gateway, re-signs evidence, and re-renders the Display Doc.
   state.continueWithIntentWithIdAndMessage(INTENT.OPEN_MANAGE_REPORT, {
     payload: { reportId },

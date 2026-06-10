@@ -1,36 +1,36 @@
-// U-F17 — Anonymous call: end / abandon (ER-C12).
+// U-F17 - Anonymous call: end / abandon (ER-C12).
 //
 // ONE status-conditional handler for both lifecycle holes (input-schema "callEnd"):
 //   - Reporter hangs up BEFORE an admin answers  → RINGING  → ABANDONED
 //   - Network drop / inactivity timeout MID-CALL  → ACTIVE   → ENDED (duration recorded)
 //
-// Independent intent (Context B — object graph EMPTY on entry). Like U-F16's
+// Independent intent (Context B - object graph EMPTY on entry). Like U-F16's
 // callTimeout it is NOT a navigation CTA; it is fired with a { callRef } by one of:
-//   (a) a hang-up / "Cancel call" invoke_intent from the meeting/ring UI — the
+//   (a) a hang-up / "Cancel call" invoke_intent from the meeting/ring UI - the
 //       framework delivers the custom field ONE LEVEL DEEP under
 //       state.messageFromUser.payload (CLAUDE.md "Custom HTML Payloads"); OR
-//   (b) the mid-call inactivity-timeout jobScheduler message — armed admin-side when
+//   (b) the mid-call inactivity-timeout jobScheduler message - armed admin-side when
 //       the call goes ACTIVE (A-F21's atomic claim, rule 13) and delivered under
 //       state.messageFromUser.data (job-scheduler guide).
 // We read both shapes defensively, exactly as call-timeout.js does, so whichever
 // trigger lands works without a separate handler.
 //
 // The "same guard idea" as U-F16 (the task's WHAT line): the CORRECT terminal state is
-// derived from the CURRENT, freshly-loaded status — never from the trigger. So a single
+// derived from the CURRENT, freshly-loaded status - never from the trigger. So a single
 // re-read + switch makes every duplicate or stale fire a safe no-op (rule 13):
 //   RINGING (unclaimed) → ABANDONED   (reporter left before answer)
 //   ACTIVE              → ENDED        (call was answered then dropped)
 //   anything else       → no-op        (already ENDED/MISSED/ABANDONED, claimed mid-ring,
-//                                        or not found — never overwrite a settled call)
+//                                        or not found - never overwrite a settled call)
 // This means abandon and end CANNOT race into the wrong state: if an admin answered
 // first (status ACTIVE / attendedBy set), a late hang-up signal ENDS rather than wrongly
 // ABANDONs; if the ring timed out first (MISSED, U-F16), both are no-ops. No optimistic-
-// concurrency version field is needed — the status itself is the guard, and a non-RINGING/
+// concurrency version field is needed - the status itself is the guard, and a non-RINGING/
 // non-ACTIVE read short-circuits before any write.
 //
 // ANONYMITY (NON-NEGOTIABLE): the call-queue row is identity-free; this handler only
 // stamps status/timestamps/duration. It writes no reporter id/email/name and sends no
-// cross-app message — ABANDONED/ENDED have no MSG_* contract in the task graph (the admin
+// cross-app message - ABANDONED/ENDED have no MSG_* contract in the task graph (the admin
 // observes the terminal status on next read). Do NOT invent a sender.
 
 import { D, state } from "@frontmltd/frontmjs/core/State";
@@ -56,16 +56,16 @@ export const callEnd = Intent.Create({
 
 callEnd.onResolution = async () => {
   // Trigger payload. Scheduled inactivity timeout delivers it under .data; a hang-up
-  // invoke_intent delivers it under .payload — accept either (defensive, mirrors U-F16).
+  // invoke_intent delivers it under .payload - accept either (defensive, mirrors U-F16).
   const { callRef } =
     state.messageFromUser?.data || state.messageFromUser?.payload || {};
   if (!callRef) {
     D.log({ message: "U-F17: callEnd fired without a callRef" });
-    return; // nothing to act on — stay silent (no spurious reporter message)
+    return; // nothing to act on - stay silent (no spurious reporter message)
   }
 
   // Attach to the existing context (Redis buffer, no MongoDB-clobbering reload of the
-  // report graph — rule 22) and re-read THIS call-queue row fresh by callRef.
+  // report graph - rule 22) and re-read THIS call-queue row fresh by callRef.
   await Context.CreateAndInit(`user_${state.getUniqueId()}`, { state });
   await callQueueDoc.loadDocument({ callRef });
 
@@ -93,7 +93,7 @@ callEnd.onResolution = async () => {
     toStatus = CALL_STATUS.ENDED;
   } else {
     // Already terminal (ENDED/MISSED/ABANDONED), or RINGING-but-claimed mid-flight
-    // (let the admin's atomic claim win — rule 13). Idempotent no-op.
+    // (let the admin's atomic claim win - rule 13). Idempotent no-op.
     D.log({
       message: "U-F17: callEnd no-op (call not in an endable state)",
       data: { callRef, status, claimed: !!attendedBy },
@@ -102,7 +102,7 @@ callEnd.onResolution = async () => {
   }
 
   // Apply the transition. endedOn marks settlement; duration is recorded only WHERE
-  // APPLICABLE — i.e. an ENDED call that has a recorded answeredOn (an ABANDONED call
+  // APPLICABLE - i.e. an ENDED call that has a recorded answeredOn (an ABANDONED call
   // was never answered, so it has no duration).
   callQueueDoc.f[callStatusField.id].value = toStatus;
   callQueueDoc.f[endedOnField.id].value = now;
@@ -113,7 +113,7 @@ callEnd.onResolution = async () => {
     }
   }
 
-  // Persist. save() can abort WITHOUT throwing by stacking an error — detect that the
+  // Persist. save() can abort WITHOUT throwing by stacking an error - detect that the
   // same way U-F15/U-F16 do (error-stack growth) and do not claim success.
   const errorsBefore = (state.errorStack || []).length;
   try {

@@ -1,19 +1,19 @@
-// U-F15 — Anonymous call: start (masked, voice-only).
+// U-F15 - Anonymous call: start (masked, voice-only).
 //
 // Independent intent (Context B). Triggered by the Home "Call compliance" CTA
 // (data-action="intent" → INTENT.START_ANONYMOUS_CALL). On resolution it:
-//   1. Attaches to the existing context (Context.Create — preserves the buffer; the
+//   1. Attaches to the existing context (Context.Create - preserves the buffer; the
 //      call does not touch reportDoc but the app is contextAware, rule 22).
 //   2. Creates a voice-only masked Daily.co meeting and mints the reporter's masked
-//      guest token (lib/calling.initiateAnonymousCall — masked/system host, NEVER
+//      guest token (lib/calling.initiateAnonymousCall - masked/system host, NEVER
 //      state.user.userEmail; no recording; startVideoOff). Returns { callRef, meetingId }.
 //   3. Persists an IDENTITY-FREE RINGING call-queue entry keyed by callRef
 //      (retry-on-collision, ER-B9). The Doc carries NO reporter id/email/name.
-//   4. [X3] AFTER save() the MSG_INCOMING_CALL ring fan-out is wired here (rule 16) —
+//   4. [X3] AFTER save() the MSG_INCOMING_CALL ring fan-out is wired here (rule 16) -
 //      payload { callRef, meetingId } only. NOT built in U-F15 (X3 depends on U-F15);
 //      the hook is marked below, mirroring the X1 hook in submit-report.js.
 //   5. Places the reporter into the meeting as the masked guest, voice-only
-//      (videoCall.sendResponse(JOIN_MEETING) — uses the masked-guest token minted in
+//      (videoCall.sendResponse(JOIN_MEETING) - uses the masked-guest token minted in
 //      step 2, so the reporter shows as an opaque "Anonymous Reporter", camera off).
 //
 // ANONYMITY (NON-NEGOTIABLE, ER-A5): nothing here writes or sends a reporter
@@ -28,7 +28,7 @@ import { Intent } from "@frontmltd/frontmjs/core/Intent";
 import { D, state } from "@frontmltd/frontmjs/core/State";
 import { callQueueDoc } from "../docs/call-queue-doc";
 import { reportDisplayDoc } from "../docs/report-display-doc";
-// voicemailDoc — the transient audio-capture form. The 30s no-answer path (call-timeout.js)
+// voicemailDoc - the transient audio-capture form. The 30s no-answer path (call-timeout.js)
 // owns its onSubmit; we reuse the SAME form for the all-admins-busy short-circuit below.
 import { voicemailDoc } from "../docs/voicemail-doc";
 import { showScreen, SCREEN } from "./display-nav";
@@ -64,7 +64,7 @@ import {
   CALL_UI,
 } from "../constants";
 
-// VideoCall instance — MUST be exported so the framework can route JOIN_MEETING and
+// VideoCall instance - MUST be exported so the framework can route JOIN_MEETING and
 // the call-lifecycle responses (docs: "the VideoCall instance must be exported").
 // lib/calling.initiateAnonymousCall drives createMeeting/getAccessToken on it; this
 // frame drives the JOIN_MEETING response.
@@ -80,9 +80,9 @@ export const startAnonymousCall = Intent.Create({
 });
 
 startAnonymousCall.onResolution = async () => {
-  // ENTER — proves the intent actually dispatched from the Home CTA click.
+  // ENTER - proves the intent actually dispatched from the Home CTA click.
   D.log({
-    message: "U-F15: ENTER — Call compliance clicked",
+    message: "U-F15: ENTER - Call compliance clicked",
     data: {
       userId: state.user?.userId,
       conversationId: state.conversationId,
@@ -95,7 +95,7 @@ startAnonymousCall.onResolution = async () => {
   //    runs); without a guard each fire mints a NEW Daily meeting + ring fan-out. Suppress
   //    a repeat within CALL_DEBOUNCE_MS using a conversation-state timestamp. Set BEFORE any
   //    meeting work so a suppressed repeat does nothing. (Best-effort against truly
-  //    simultaneous Lambdas — Redis write latency — but it catches the observed case.)
+  //    simultaneous Lambdas - Redis write latency - but it catches the observed case.)
   const nowTs = Date.now();
   const lastCallAt = Number(state.getField(STATE_KEYS.CALL_DEBOUNCE_AT) || 0);
   if (lastCallAt && nowTs - lastCallAt < CALL_DEBOUNCE_MS) {
@@ -107,18 +107,18 @@ startAnonymousCall.onResolution = async () => {
   }
   state.setField(STATE_KEYS.CALL_DEBOUNCE_AT, nowTs);
 
-  // 1. Run on the reporter's HOME tab (userTab(CONTEXT.MAIN_APP) — the SAME stable id
+  // 1. Run on the reporter's HOME tab (userTab(CONTEXT.MAIN_APP) - the SAME stable id
   //    app-start uses) so the CONNECTING re-render below lands IN PLACE (no new tab). The
   //    whole call flow runs on this tab.
   await Context.CreateAndInit(userTab(CONTEXT.MAIN_APP, state), { state });
   D.log({ message: "U-F15: context ready" });
 
-  // 1b. Resolve the currently-available admins ONCE, up-front — BEFORE any "Connecting…"
+  // 1b. Resolve the currently-available admins ONCE, up-front - BEFORE any "Connecting…"
   //     feedback, so we never show "Connecting…" when no call will be placed. Their emails
   //     are passed as meeting `participants` (step 2) so the Loft/Daily backend TRACKS them
   //     and fires the endMeeting/leaveUser lifecycle intents that free an admin's presence on
-  //     hang-up (SeaMedix pattern — without participants the admin stays BUSY). The SAME list
-  //     is reused for the ring fan-out (step 4) — no second query. Identity-free of the
+  //     hang-up (SeaMedix pattern - without participants the admin stays BUSY). The SAME list
+  //     is reused for the ring fan-out (step 4) - no second query. Identity-free of the
   //     reporter (admins only; the reporter stays a masked guest). Best-effort.
   let availableAdmins = [];
   try {
@@ -142,16 +142,16 @@ startAnonymousCall.onResolution = async () => {
   //     compliance officer is busy/offline, short-circuit straight to the voicemail-capture
   //     form (the SAME form the 30s no-answer timeout opens). The reporter leaves a short
   //     audio message that becomes a source=CALL report via voicemailDoc.onSubmit
-  //     (call-timeout.js). No call-queue row is created — the audio stands alone as the
+  //     (call-timeout.js). No call-queue row is created - the audio stands alone as the
   //     report (the chosen busy-path behaviour). Home stays on "Call compliance" (idle).
   if (!adminEmails.length) {
     D.log({
       message:
-        "U-F15: no admin available — routing to voicemail (busy short-circuit)",
+        "U-F15: no admin available - routing to voicemail (busy short-circuit)",
     });
-    // voicemailDoc.onSubmit REQUIRES STATE_KEYS.CURRENT_CALL_REF to key the report — stash a
+    // voicemailDoc.onSubmit REQUIRES STATE_KEYS.CURRENT_CALL_REF to key the report - stash a
     // fresh callRef even though no call was placed. Reset the transient capture Doc in place
-    // (rule 26 — never cloneAndInit): new docId FIRST, then clear values, so a warm container
+    // (rule 26 - never cloneAndInit): new docId FIRST, then clear values, so a warm container
     // cannot leak a prior recording's envelope onto this popup.
     const voicemailCallRef = generateCallRef();
     state.setField(STATE_KEYS.CURRENT_CALL_REF, voicemailCallRef);
@@ -168,7 +168,7 @@ startAnonymousCall.onResolution = async () => {
   }
 
   // 1d. An admin IS available → we ARE placing a call. NOW flip the Home Call CTA to
-  //     "Connecting…". It reverts reliably — joinMeeting → "Connected", endMeeting/leaveUser
+  //     "Connecting…". It reverts reliably - joinMeeting → "Connected", endMeeting/leaveUser
   //     → "Call compliance" (contracts/call-lifecycle.js). Best-effort; never blocks the call.
   state.setField(STATE_KEYS.CALL_UI_STATE, CALL_UI.CONNECTING);
   try {
@@ -298,7 +298,7 @@ startAnonymousCall.onResolution = async () => {
   //    INTENT.CALL_TIMEOUT (frames/call-timeout.js). That handler re-reads THIS
   //    call-queue row and, ONLY if it is still unclaimed-RINGING, transitions it to
   //    MISSED and offers a voicemail. If an admin answers first (A-F21 sets ACTIVE /
-  //    attendedBy) the timeout is a guarded no-op — no cancellation needed. The jobId
+  //    attendedBy) the timeout is a guarded no-op - no cancellation needed. The jobId
   //    is deterministic per call so a re-armed timer overwrites rather than stacks.
   //    Best-effort: if scheduling fails, the reporter still joins the meeting; only the
   //    voicemail fallback is lost, which is logged.
@@ -319,17 +319,17 @@ startAnonymousCall.onResolution = async () => {
     });
   }
 
-  // 4. [X3 — rule 16] AFTER save(): ring all CURRENTLY-AVAILABLE admins via the
+  // 4. [X3 - rule 16] AFTER save(): ring all CURRENTLY-AVAILABLE admins via the
   //    identity-free MSG_INCOMING_CALL bot-to-bot message + VoIP push, payload
   //    { callRef, meetingId } ONLY (lib/calling.ringAvailableAdmins builds both).
   //    resolveAvailableAdmins is the single source for "who is on call right now"
-  //    (GLOBAL admins whose availability === AVAILABLE) — ONLY those are rung. botId is
+  //    (GLOBAL admins whose availability === AVAILABLE) - ONLY those are rung. botId is
   //    the admin app, from deployment static data. Best-effort + logged; a ring fault
-  //    must NEVER block the reporter from joining the meeting (step 5) — the no-answer
+  //    must NEVER block the reporter from joining the meeting (step 5) - the no-answer
   //    timeout (step 3b) is the backstop. No available admins → ringAvailableAdmins
   //    logs and rings no one; the timeout still offers voicemail.
   try {
-    // Reuse the admins resolved up-front (step 1b) — same "who is on call now" set.
+    // Reuse the admins resolved up-front (step 1b) - same "who is on call now" set.
     const admins = availableAdmins;
     const toBotId = await resolvePeerBotId(STATIC_DATA_KEYS.ADMIN_BOT_ID);
     D.log({
@@ -350,17 +350,17 @@ startAnonymousCall.onResolution = async () => {
   } catch (error) {
     D.log({
       message:
-        "U-F15/X3: ringAvailableAdmins failed (non-fatal — reporter still joins)",
+        "U-F15/X3: ringAvailableAdmins failed (non-fatal - reporter still joins)",
       data: { callRef, error: String(error) },
     });
   }
 
   // 5. Place the reporter into the meeting as the masked guest (voice-only, camera
   //    off via the meeting's startVideoOff). Uses the masked-guest token minted in
-  //    step 2 — the reporter never appears under their real name.
+  //    step 2 - the reporter never appears under their real name.
   //
   // serverUrl before JOIN (SeaMedix openMeeting pattern). serverUrl is the bare FrontM
-  // "Loft" player HOST (e.g. dailydev.frontm.ai) — the web client opens the call at
+  // "Loft" player HOST (e.g. dailydev.frontm.ai) - the web client opens the call at
   // https://<lofthost>/<roomId>. Feeding the full Daily room URL here was WRONG: the client
   // built a broken "https://https//frontm.daily.co/room/room" (double protocol + dup room).
   anonymousVideoCall.serverUrl = await getMeetingLoftHost();

@@ -1,9 +1,9 @@
-// Amendments — MOBILE renderer (wireframes §4 "Amendments [RO]", admin side): same data
+// Amendments - MOBILE renderer (wireframes §4 "Amendments [RO]", admin side): same data
 // as web, restacked for narrow widths. A titled card, then one stacked block per
 // amendment (when, then the free-text note, then the optional evidence link), newest
-// first. NO +Add / edit / delete control (admin is read-only — the reporter appends,
+// first. NO +Add / edit / delete control (admin is read-only - the reporter appends,
 // U-F13; rule 30). Composes the shared escapeHtml / formatDateTime / emptyStateHtml
-// primitives (format.js) with theme tokens (theme.js) — every interpolated value is
+// primitives (format.js) with theme tokens (theme.js) - every interpolated value is
 // escaped at the boundary (NFR-2, rule 10). Pure presentation: index.js owns the data,
 // the evidence overlay, and the sort.
 //
@@ -57,7 +57,7 @@ const entryBlock = (r) => {
 };
 
 export const renderMobile = (data) => {
-  // No report open (Dashboard / Queue screens, or not found) — emit nothing (empty-safe).
+  // No report open (Dashboard / Queue screens, or not found) - emit nothing (empty-safe).
   if (!data.hasReport) return "";
 
   const body = data.rows.length

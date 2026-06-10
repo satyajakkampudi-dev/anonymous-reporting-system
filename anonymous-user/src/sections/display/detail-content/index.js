@@ -1,22 +1,22 @@
-// Display section: Report detail content — "What you reported" (schema id:
+// Display section: Report detail content - "What you reported" (schema id:
 // detailContent, row 3). Shell (Section + CardsSet + placeholder Card + grid) was
 // built in DISPLAY-SHELL; U-D-detailcontent fills the card content. Display-only
 // (no buttons) → readOnly not required.
 //
 // TWO render paths, because evidence needs S3 signing and onResponse is NOT awaited:
 //
-//   1. prepareDetailContentEvidence() — EXPORTED async helper. The nav frame
+//   1. prepareDetailContentEvidence() - EXPORTED async helper. The nav frame
 //      (openReportDetail) MUST `await` it BEFORE reportDisplayDoc.sendResponse().
-//      It drills each evidenceFile envelope (.value?.value = S3 key — NEVER the
+//      It drills each evidenceFile envelope (.value?.value = S3 key - NEVER the
 //      raw key in HTML, rule 11/18), signs it via state.frontmlib.getS3SignedUrl
 //      against the CONTENT bucket at `${currentUserDomain}/${key}` (domain-scoped
 //      FILE_FIELD), and caches { fileName, url } in a
 //      module-local for the synchronous render. Signing here (cloud-only AWS creds)
-//      is the ONLY correct place — it cannot live in onResponse (the framework
+//      is the ONLY correct place - it cannot live in onResponse (the framework
 //      calls section.onResponse synchronously and discards an async return; S3 guide
 //      "section.onResponse is NOT awaited").
 //
-//   2. detailContentSection.onResponse — SYNC render handler. Fires on every
+//   2. detailContentSection.onResponse - SYNC render handler. Fires on every
 //      reportDisplayDoc.sendResponse(). Reads the already-loaded scalar fields plus
 //      the pre-signed evidence cache and dispatches via renderForPlatform. Empty-safe:
 //      on Home / My-Reports no report is loaded → hasReport:false → renders nothing.
@@ -114,7 +114,7 @@ export const prepareDetailContentEvidence = async () => {
   signedEvidence = [];
 
   const reportId = reportDoc.f[reportIdField.id]?.value || "";
-  if (!reportId) return; // no report loaded (Home / My-Reports) — nothing to sign.
+  if (!reportId) return; // no report loaded (Home / My-Reports) - nothing to sign.
 
   // Collect the S3 keys from the media-field envelopes ( .value?.value ).
   const attached = [];
@@ -137,7 +137,7 @@ export const prepareDetailContentEvidence = async () => {
   if (!attached.length) return;
 
   // DOMAIN-scoped evidence (fileScope:"domain") lands in the CONTENT bucket at
-  // `${currentUserDomain}/${key}` — NOT conversationsBucket (that's IMAGE_FIELD /
+  // `${currentUserDomain}/${key}` - NOT conversationsBucket (that's IMAGE_FIELD /
   // conversation-scoped media). Sign against the content bucket (healthMariner pattern).
   const bucket = await state.getStaticData(STATIC_DATA_KEYS.CONTENT_BUCKET);
   if (!bucket) {
@@ -153,7 +153,7 @@ export const prepareDetailContentEvidence = async () => {
   for (const item of attached) {
     try {
       // DOMAIN-scoped evidence (sections/evidence.js): the object lives at
-      // `${currentUserDomain}/${key}` — NOT the conversation path. Sign that.
+      // `${currentUserDomain}/${key}` - NOT the conversation path. Sign that.
       const keyPath = `${state.currentUserDomain}/${item.key}`;
       const url = await state.frontmlib.getS3SignedUrl(
         bucket,
@@ -181,7 +181,7 @@ export const prepareDetailContentEvidence = async () => {
   }
 };
 
-// Build the card content on every render (empty-safe — no report loaded → no card).
+// Build the card content on every render (empty-safe - no report loaded → no card).
 detailContentSection.onResponse = () => {
   const reportId = reportDoc.f[reportIdField.id]?.value || "";
   const locationToken = reportDoc.f[locationField.id]?.value || "";

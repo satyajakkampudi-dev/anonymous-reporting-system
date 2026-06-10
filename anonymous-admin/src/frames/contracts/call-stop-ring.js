@@ -1,14 +1,14 @@
-// X7 RECEIVER — MSG_CALL_STOP_RING (anonymous-admin -> anonymous-admin).
+// X7 RECEIVER - MSG_CALL_STOP_RING (anonymous-admin -> anonymous-admin).
 //
 // The RECEIVING half of the MSG_CALL_STOP_RING contract. The SENDER is the admin app
 // itself (answer-call.js A-F21, via lib/calling.sendCallStopRing) which, AFTER it
 // claims a RINGING call (CAS to ACTIVE) and joins, fans an identity-free
 // { callRef, meetingId } to every OTHER ringing admin (userIds excludes self;
-// botId omitted so sendMessageToUserInBot defaults to the CURRENT bot — correct for
+// botId omitted so sendMessageToUserInBot defaults to the CURRENT bot - correct for
 // admin -> admin). This receiver runs in each of those other admins' contexts to
 // STOP their ring: another admin already took the call.
 //
-// INDEPENDENT INTENT (Context B — object graph EMPTY on entry; CLAUDE.md "Invocation
+// INDEPENDENT INTENT (Context B - object graph EMPTY on entry; CLAUDE.md "Invocation
 // Lifecycle"). Matched by onMatching === MSG.CALL_STOP_RING and nothing else.
 //
 // MIRROR OF THE X3 RING-TRIGGER (contracts/incoming-call.js), but in REVERSE: the
@@ -18,9 +18,9 @@
 // adminDisplayDoc.sendResponse() fires the banner's SYNCHRONOUS onResponse against a
 // now-ACTIVE call -> it emits nothing -> the banner DISMISSES. The X3 receiver now also
 // starts an audible WEB ring (RING_START = "ringStart"), so this receiver additionally
-// issues RING_STOP ("ringStop") to silence it — the banner re-render alone does NOT stop
+// issues RING_STOP ("ringStop") to silence it - the banner re-render alone does NOT stop
 // the framework's web ring. (Mobile VoIP/CallKit has no documented recall; ring actions
-// "do not affect mobile push notifications" per the video-call ref — the banner dismissal
+// "do not affect mobile push notifications" per the video-call ref - the banner dismissal
 // is its surface.) NOTE: the action values are RING_START / RING_STOP; there is no
 // "RING_START_ACTION"/"RING_STOP_ACTION" KEY in VIDEO_CALL_ACTIONS (those are static
 // METHODS on VideoCall that return the values). Load BEFORE reading/rendering (rule 21).
@@ -46,7 +46,7 @@ import { CONTEXT } from "../../constants";
 
 export const callStopRingReceiver = Intent.Create({
   intentId: "callStopRingReceiver",
-  prompt: "Stop ringing — another admin claimed the anonymous call",
+  prompt: "Stop ringing - another admin claimed the anonymous call",
   state,
 });
 
@@ -54,11 +54,11 @@ callStopRingReceiver.onMatching = () =>
   state.messageTypeFromUser === MSG.CALL_STOP_RING;
 
 callStopRingReceiver.onResolution = async () => {
-  // 1. Payload — { callRef, meetingId }, identity-free. callRef is the call-queue PK.
+  // 1. Payload - { callRef, meetingId }, identity-free. callRef is the call-queue PK.
   const { callRef } = state.messageFromUser || {};
   if (!callRef) {
     D.log({
-      message: "X7 receiver: MSG_CALL_STOP_RING missing callRef — ignored",
+      message: "X7 receiver: MSG_CALL_STOP_RING missing callRef - ignored",
     });
     return;
   }
@@ -66,7 +66,7 @@ callStopRingReceiver.onResolution = async () => {
   // 2. Attach to the existing context (Redis buffer), then re-load the call-queue row
   //    FRESH by callRef (rule 21). It is now ACTIVE (claimed by another admin), so the
   //    incoming-call onResponse will read status !== RINGING and emit no banner.
-  // Stable per-user On-call tab + On-call screen (rule 37) — mirror the X3 ring-trigger
+  // Stable per-user On-call tab + On-call screen (rule 37) - mirror the X3 ring-trigger
   // so the dismiss re-renders the SAME tab (no new/broken tab).
   await Context.CreateAndInit(userTab(CONTEXT.ON_CALL, state), { state });
   try {
@@ -79,13 +79,13 @@ callStopRingReceiver.onResolution = async () => {
     return;
   }
 
-  // 3. Re-render the On-call screen — the incoming-call section's synchronous onResponse
+  // 3. Re-render the On-call screen - the incoming-call section's synchronous onResponse
   //    reads the now-ACTIVE callQueueDoc and renders nothing, dismissing the banner.
   showScreen(SCREEN.ON_CALL);
   adminDisplayDoc.sendResponse();
 
   // 4. Silence the WEB ring this admin started in the X3 receiver (RING_START). The banner
-  //    re-render alone does NOT stop the framework's audible web ring — RING_STOP does.
+  //    re-render alone does NOT stop the framework's audible web ring - RING_STOP does.
   //    (Mobile VoIP/CallKit has no documented recall; the banner dismissal is its surface.)
   try {
     adminVideoCall.sendResponse(ALL_CONSTANTS.VIDEO_CALL_ACTIONS.RING_STOP);

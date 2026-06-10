@@ -1,13 +1,13 @@
-// reportDoc — "Amendments" embedded sub-collection (rendering: custom_card, APPEND-ONLY).
+// reportDoc - "Amendments" embedded sub-collection (rendering: custom_card, APPEND-ONLY).
 //
 // Two parts (collection-embedded-forms-guide):
-//   1. amendmentsSection on reportDoc with forCollection: true (+ addCollection) —
+//   1. amendmentsSection on reportDoc with forCollection: true (+ addCollection) -
 //      owns the rows, stored as the embedded array `amendments` on the parent report.
-//      forCollection sections CANNOT carry a CardsSet (rule 7) — the read-only table
+//      forCollection sections CANNOT carry a CardsSet (rule 7) - the read-only table
 //      view is a separate Display Doc section (U-D-amendments).
-//   2. amendmentDoc field schema (amendmentRowSection) — one row's persisted fields.
+//   2. amendmentDoc field schema (amendmentRowSection) - one row's persisted fields.
 //
-// Append-only (D16, rule 25): allowEdit/allowDelete: false — no edit/delete intent;
+// Append-only (D16, rule 25): allowEdit/allowDelete: false - no edit/delete intent;
 // the add path (U-E-addAmendment) uses sendQuickFormResponse() so the popup fields
 // carry includeInQuickEdit: true.
 
@@ -25,7 +25,7 @@ export const amendmentsSection = new Section("amendmentsSection", {
   columns: 1,
   collapsable: false,
   forCollection: true,
-  // Hidden on the Data-Doc SUBMIT form — a brand-new report has no amendments, and
+  // Hidden on the Data-Doc SUBMIT form - a brand-new report has no amendments, and
   // amendments are added only AFTER submission (from the detail view). This is only the
   // embedded sub-collection HOST (persistence is unaffected by hidden); the reporter
   // sees + adds amendments in the DETAIL view via the Display Doc's amendments card.
@@ -74,7 +74,7 @@ export const amendmentEvidenceKeyField = new Field(
     type: FormFieldTypes.FILE_FIELD,
     mandatory: false,
     includeInQuickEdit: true,
-    // DOMAIN scope so an admin (different conversation) can open amendment evidence too —
+    // DOMAIN scope so an admin (different conversation) can open amendment evidence too -
     // same rationale as reporter evidence (sections/evidence.js). Anonymity-safe path.
     fileScope: "domain",
     dbName: "amendmentEvidenceKey",

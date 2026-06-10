@@ -1,5 +1,5 @@
 // User-app-specific constants (intent ids, context names, state keys).
-// Shared domain enums live in ../../lib/constants.js — do not duplicate them here.
+// Shared domain enums live in ../../lib/constants.js - do not duplicate them here.
 // Every key/value is a SCREAMING_SNAKE_CASE constant (framework-mapping rule 19);
 // no magic strings downstream.
 
@@ -9,14 +9,14 @@ export const INTENT = {
   OPEN_SUBMIT_REPORT: "openSubmitReport",
   OPEN_MY_REPORTS: "openMyReports",
   OPEN_REPORT_DETAIL: "openReportDetail",
-  // Voice path — the handler is built in U-F15; the Home CTA emits it now so the
+  // Voice path - the handler is built in U-F15; the Home CTA emits it now so the
   // navigation contract (input-schema display_elements) is complete.
   START_ANONYMOUS_CALL: "startAnonymousCall",
-  // 30s no-answer timeout target (U-F16). NOT a button/navigation intent — it is
+  // 30s no-answer timeout target (U-F16). NOT a button/navigation intent - it is
   // fired by the jobScheduler message armed at ring-start (start-anonymous-call.js),
   // so the string value is the scheduled-message intentId contract, not a public CTA.
   CALL_TIMEOUT: "callTimeout",
-  // Call end/abandon target (U-F17, input-schema "callEnd"). NOT a navigation CTA — it
+  // Call end/abandon target (U-F17, input-schema "callEnd"). NOT a navigation CTA - it
   // is fired with a { callRef } by either (a) a hang-up/cancel invoke_intent from the
   // meeting UI (payload one level deep under .payload), or (b) the mid-call inactivity
   // timeout jobScheduler message armed admin-side at ACTIVE/A-F21 (payload under .data).
@@ -59,11 +59,11 @@ export const STATE_KEYS = {
   // popup's onSubmit (a separate Lambda invocation) knows which call-queue row to
   // stamp voicemailKey + linkedReportId onto after the report is auto-created.
   CURRENT_CALL_REF: "CURRENT_CALL_REF",
-  // Active My Reports filter — { statusGroup, category, search }. The list
+  // Active My Reports filter - { statusGroup, category, search }. The list
   // renderer (U-D-myreports) reads this to highlight the active chip and to
   // filter the rendered rows. The openMyReports loader stashes the chip's
   // data-payload here (loader wiring + search box are deferred to the follow-up
-  // fix task — see specs/4 MP-FIX-MYREPORTS-FILTERS).
+  // fix task - see specs/4 MP-FIX-MYREPORTS-FILTERS).
   MY_REPORTS_FILTER: "MY_REPORTS_FILTER",
   // Number of evidence file slots currently revealed on the submit form (1–5).
   // The progressive "+ Add another file" pattern hides slots 2–5 by default; the
@@ -77,9 +77,9 @@ export const STATE_KEYS = {
   // window cannot spin up multiple Daily meetings + rings (one click = one call).
   CALL_DEBOUNCE_AT: "CALL_DEBOUNCE_AT",
   // Reporter Call-CTA lifecycle state (one of CALL_UI.*). Drives the Home button label:
-  //   CONNECTING — click → meeting created, ringing admins (U-F15)
-  //   CONNECTED  — an admin joined (joinMeeting lifecycle on the owner bot)
-  //   IDLE       — call ended / left, or never started (call-lifecycle endMeeting/leaveUser)
+  //   CONNECTING - click → meeting created, ringing admins (U-F15)
+  //   CONNECTED  - an admin joined (joinMeeting lifecycle on the owner bot)
+  //   IDLE       - call ended / left, or never started (call-lifecycle endMeeting/leaveUser)
   // Each transition re-renders Home in place so the button reflects the live call state.
   CALL_UI_STATE: "CALL_UI_STATE",
 };
@@ -96,11 +96,11 @@ export const CALL_UI = {
 // while still letting a genuine retry through shortly after.
 export const CALL_DEBOUNCE_MS = 10 * 1000;
 
-// My Reports list — coarse status-group filter chips (wireframe §3:
+// My Reports list - coarse status-group filter chips (wireframe §3:
 // [All][Open][In progress][Done]). Group membership is DERIVED from the shared
 // status state machine (lib/ticket-status STATUS_META.terminal) inside the list
 // renderer, so this enum only fixes the chip VALUES that the chip data-payload
-// and the loader agree on (no magic strings — rule 19).
+// and the loader agree on (no magic strings - rule 19).
 export const MY_REPORTS_STATUS_GROUP = {
   ALL: "all",
   OPEN: "open",
@@ -109,7 +109,7 @@ export const MY_REPORTS_STATUS_GROUP = {
   DONE: "done",
 };
 
-// "All categories" sentinel for the category filter chip — distinct from every
+// "All categories" sentinel for the category filter chip - distinct from every
 // CATEGORY token so an empty/absent filter never collides with a real value.
 export const MY_REPORTS_CATEGORY_ALL = "all";
 
@@ -131,12 +131,12 @@ export const NOTIFY_EVENT = {
 
 // Voicemail / no-answer auto-create copy + job naming (U-F16). The two strings are
 // the seed values for the auto-created source=CALL report (which has no reporter-
-// entered content — see lib CATEGORY.OTHER / URGENCY.MEDIUM defaults in the frame).
+// entered content - see lib CATEGORY.OTHER / URGENCY.MEDIUM defaults in the frame).
 // JOB_ID_PREFIX builds a deterministic, per-call jobScheduler jobId so a re-armed
 // timer (e.g. a retried U-F15) overwrites rather than stacks a second timeout.
 export const VOICEMAIL = {
   DEFAULT_REPORT_DESCRIPTION:
-    "Anonymous voicemail received — please listen to the attached audio recording. This report was created automatically because no compliance officer was available to take the call.",
+    "Anonymous voicemail received - please listen to the attached audio recording. This report was created automatically because no compliance officer was available to take the call.",
   STATUS_HISTORY_NOTE:
     "Auto-created from an anonymous voicemail (no compliance officer answered within the ring window).",
   JOB_ID_PREFIX: "call-timeout-",

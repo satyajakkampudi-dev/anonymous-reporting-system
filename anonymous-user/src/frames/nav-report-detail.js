@@ -1,7 +1,7 @@
-// Navigation intent: openReportDetail — load one report by reportId for the detail view.
+// Navigation intent: openReportDetail - load one report by reportId for the detail view.
 //
 // Independent intent (Context B). The reportId arrives in the invoke_intent envelope
-// ONE LEVEL DEEP under .payload (CLAUDE.md "Custom HTML Payloads") — never at the top
+// ONE LEVEL DEEP under .payload (CLAUDE.md "Custom HTML Payloads") - never at the top
 // level. Attach to the context, load the specific report (data-loading table), assert
 // OWNERSHIP (reporterId === userId; never a cross-user leak), then load the two
 // embedded sub-collections (loadDocument does not auto-populate collection.rows).
@@ -41,7 +41,7 @@ openReportDetail.onResolution = async () => {
   await Context.CreateAndInit(userTab(CONTEXT.REPORT_DETAIL, state), { state });
   await reportDoc.loadDocument({ reportId });
 
-  // Ownership assertion — the report must belong to the caller.
+  // Ownership assertion - the report must belong to the caller.
   if (!ownsReport({ reporterId: reporterIdField.value })) {
     state.addErrorToStack(
       ERROR_CODES.NOT_REPORT_OWNER,
@@ -54,7 +54,7 @@ openReportDetail.onResolution = async () => {
   // loadDocument: reportDoc.hasSubDocs is true, so loadDocument runs through
   // buildDocumentFromContainer, which clears + fills each registered sub-collection
   // (amendmentsCollection / statusHistoryCollection) from the report's embedded arrays.
-  // Do NOT call loadCollectionWithQuery({}) here — these are EMBEDDED arrays, not
+  // Do NOT call loadCollectionWithQuery({}) here - these are EMBEDDED arrays, not
   // standalone collections, so that query hits the (non-existent) `amendments_<botId>`
   // collection, finds nothing, and CLEARS the rows loadDocument just loaded → empty
   // timeline/amendments on a fresh open. (Removed: the two loadCollectionWithQuery calls.)
@@ -69,11 +69,11 @@ openReportDetail.onResolution = async () => {
     },
   });
 
-  // Sign the report's evidence S3 keys BEFORE rendering — onResponse (the detail
+  // Sign the report's evidence S3 keys BEFORE rendering - onResponse (the detail
   // content render handler) is synchronous and NOT awaited, so the signing must
   // complete here (S3 guide "Signed URLs before sendResponse", rule 11/18).
   await prepareDetailContentEvidence();
-  // Sign each amendment's evidence S3 key (same constraint — onResponse is sync,
+  // Sign each amendment's evidence S3 key (same constraint - onResponse is sync,
   // not awaited). The sub-collection is already loaded above.
   await prepareAmendmentsEvidence();
 

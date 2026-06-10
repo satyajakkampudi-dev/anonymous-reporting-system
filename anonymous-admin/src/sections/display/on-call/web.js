@@ -1,10 +1,10 @@
-// On-call status (availability) — WEB renderer (wireframes §6: a titled card, the current
+// On-call status (availability) - WEB renderer (wireframes §6: a titled card, the current
 // presence shown as a pill, then the three mutually-exclusive state buttons, and a one-
 // line note that only `available` admins are rung). Composes the shared theme tokens
 // (theme.js) + the tonePillHtml / intentButtonHtml / escapeHtml primitives (format.js).
-// Pure presentation — index.js owns the read of the caller's own availability.
+// Pure presentation - index.js owns the read of the caller's own availability.
 //
-// Three states, NEVER a boolean toggle (rule 30): the buttons are radio-like — the button
+// Three states, NEVER a boolean toggle (rule 30): the buttons are radio-like - the button
 // matching the current state is rendered "active" (filled with the state's tone) so the
 // selection is unmistakable; the others are calm outlines. Every button carries
 // data-payload {availability} for the setAvailability handler (A-F20).
@@ -30,7 +30,7 @@ const FONT = TYPOGRAPHY.FONT_FAMILY;
 
 // Presentation metadata per availability state: the human label + the pill/active-button
 // tone. AVAILABLE = success (green, on-duty), BUSY = warning (amber, on a call / occupied),
-// UNAVAILABLE = neutral (grey, off-duty — never rung).
+// UNAVAILABLE = neutral (grey, off-duty - never rung).
 const AVAIL_META = {
   [AVAILABILITY.AVAILABLE]: { label: "Available", tone: TONE.SUCCESS },
   [AVAILABILITY.BUSY]: { label: "Busy", tone: TONE.WARNING },

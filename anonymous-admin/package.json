@@ -1,7 +1,7 @@
 {
   "version": "0.1.0",
   "name": "anonymous-admin",
-  "description": "Anonymous Reporting — admin microapp (triage, resolve, escalate)",
+  "description": "Anonymous Reporting - admin microapp (triage, resolve, escalate)",
   "devDependencies": {
     "@babel/core": "^7.29.0",
     "@babel/preset-env": "^7.29.0",

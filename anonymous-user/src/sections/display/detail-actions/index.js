@@ -9,18 +9,18 @@
 //
 // Single SYNC render path: detailActionsSection.onResponse fires on every
 // reportDisplayDoc.sendResponse() (same invocation as openReportDetail's
-// reportDoc.loadDocument — Context-A, graph live). It reads the loaded reportDoc
+// reportDoc.loadDocument - Context-A, graph live). It reads the loaded reportDoc
 // scalar fields and dispatches via renderForPlatform. No async work, no S3, so the
-// handler stays synchronous (section.onResponse is NOT awaited — CLAUDE.md render-
+// handler stays synchronous (section.onResponse is NOT awaited - CLAUDE.md render-
 // handler rule); a prepare() helper like detail-content's is unnecessary.
 //
 // Action GATING is code-enforced, never free-form: the reporter's allowed actions
 // for the report's CURRENT status come straight from the state-machine single source
-// of truth — STATUS_META.allowedActionsByRole[ACTOR_ROLE.REPORTER] (lib/ticket-status,
+// of truth - STATUS_META.allowedActionsByRole[ACTOR_ROLE.REPORTER] (lib/ticket-status,
 // the same map the transition guard of framework-mapping rule 12 validates writes
-// against) — so an illegal action is never rendered. Reject carries the extra
+// against) - so an illegal action is never rendered. Reject carries the extra
 // REOPEN_CAP guard
-// (reopenCount < 1, D10) — once a report has been reopened once, Reject is withheld
+// (reopenCount < 1, D10) - once a report has been reopened once, Reject is withheld
 // even though STATUS_META still lists it for a RESOLVED report. Empty-safe: on
 // Home / My-Reports no report is loaded → no allowed actions → renders nothing; a
 // terminal report (WITHDRAWN / CLOSED_*) has an empty reporter action set → nothing.
@@ -69,14 +69,14 @@ export const detailActionsPlaceholderCard = new Card(
   }
 );
 
-// Build the card content on every render (empty-safe — no allowed actions → no card).
+// Build the card content on every render (empty-safe - no allowed actions → no card).
 detailActionsSection.onResponse = () => {
   const reportId = reportDoc.f[reportIdField.id]?.value || "";
   const status = reportDoc.f[statusField.id]?.value || "";
   // reopenCount defaults to 0; coerce defensively (NUMBER_FIELD, may be unset).
   const reopenCount = Number(reportDoc.f[reopenCountField.id]?.value || 0);
 
-  // Status- + role-gated set — the SINGLE source of truth for which actions are
+  // Status- + role-gated set - the SINGLE source of truth for which actions are
   // legal for the reporter on this status (lib/ticket-status). Never re-derived.
   const allowed = reportId ? allowedActions(status, ACTOR_ROLE.REPORTER) : [];
 
@@ -119,7 +119,7 @@ detailActionsSection.onResponse = () => {
   }
 
   // Hint: the status WOULD allow Reject (i.e. the report is RESOLVED) but the one-reopen
-  // cap (D10) is reached — so only Accept is offered. Explain WHY, rather than silently
+  // cap (D10) is reached - so only Accept is offered. Explain WHY, rather than silently
   // dropping the Reject button, so the reporter understands the report can't be reopened
   // again. Shown beside the remaining Accept action.
   const reopenCapReached = rejectAllowedByStatus && reopenCount >= REOPEN_CAP;

@@ -1,8 +1,8 @@
-// Report detail content — MOBILE renderer ("What you reported", wireframes §4
+// Report detail content - MOBILE renderer ("What you reported", wireframes §4
 // content card). Same data as web, restacked for narrow widths: the meta facts
 // stack one-per-line, the description and evidence follow full-width, and tap
 // targets are generous for touch. Composes shared theme tokens (theme.js) and the
-// escapeHtml primitive (format.js) — every interpolated value is escaped at the
+// escapeHtml primitive (format.js) - every interpolated value is escaped at the
 // boundary (NFR-2, rule 10). Evidence URLs are PRE-SIGNED in index.js before
 // sendResponse; this renderer never sees an S3 key (rule 11/18). Pure presentation.
 
@@ -20,7 +20,7 @@ const metaLine = (label, value) =>
   `letter-spacing:0.04em;color:${COLORS.TEXT_FAINT};">${escapeHtml(label)}</div>` +
   `<div style="font-size:${TYPOGRAPHY.SIZE_MD}px;color:${COLORS.TEXT};` +
   `font-weight:${TYPOGRAPHY.WEIGHT_MEDIUM};margin-top:2px;word-break:break-word;">` +
-  `${escapeHtml(value || "—")}</div>` +
+  `${escapeHtml(value || "-")}</div>` +
   `</div>`;
 
 // Evidence list: signed download links (large tap targets), degraded entries, or
@@ -62,13 +62,13 @@ const evidenceBlock = (evidence) => {
 };
 
 export const renderMobile = (data) => {
-  // No report loaded (Home / My-Reports screens) — emit nothing (empty-safe).
+  // No report loaded (Home / My-Reports screens) - emit nothing (empty-safe).
   if (!data.hasReport) return "";
 
   const description = data.description
     ? `<div style="font-size:${TYPOGRAPHY.SIZE_SM}px;color:${COLORS.TEXT};` +
       `line-height:1.55;white-space:pre-wrap;word-break:break-word;">${escapeHtml(data.description)}</div>`
-    : `<div style="font-size:${TYPOGRAPHY.SIZE_SM}px;color:${COLORS.TEXT_MUTED};">—</div>`;
+    : `<div style="font-size:${TYPOGRAPHY.SIZE_SM}px;color:${COLORS.TEXT_MUTED};">-</div>`;
 
   const notes = data.evidenceNotes
     ? `<div style="margin-top:${SPACING.SM}px;font-size:${TYPOGRAPHY.SIZE_SM}px;` +

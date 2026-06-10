@@ -1,7 +1,7 @@
-// U-F5 anonymity guard — MOBILE renderer (REQUIREMENTS §9.1; wireframes §2 "Mobile").
+// U-F5 anonymity guard - MOBILE renderer (REQUIREMENTS §9.1; wireframes §2 "Mobile").
 // Single-column, stacked: heading, the two field lists, then the ER-A1 guidance.
 // Tighter type than web (small screen). Composes shared theme tokens
-// (lib/utils/theme.js) and escapeHtml (lib/utils/format.js) — every label is
+// (lib/utils/theme.js) and escapeHtml (lib/utils/format.js) - every label is
 // escaped before HTML use (rule 10).
 
 import { escapeHtml } from "../../../../../lib/utils/format";

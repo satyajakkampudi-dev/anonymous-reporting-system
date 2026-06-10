@@ -1,10 +1,10 @@
-// Report detail actions — MOBILE renderer (wireframes §4 "Actions" card, stacked
+// Report detail actions - MOBILE renderer (wireframes §4 "Actions" card, stacked
 // full-width below the resolution card). A titled card: lifecycle actions (Amend /
 // Withdraw) on the first row, resolution responses (Accept / Reject) on the second,
 // each wrapping for narrow widths with comfortable tap targets. Buttons are pre-gated
-// upstream (index.js, via STATUS_META) — this renderer only lays out what it is
+// upstream (index.js, via STATUS_META) - this renderer only lays out what it is
 // handed; an empty set → it emits nothing (empty-safe). Pure presentation: composes
-// the shared intentButtonHtml primitive (format.js — escapes the label + JSON-escapes
+// the shared intentButtonHtml primitive (format.js - escapes the label + JSON-escapes
 // the data-payload, NFR-2 / rule 10) and theme tokens (theme.js). No buttons invented.
 
 import { intentButtonHtml, escapeHtml } from "../../../../../lib/utils/format";
@@ -65,7 +65,7 @@ const buttonRow = (reportId, buttons, marginBottom) => {
 };
 
 export const renderMobile = (data) => {
-  // No legal action AND no hint (no report loaded, or terminal status) — emit nothing.
+  // No legal action AND no hint (no report loaded, or terminal status) - emit nothing.
   if (!data.hasActions && !data.reopenCapNote) return "";
 
   // Reopen-cap hint (D10): RESOLVED but already reopened once → Reject withheld; explain.

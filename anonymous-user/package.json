@@ -1,7 +1,7 @@
 {
   "version": "0.1.0",
   "name": "anonymous-user",
-  "description": "Anonymous Reporting — user microapp (submit and track reports)",
+  "description": "Anonymous Reporting - user microapp (submit and track reports)",
   "devDependencies": {
     "@babel/core": "^7.29.0",
     "@babel/preset-env": "^7.29.0",

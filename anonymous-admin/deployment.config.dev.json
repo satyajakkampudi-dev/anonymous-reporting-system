@@ -4,7 +4,7 @@
   "authorisedAccess": false,
   "inactivityDuration": 0,
   "botName": "QuitelineReportAdmin",
-  "description": "Compliance console to triage, investigate, resolve, and escalate anonymous reports — reporter identity is never revealed.",
+  "description": "Compliance console to triage, investigate, resolve, and escalate anonymous reports - reporter identity is never revealed.",
   "userRoles": ["enduser", "admin"],
   "category": ["Developer"],
   "developer": "FrontM",

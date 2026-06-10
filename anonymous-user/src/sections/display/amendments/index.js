@@ -1,27 +1,27 @@
 // Display section: Amendments table (schema id: amendments, row 6).
 // Shell (Section + CardsSet + placeholder Card + grid) was built in DISPLAY-SHELL;
 // U-D-amendments fills the card content. readOnly: true because the card header
-// hosts an inline "+ Add" (addAmendment) intent button — the card surface must not
+// hosts an inline "+ Add" (addAmendment) intent button - the card surface must not
 // swallow the click.
 //
 // APPEND-ONLY (D16, rule 25): the reporter may ADD amendments but never edit or
-// delete one. This renderer carries NO edit/delete affordance — only the table and
+// delete one. This renderer carries NO edit/delete affordance - only the table and
 // the header "+ Add" button.
 //
 // TWO render paths, mirroring detail-content, because the per-row evidence file
 // needs S3 signing and onResponse is NOT awaited:
 //
-//   1. prepareAmendmentsEvidence() — EXPORTED async helper. The nav frame
+//   1. prepareAmendmentsEvidence() - EXPORTED async helper. The nav frame
 //      (openReportDetail) MUST `await` it AFTER amendmentsCollection has loaded and
 //      BEFORE reportDisplayDoc.sendResponse(). For each amendment row it drills the
-//      FILE_FIELD envelope (.value?.value = S3 key — NEVER the raw key in HTML, rule
+//      FILE_FIELD envelope (.value?.value = S3 key - NEVER the raw key in HTML, rule
 //      11/18), signs it via state.frontmlib.getS3SignedUrl against the conversations
 //      bucket, and caches { fileName, url } keyed by amendmentId for the synchronous
-//      render. Signing here (cloud-only AWS creds) is the ONLY correct place — it
+//      render. Signing here (cloud-only AWS creds) is the ONLY correct place - it
 //      cannot live in onResponse (the framework calls section.onResponse synchronously
 //      and discards an async return; S3 guide "section.onResponse is NOT awaited").
 //
-//   2. amendmentsDisplaySection.onResponse — SYNC render handler. Fires on every
+//   2. amendmentsDisplaySection.onResponse - SYNC render handler. Fires on every
 //      reportDisplayDoc.sendResponse(). Reads the loaded amendmentsCollection.rows
 //      plus the pre-signed evidence cache and dispatches via renderForPlatform.
 //      Empty-safe: on Home / My-Reports no report is loaded → hasReport:false → emits
@@ -94,7 +94,7 @@ export const amendmentsDisplayPlaceholderCard = new Card(
 let signedEvidenceById = {};
 
 // Collects every amendment row's S3 evidence key from the loaded sub-collection.
-// Each row is a Doc — read fields via row.f[field.id].value; the FILE_FIELD value is
+// Each row is a Doc - read fields via row.f[field.id].value; the FILE_FIELD value is
 // an envelope, so the S3 key is .value?.value (rule 11/18).
 const collectAttachments = () => {
   const attached = [];
@@ -126,7 +126,7 @@ export const prepareAmendmentsEvidence = async () => {
   signedEvidenceById = {};
 
   const reportId = reportDoc.f[reportIdField.id]?.value || "";
-  if (!reportId) return; // no report loaded (Home / My-Reports) — nothing to sign.
+  if (!reportId) return; // no report loaded (Home / My-Reports) - nothing to sign.
 
   const attached = collectAttachments();
   if (!attached.length) return;
@@ -134,7 +134,7 @@ export const prepareAmendmentsEvidence = async () => {
   // DOMAIN-scoped amendment evidence lands in the CONTENT bucket (not conversationsBucket).
   const bucket = await state.getStaticData(STATIC_DATA_KEYS.CONTENT_BUCKET);
   if (!bucket) {
-    // No bucket configured — keep the filename, never embed a key (broken link).
+    // No bucket configured - keep the filename, never embed a key (broken link).
     D.log({
       message: "amendments: no conversations bucket configured",
       data: { reportId, attachedCount: attached.length },
@@ -183,7 +183,7 @@ export const prepareAmendmentsEvidence = async () => {
   }
 };
 
-// Build the card content on every render (empty-safe — no report loaded → no card).
+// Build the card content on every render (empty-safe - no report loaded → no card).
 amendmentsDisplaySection.onResponse = () => {
   const reportId = reportDoc.f[reportIdField.id]?.value || "";
 
@@ -196,17 +196,17 @@ amendmentsDisplaySection.onResponse = () => {
     return {
       note: row.f[amendmentNoteField.id]?.value || "",
       amendedOn: row.f[amendedOnField.id]?.value || null,
-      // signed { fileName, url } when present, else null → renderer shows "—".
+      // signed { fileName, url } when present, else null → renderer shows "-".
       evidence: hasEvidence ? signedEvidenceById[amendmentId] || null : null,
     };
   });
 
-  // Newest first — the most recent amendment is the one the reporter just added.
+  // Newest first - the most recent amendment is the one the reporter just added.
   amendments.sort(
     (a, b) => (Number(b.amendedOn) || 0) - (Number(a.amendedOn) || 0)
   );
 
-  // Amend is offered ONLY while the report is non-terminal — the SAME state-machine gate
+  // Amend is offered ONLY while the report is non-terminal - the SAME state-machine gate
   // (allowedActionsByRole) the detail-actions card + the addAmendment frame use. Once the
   // report is CLOSED_* / WITHDRAWN there is nothing to amend, so the "+ Add" button is
   // withheld (the table still renders the existing amendments, read-only).
@@ -219,7 +219,7 @@ amendmentsDisplaySection.onResponse = () => {
     // No report loaded (Home / My-Reports screens) → the renderer emits nothing.
     hasReport: !!reportId,
     reportId,
-    // Only expose the add intent when amending is legal — the renderer hides the
+    // Only expose the add intent when amending is legal - the renderer hides the
     // "+ Add" button when this is absent.
     addIntent: canAmend ? INTENT.ADD_AMENDMENT : "",
     canAmend,

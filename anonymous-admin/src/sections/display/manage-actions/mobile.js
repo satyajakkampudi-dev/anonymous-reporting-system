@@ -1,13 +1,13 @@
-// Manage detail actions — MOBILE renderer (wireframes §4 "Actions" card, admin side, stacked
+// Manage detail actions - MOBILE renderer (wireframes §4 "Actions" card, admin side, stacked
 // full-width below the resolution card). A titled card: forward transitions (Take review / Resolve
 // / Escalate / Close as rejected) on the first row, triage/export tools (Override severity / Export)
 // on the second, each wrapping for narrow widths with comfortable tap targets. Buttons are pre-gated
-// upstream (index.js, via STATUS_META.allowedActionsByRole) — this renderer only lays out what it is
+// upstream (index.js, via STATUS_META.allowedActionsByRole) - this renderer only lays out what it is
 // handed; an empty set → it emits nothing (empty-safe). Pure presentation: composes the shared
-// intentButtonHtml primitive (format.js — escapes the label + JSON-escapes the data-payload, NFR-2 /
+// intentButtonHtml primitive (format.js - escapes the label + JSON-escapes the data-payload, NFR-2 /
 // rule 10) and theme tokens (theme.js). No buttons are invented here.
 //
-// NO reporter identity is present in the data (rule 30, ER-A2/A3, C1) — buttons carry only reportId.
+// NO reporter identity is present in the data (rule 30, ER-A2/A3, C1) - buttons carry only reportId.
 
 import { intentButtonHtml, escapeHtml } from "../../../../../lib/utils/format";
 import {
@@ -94,7 +94,7 @@ const completedChipHtml = (chip) => {
 };
 
 export const renderMobile = (data) => {
-  // No legal action and no completed chip — emit nothing.
+  // No legal action and no completed chip - emit nothing.
   if (!data.hasActions) return "";
 
   // First row: forward transitions + the disabled status chip (Resolved / closed).

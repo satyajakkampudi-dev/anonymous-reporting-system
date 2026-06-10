@@ -1,9 +1,9 @@
-// Manage detail resolution — MOBILE renderer (wireframes §4 "Resolution" card, admin side):
-// same data as web — the admin-written resolution text, the "Resolved on" date (with an
+// Manage detail resolution - MOBILE renderer (wireframes §4 "Resolution" card, admin side):
+// same data as web - the admin-written resolution text, the "Resolved on" date (with an
 // empty-state body until a resolution is recorded) and the read-only reporter reject-reason
-// block — restacked full-width for narrow widths. Pure presentation: composes shared theme
-// tokens (theme.js) and the escapeHtml / toneColors primitives — every interpolated value is
-// escaped at the primitive boundary (NFR-2, rule 10). No buttons here — Resolve / Close as
+// block - restacked full-width for narrow widths. Pure presentation: composes shared theme
+// tokens (theme.js) and the escapeHtml / toneColors primitives - every interpolated value is
+// escaped at the primitive boundary (NFR-2, rule 10). No buttons here - Resolve / Close as
 // rejected live in the manage-actions card. index.js owns the data.
 //
 // NO reporter identity is present in the data (rule 30, ER-A2/A3, C1).
@@ -21,7 +21,7 @@ const sectionTitle = (text) =>
   `<div style="font-size:${TYPOGRAPHY.SIZE_MD}px;font-weight:${TYPOGRAPHY.WEIGHT_BOLD};` +
   `color:${COLORS.TEXT};margin-bottom:${SPACING.MD}px;">${escapeHtml(text)}</div>`;
 
-// Read-only "reporter rejected an earlier resolution" block — shown ONLY when the reporter
+// Read-only "reporter rejected an earlier resolution" block - shown ONLY when the reporter
 // supplied a reject reason (ER-B5/D10). WARNING tone. The officer cannot edit it.
 const rejectReasonBlock = (reason) => {
   if (!reason) return "";
@@ -39,7 +39,7 @@ const rejectReasonBlock = (reason) => {
 };
 
 export const renderMobile = (data) => {
-  // No report open (Dashboard / Queue screens, or not found) — emit nothing (empty-safe).
+  // No report open (Dashboard / Queue screens, or not found) - emit nothing (empty-safe).
   if (!data.hasReport) return "";
 
   const body = data.resolution

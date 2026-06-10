@@ -1,4 +1,4 @@
-// A-E-resolveReport — admin "Resolve" transition (A-F9).
+// A-E-resolveReport - admin "Resolve" transition (A-F9).
 //
 //   UNDER_REVIEW --(any admin)--------> RESOLVED
 //   ESCALATED    --(secondary only)---> RESOLVED
@@ -6,32 +6,32 @@
 // Per-action transition POPUP (framework-mapping rule 29): unlike takeReview (a direct
 // transition with no popup), resolve opens a sendQuickFormResponse() to capture the
 // mandatory resolution text. The two halves of the documented "capture popup ->
-// transition" flow — mirror of the user app's reject-resolution.js (rule 29 precedent)
+// transition" flow - mirror of the user app's reject-resolution.js (rule 29 precedent)
 // and the admin take-review.js guard/concurrency/save/history discipline:
 //
-//   1. resolveReport.onResolution — the trigger intent (independent intent, Context B —
+//   1. resolveReport.onResolution - the trigger intent (independent intent, Context B -
 //      object graph EMPTY on entry; CLAUDE.md "Invocation Lifecycle"). Fired by the
 //      "Resolve" button in the Manage-actions card (A-D-manageactions): data-action=
 //      "intent", intentId = resolveReport, data-payload '{"reportId":"..."}'. The
 //      payload lives ONE LEVEL DEEP under state.messageFromUser.payload (CLAUDE.md
-//      "Custom HTML Payloads"). It ATTACHES to the existing context (Context.Create —
+//      "Custom HTML Payloads"). It ATTACHES to the existing context (Context.Create -
 //      Redis buffer, NO loadDocument: rule 22), runs a CHEAP pre-popup guard off the
 //      buffer (defence-in-depth; the AUTHORITATIVE guard re-runs on submit against a
 //      fresh MongoDB read), stashes the reportId, resets the capture Doc IN PLACE
-//      (rule 26 — docId first, then clear values; NEVER cloneAndInit) and opens the
+//      (rule 26 - docId first, then clear values; NEVER cloneAndInit) and opens the
 //      resolution popup.
 //
-//   2. resolveCaptureDoc.onSubmit — the transition. On popup-confirm it sanitises the
+//   2. resolveCaptureDoc.onSubmit - the transition. On popup-confirm it sanitises the
 //      mandatory resolution text (reject if empty after sanitise), re-reads the report
 //      FRESH by reportId (the optimistic-concurrency guard, rule 12: `current` is the
 //      latest persisted status, so a concurrent admin move or a double-confirm is
 //      rejected, never overwritten), re-checks legality via canTransition(current,
-//      RESOLVED, role) — which also enforces the ESCALATED -> RESOLVED secondary-only
-//      split — then applies: status=RESOLVED, resolvedOn=now, resolution=sanitised text
+//      RESOLVED, role) - which also enforces the ESCALATED -> RESOLVED secondary-only
+//      split - then applies: status=RESOLVED, resolvedOn=now, resolution=sanitised text
 //      (onto adminReportDoc's hidden `resolution` column), version=read+1, updatedOn=now;
-//      appends ONE statusHistory row (actorRole = the admin's ROLE token, never an id —
+//      appends ONE statusHistory row (actorRole = the admin's ROLE token, never an id -
 //      anonymity, rule 16). A true compare-and-swap via save(false, {reportId, version})
-//      is UNSAFE — Doc.save() forces { upsert: true }, so a non-matching version query
+//      is UNSAFE - Doc.save() forces { upsert: true }, so a non-matching version query
 //      would INSERT a corrupt duplicate; version advances monotonically (read -> read+1)
 //      so other writers' guards and the audit trail stay coherent (same reasoning as
 //      take-review.js / U-F10).
@@ -39,26 +39,26 @@
 // ANONYMITY (rule 30). adminReportDoc declares NO reporterId / contactMethod /
 // contactValue field, so loadDocument cannot surface them and save() persists a
 // MongoDB `$set` of only the bound fields. The auto-close schedule and the X4 hook
-// carry { reportId } only — never any reporter identity, never an actorId.
+// carry { reportId } only - never any reporter identity, never an actorId.
 //
 // AUTO-CLOSE +30d (D2). AFTER a successful save() we arm a jobScheduler message that
 // fires INTENT.AUTO_CLOSE_REPORT at resolvedOn + TIMING.AUTO_CLOSE_MS, payload
 // { reportId } ONLY. The handler is registered by A-F17 (RESOLVED -> CLOSED_BY_SYSTEM
 // if the reporter has neither accepted nor rejected by then); A-F17 DEPENDS on this
 // task, so the id is safe to target now. toUser is the resolving admin's own userId
-// (an admin identity, not the reporter's — anonymity preserved); the A-F17 handler
+// (an admin identity, not the reporter's - anonymity preserved); the A-F17 handler
 // re-reads the shared report by reportId, independent of whose context it fires in
 // (job-scheduler guide: the scheduled intent runs in the toUser's context). The jobId
 // is deterministic per report so a re-resolve (after a reject/reopen cycle) overwrites
 // the prior timer rather than stacking. Best-effort: a scheduling failure does NOT
 // fail the resolve (the report is already RESOLVED + saved); it is logged.
 //
-// CROSS-APP X4 (MSG_REPORT_RESOLVED — deferred, NOT silently skipped). The acceptance
+// CROSS-APP X4 (MSG_REPORT_RESOLVED - deferred, NOT silently skipped). The acceptance
 // criterion calls for MSG_REPORT_RESOLVED to the reporter after save(). The admin app,
-// by design, CANNOT address the reporter (it holds no reporterId — rule 30). Resolving
+// by design, CANNOT address the reporter (it holds no reporterId - rule 30). Resolving
 // identity-free delivery is the explicit responsibility of cross-app task X4. So the
 // sender is left as a documented post-save hook below, exactly mirroring take-review.js
-// (X5) and reject-resolution.js (X2). Payload would be { reportId, newStatus } — no
+// (X5) and reject-resolution.js (X2). Payload would be { reportId, newStatus } - no
 // identity. Do NOT invent the sender now.
 
 import { Intent } from "@frontmltd/frontmjs/core/Intent";
@@ -95,7 +95,7 @@ import { CONTEXT, INTENT, STATE_KEYS } from "../constants";
 // Shared copy so the pre-popup guard and the authoritative submit guard surface the
 // SAME message for the same condition (no drift).
 const ILLEGAL_MSG =
-  "This report can no longer be resolved — its status has changed. Please refresh to see the latest update.";
+  "This report can no longer be resolved - its status has changed. Please refresh to see the latest update.";
 
 export const resolveReport = Intent.Create({
   intentId: INTENT.RESOLVE_REPORT,
@@ -105,14 +105,14 @@ export const resolveReport = Intent.Create({
 
 // --- 1. Trigger intent: cheap pre-popup guard off the buffer, then open the popup ---
 resolveReport.onResolution = async () => {
-  // 1. Payload (one level deep under .payload — never the top level).
+  // 1. Payload (one level deep under .payload - never the top level).
   const { reportId } = state.messageFromUser?.payload || {};
   if (!reportId) {
     state.addErrorToStack(400, "Missing reportId for resolveReport");
     return;
   }
 
-  // 2. Authorise — authoritative role re-resolution (NOT the display stash). A thrown
+  // 2. Authorise - authoritative role re-resolution (NOT the display stash). A thrown
   //    read (poor maritime link) is a neutral retry, not a deny.
   let role;
   try {
@@ -133,7 +133,7 @@ resolveReport.onResolution = async () => {
     return;
   }
 
-  // 3. Attach to the manage tab (stable per-screen id, rule 37 — the re-render via
+  // 3. Attach to the manage tab (stable per-screen id, rule 37 - the re-render via
   //    openManageReport lands in the same tab), then re-read the report fresh (rule 22).
   await Context.CreateAndInit(userTab(CONTEXT.MANAGE_REPORT, state), { state });
   await adminReportDoc.loadDocument({ reportId });
@@ -149,7 +149,7 @@ resolveReport.onResolution = async () => {
   // 5. Stash the id for the submit handler (a separate invocation; survives via Redis).
   state.setField(STATE_KEYS.CURRENT_REPORT_ID, reportId);
 
-  // 6. Reset the REGISTERED capture Doc in place (rule 26 — never cloneAndInit). docId
+  // 6. Reset the REGISTERED capture Doc in place (rule 26 - never cloneAndInit). docId
   //    FIRST, then clear values, so the cleared buffer targets the new empty path.
   resolveCaptureDoc.docId = state.getUniqueId();
   for (const field of resolveCaptureDoc.fields) {
@@ -161,7 +161,7 @@ resolveReport.onResolution = async () => {
 
 // --- 2. Persist handler: sanitise, re-read fresh, re-guard, apply, append, save ---
 resolveCaptureDoc.onSubmit = async (self) => {
-  // 1. Resolution: mandatory + sanitised (rule 10 — strip markup; safe for HTML card +
+  // 1. Resolution: mandatory + sanitised (rule 10 - strip markup; safe for HTML card +
   //    any email/X4 use). Reject a resolution that sanitises to empty (markup-only/abuse).
   const rawResolution = self.f[resolutionInputField.id]?.value;
   const resolution = sanitiseText(rawResolution);
@@ -178,7 +178,7 @@ resolveCaptureDoc.onSubmit = async (self) => {
     return;
   }
 
-  // 2. Which report — stashed by onResolution (the popup submit is a fresh invocation).
+  // 2. Which report - stashed by onResolution (the popup submit is a fresh invocation).
   const reportId = state.getField(STATE_KEYS.CURRENT_REPORT_ID);
   if (!reportId) {
     state.addSystemErrorToStack(
@@ -188,7 +188,7 @@ resolveCaptureDoc.onSubmit = async (self) => {
     return;
   }
 
-  // 3. Authorise AUTHORITATIVELY on submit too (defence in depth — the popup was opened
+  // 3. Authorise AUTHORITATIVELY on submit too (defence in depth - the popup was opened
   //    in an earlier invocation; re-resolve against the seeded registry). Neutral retry
   //    on a thrown read; refuse on null.
   let role;
@@ -213,20 +213,20 @@ resolveCaptureDoc.onSubmit = async (self) => {
   // 4. Re-read the report FRESH (the concurrency guard).
   await adminReportDoc.loadDocument({ reportId });
 
-  // 5. Existence — no hydrated reportId means the report was not found.
+  // 5. Existence - no hydrated reportId means the report was not found.
   if (!adminReportDoc.f[reportIdField.id]?.value) {
     state.addErrorToStack(404, "Report not found.");
     return;
   }
 
   // 6. Concurrency + legality against the CURRENT (just-read) status for THIS role.
-  //    Catches a concurrent move and a double-confirm — rejected, never overwritten —
+  //    Catches a concurrent move and a double-confirm - rejected, never overwritten -
   //    and enforces the ESCALATED -> RESOLVED secondary-only split (canTransition).
   const current = adminReportDoc.f[statusField.id]?.value || "";
   if (!canTransition(current, STATUS.RESOLVED, role)) {
     state.addErrorToStack(ERROR_CODES.ILLEGAL_TRANSITION, ILLEGAL_MSG);
     D.log({
-      message: "A-F9: resolve rejected — illegal/stale transition",
+      message: "A-F9: resolve rejected - illegal/stale transition",
       data: { reportId, current, to: STATUS.RESOLVED, role },
     });
     return;
@@ -243,11 +243,11 @@ resolveCaptureDoc.onSubmit = async (self) => {
   adminReportDoc.f[updatedOnField.id].value = now;
 
   // 8. One statusHistory row, atomic with the report write (rule 12). actorRole is the
-  //    admin's ROLE token — never an id (anonymity, rule 16). We RECORD THE RESOLUTION
+  //    admin's ROLE token - never an id (anonymity, rule 16). We RECORD THE RESOLUTION
   //    TEXT as the row's note: the `resolution` column only ever holds the LATEST
   //    resolution, so on a re-resolve (after a reject/reopen) the previous resolution
   //    would be overwritten and lost. Storing it on the timeline row preserves every
-  //    resolution in the history — each "Resolved" row shows the resolution that was
+  //    resolution in the history - each "Resolved" row shows the resolution that was
   //    given at that point. Identity-free (admin free-text, already sanitised).
   appendStatusHistoryRow(adminReportDoc, {
     fromStatus: current,
@@ -257,7 +257,7 @@ resolveCaptureDoc.onSubmit = async (self) => {
   });
 
   // 9. Persist. save() (audit: true, NFR-3) re-runs the Doc/field onSave gates; a gate
-  //    abort adds to the error stack WITHOUT throwing — detect it the way take-review.js
+  //    abort adds to the error stack WITHOUT throwing - detect it the way take-review.js
   //    does and do not claim success.
   const errorsBefore = (state.errorStack || []).length;
   try {
@@ -297,13 +297,13 @@ resolveCaptureDoc.onSubmit = async (self) => {
     });
   }
 
-  // 11. Post-save hook (rule 16) — X4 MSG_REPORT_RESOLVED. The admin app holds NO
-  //     reporterId (rule 30 — adminProjection strips it) so it CANNOT address the
+  // 11. Post-save hook (rule 16) - X4 MSG_REPORT_RESOLVED. The admin app holds NO
+  //     reporterId (rule 30 - adminProjection strips it) so it CANNOT address the
   //     reporter. We BROADCAST an identity-free { reportId, resolvedOn } to the entire
   //     user bot; the user-side receiver (report-resolved.js) loads by reportId and
   //     notifies ONLY if the loaded report's reporterId === its own state.user.userId
-  //     (the ownership filter — the anonymity linchpin). Best-effort, AFTER save();
-  //     a broadcast failure NEVER rolls back the (already-persisted) resolve — the
+  //     (the ownership filter - the anonymity linchpin). Best-effort, AFTER save();
+  //     a broadcast failure NEVER rolls back the (already-persisted) resolve - the
   //     in-app RESOLVED status is the source of truth, the push/email is a courtesy.
   try {
     const userBotId = await resolvePeerBotId(STATIC_DATA_KEYS.USER_BOT_ID);

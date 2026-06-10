@@ -1,8 +1,8 @@
-// Navigation intent: openMyReports — load the reporter's own reports.
+// Navigation intent: openMyReports - load the reporter's own reports.
 //
 // Independent intent (Context B): the collection graph is empty, so we MUST
 // loadCollectionWithQuery before reading (rule 20). Scoped to the current reporter
-// (reporterId === userId) — never another user's reports. SCAFFOLD: the list HTML
+// (reporterId === userId) - never another user's reports. SCAFFOLD: the list HTML
 // card is U-D-myreports; here we load + emit a placeholder confirmation so the load
 // path is verifiable.
 
@@ -31,13 +31,13 @@ export const openMyReports = Intent.Create({
 openMyReports.onResolution = async () => {
   // Stable per-screen tab (rule 37): the framework keys each tab by the contextId
   // STRING, and an invoke_intent click carries NO tabId (messageFromUser has only
-  // intentId + payload; state.currentTabId is null) — so Context.Create is unusable and
+  // intentId + payload; state.currentTabId is null) - so Context.Create is unusable and
   // a `user_${getUniqueId()}` id opens a new tab per click. Reusing the stable MY_REPORTS
   // id re-renders the list IN PLACE on every filter chip.
   await Context.CreateAndInit(userTab(CONTEXT.MY_REPORTS, state), { state });
-  // MP-FIX-NAV — stash the active filter so the render handler (my-reports/index.js
+  // MP-FIX-NAV - stash the active filter so the render handler (my-reports/index.js
   // onResponse) can apply it. The status/category chips are intent buttons that emit
-  // openMyReports with a { statusGroup, category } data-payload — delivered ONE level
+  // openMyReports with a { statusGroup, category } data-payload - delivered ONE level
   // deep under state.messageFromUser.payload (CLAUDE.md invoke_intent envelope). A
   // chip-less open (Home nav, or the post-submit continueWithIntent which drops
   // messageFromUser) carries no payload → reset to ALL/ALL so the full list shows.

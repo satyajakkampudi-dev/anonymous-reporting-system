@@ -3,23 +3,23 @@
 // Shell (Section + CardsSet + placeholder Card + grid) was built in A-DISPLAY-SHELL;
 // A-D-dashboard fills the card content. readOnly: true because the priority card and
 // the per-ship cells host inline data-action="intent" clicks (→ openQueue with a
-// filter) — the card surface must not swallow them.
+// filter) - the card surface must not swallow them.
 //
 // ANONYMITY (the dominant constraint): this section binds NO reporter-identity field
 // (rule 30) and NEVER aggregates raw report rows itself. It reads ONLY the A-F2
-// aggregation stash (STATE_KEYS.DASHBOARD_STATS) — A-F2 owns the counting AND the
+// aggregation stash (STATE_KEYS.DASHBOARD_STATS) - A-F2 owns the counting AND the
 // small-cell suppression (<5 → "Other", ER-A6/D-L3-3). Aggregating per-ship here would
 // risk surfacing a single-report vessel before suppression, so the stash is the sole
-// data source. No Atlas Charts (D4) — plain custom-HTML stat cards.
+// data source. No Atlas Charts (D4) - plain custom-HTML stat cards.
 //
 // onResponse runs as a Context-A render handler during adminDisplayDoc.sendResponse(),
-// SYNCHRONOUSLY (the framework does NOT await it — CLAUDE.md "Render handlers are NOT
+// SYNCHRONOUSLY (the framework does NOT await it - CLAUDE.md "Render handlers are NOT
 // awaited"); state.getField is synchronous, so there is no async work here.
 //
 // EMPTY-SAFE: onResponse fires for every sendResponse(), including before A-F2 ships
 // (stash undefined → neutral empty state) and for an admin whose scope has zero reports
 // (stash present, totalReports 0 → "no reports" state). Distinct framework ids from any
-// Data Doc section — ids are global (rule 7).
+// Data Doc section - ids are global (rule 7).
 
 import { Section } from "@frontmltd/frontmjs/core/Section";
 import { Card, CardsSet } from "@frontmltd/frontmjs/core/Card";
@@ -64,7 +64,7 @@ export const dashboardDisplayPlaceholderCard = new Card(
 // sub-array guaranteed present (so renderers never guard each access) plus a
 // `hasStash` flag distinguishing "aggregation not run yet" (pre-A-F2) from
 // "ran, zero reports". A-F2 may fill the stash incrementally; absent sub-arrays
-// simply render as a muted "—" in their group.
+// simply render as a muted "-" in their group.
 const readStats = () => {
   const raw = state.getField(STATE_KEYS.DASHBOARD_STATS);
   const hasStash = !!raw && typeof raw === "object";
@@ -88,7 +88,7 @@ dashboardDisplaySection.onResponse = () => {
     // The priority card's click target + payload (consumed by A-F4/A-F5).
     priorityIntent: INTENT.OPEN_QUEUE,
     priorityPayload: { filter: QUEUE_FILTER.PRIORITY },
-    // Top nav bar (wireframes §1: [ Queue ] [ On-call ] [ Manual log ]) — the
+    // Top nav bar (wireframes §1: [ Queue ] [ On-call ] [ Manual log ]) - the
     // dashboard is the navigation hub; each opens the screen in its own tab (the
     // visible tab strip then lets the admin switch back). Always rendered, even on
     // the empty state, so navigation never depends on there being reports.

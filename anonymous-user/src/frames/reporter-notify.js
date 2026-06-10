@@ -1,16 +1,16 @@
-// U-F14 — Reporter notification dispatch (reusable helper).
+// U-F14 - Reporter notification dispatch (reusable helper).
 //
-// A single reusable function — notifyReporter(reportDoc, { event }) — that
+// A single reusable function - notifyReporter(reportDoc, { event }) - that
 // notifies the reporter that something happened to THEIR report. It is NOT an
 // intent and registers no framework events: it is a plain async helper composed
 // from the lib/notifications.js best-effort primitives (NFR-4). Callers:
 //   - the inbound cross-app receivers X4 / X5 / X6 (Context B): each loads the
 //     report by reportId, then calls this with the matching NOTIFY_EVENT;
 //   - any reporter-side own-action frame that later opts to acknowledge (e.g. a
-//     RECEIVED ack on submit) — wired by that task, not here.
+//     RECEIVED ack on submit) - wired by that task, not here.
 //
 // Two channels, both BEST-EFFORT + LOGGED (a failed send never throws and never
-// goes silent; the SLA digest / Alerts screen are the fallback — NFR-4):
+// goes silent; the SLA digest / Alerts screen are the fallback - NFR-4):
 //   1. Web push, addressed by the reporter's FrontM userId (= reporterId). This
 //      is the in-app channel the reporter uses to track their own report, so it
 //      is sent whenever a reporterId exists, independent of the contact-method
@@ -21,7 +21,7 @@
 //
 // ANONYMITY (framework-mapping rule 16; acceptance criterion):
 //   - The notification CONTENT carries nothing beyond what the reporter already
-//     owns — the reportId and the report's own status. No resolution text, no
+//     owns - the reportId and the report's own status. No resolution text, no
 //     accused party, no evidence, no actor identity.
 //   - The push `data` payload carries reportId only (so a tap can deep-link).
 //   - The email `to` is the reporter's OWN address (their contactValue); we
@@ -48,7 +48,7 @@ import { renderEmail } from "../../../lib/email-template";
 import { NOTIFY_EVENT } from "../constants";
 
 // Build the (identity-free) copy for an event. `statusText` is the live status
-// label of the freshly-loaded report — so the wording always matches the
+// label of the freshly-loaded report - so the wording always matches the
 // persisted state even if the triggering event was coarse. Returns a plain
 // title + body for push and a subject + (escaped) HTML for email.
 const buildCopy = (event, reportId, statusText) => {
@@ -75,13 +75,13 @@ const buildCopy = (event, reportId, statusText) => {
         subject: `Your report ${reportId} has been received`,
         html: buildHtml(
           "Report received",
-          "Thank you — your report has been received by the compliance team."
+          "Thank you - your report has been received by the compliance team."
         ),
       };
     case NOTIFY_EVENT.RESOLVED:
       return {
         title: "Report resolved",
-        message: `Your report ${reportId} has been resolved — please review the outcome.`,
+        message: `Your report ${reportId} has been resolved - please review the outcome.`,
         subject: `Your report ${reportId} has been resolved`,
         html: buildHtml(
           "Report resolved",
@@ -118,22 +118,22 @@ export const notifyReporter = async (reportDoc, { event } = {}) => {
   const reporterId = reportDoc?.f[reporterIdField.id]?.value;
   const status = reportDoc?.f[statusField.id]?.value || "";
 
-  // Defensive: no report loaded → nothing to do (should not happen — callers load
+  // Defensive: no report loaded → nothing to do (should not happen - callers load
   // by id first). Logged, not thrown (NFR-4).
   if (!reportId) {
     D.log({
-      message: "U-F14: notifyReporter skipped — no reportId on the loaded doc",
+      message: "U-F14: notifyReporter skipped - no reportId on the loaded doc",
       data: { event },
     });
     return { ok: false, push: false, email: false };
   }
 
-  // MANUAL / CALL reports have no tracking owner (reporterId empty) — there is
+  // MANUAL / CALL reports have no tracking owner (reporterId empty) - there is
   // nobody to notify and no in-app account to push to. Logged skip.
   if (!reporterId) {
     D.log({
       message:
-        "U-F14: notifyReporter skipped — report has no reporterId (MANUAL/CALL)",
+        "U-F14: notifyReporter skipped - report has no reporterId (MANUAL/CALL)",
       data: { reportId, event, status },
     });
     return { ok: false, push: false, email: false };
@@ -141,7 +141,7 @@ export const notifyReporter = async (reportDoc, { event } = {}) => {
 
   const copy = buildCopy(event, reportId, statusLabel(status));
 
-  // 1. Push — mobile + web (framework-mapping rule 32). notifyReporter ALWAYS runs in
+  // 1. Push - mobile + web (framework-mapping rule 32). notifyReporter ALWAYS runs in
   //    the reporter's own session (submit onSubmit; X4/X5/X6 receivers), so push-to-self
   //    reaches their device AND browser. `data` carries reportId only (identity-free).
   const pushResult = await sendPushToCurrentUser({
@@ -150,7 +150,7 @@ export const notifyReporter = async (reportDoc, { event } = {}) => {
     data: { reportId },
   });
 
-  // 2. Email — only when the reporter chose Email AND gave a valid address. The
+  // 2. Email - only when the reporter chose Email AND gave a valid address. The
   //    stored contactMethod is a LABEL ("Email"); map it to a token before the
   //    comparison (contactMethodFromLabel; idempotent for token-valued rows).
   const method = contactMethodFromLabel(

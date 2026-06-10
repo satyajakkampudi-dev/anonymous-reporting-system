@@ -1,25 +1,25 @@
 // Display section: Manage detail header (schema id: manageHeader, row 2). A-D-manageheader
 // fills the card with tracking id, status pill, severity tone, assigned role, category,
-// urgency, created date for the opened report (gateway projection — NO identity).
+// urgency, created date for the opened report (gateway projection - NO identity).
 //
 // DATA SOURCE. onResponse is a Context-A render handler called SYNCHRONOUSLY during
 // adminDisplayDoc.sendResponse() (CLAUDE.md "Render handlers are NOT awaited"), so it
 // cannot await a load. The openManageReport nav frame (Context B) has already run the
-// anonymity gateway — loadReportForAdmin({ reportId }) → loadReportsForAdmin, which
-// populates reportsCollection.rows — and stashed the reportId (STATE_KEYS.CURRENT_REPORT_ID)
+// anonymity gateway - loadReportForAdmin({ reportId }) → loadReportsForAdmin, which
+// populates reportsCollection.rows - and stashed the reportId (STATE_KEYS.CURRENT_REPORT_ID)
 // in the SAME invocation. This handler reads that id, finds the matching loaded row, and
 // re-strips it through applyAdminProjection as a second anonymity layer (mirrors the queue).
 //
 // ANONYMITY (the dominant constraint): this section binds NO reporter-identity field
-// (rule 30, C1, ER-A2) and NEVER queries `reports` itself (ER-A3) — its only source is the
+// (rule 30, C1, ER-A2) and NEVER queries `reports` itself (ER-A3) - its only source is the
 // gateway-loaded rows, identity-free by construction and stripped again here.
 //
 // EMPTY-SAFE: onResponse fires for every sendResponse(), including the no-report case
 // (Dashboard / Queue screens, or a report not found) → hasReport:false → renderers emit
 // nothing. Pure display (no inline buttons) → readOnly omitted. Distinct ids (rule 7).
 //
-// SANITISATION (rule 10): the header binds only id / enum-token / date fields — no
-// free-text — so escaping at the format-primitive boundary (escapeHtml in the renderers)
+// SANITISATION (rule 10): the header binds only id / enum-token / date fields - no
+// free-text - so escaping at the format-primitive boundary (escapeHtml in the renderers)
 // is the full requirement; no lib/validation.js sanitiser is needed for these values.
 
 import { Section } from "@frontmltd/frontmjs/core/Section";
@@ -96,7 +96,7 @@ const readOpenedReport = () => {
   return rows.find((r) => r && r.reportId === reportId) || null;
 };
 
-// Build the card content on every render (empty-safe — no report open → no card).
+// Build the card content on every render (empty-safe - no report open → no card).
 manageHeaderDisplaySection.onResponse = () => {
   const report = readOpenedReport();
 
@@ -109,10 +109,10 @@ manageHeaderDisplaySection.onResponse = () => {
     reportId: report?.reportId || "",
     status: report?.status || "", // STATUS token → statusPillHtml resolves label + tone
     severity: severityToken, // SEVERITY token → severityColors() resolves the tone
-    severityLabel: SEVERITY_LABELS[severityToken] || severityToken || "—",
+    severityLabel: SEVERITY_LABELS[severityToken] || severityToken || "-",
     assigned: ASSIGNED_LABELS[assignedToken] || "Unassigned",
-    category: CATEGORY_LABELS[report?.category] || report?.category || "—",
-    urgency: URGENCY_LABELS[report?.urgency] || report?.urgency || "—",
+    category: CATEGORY_LABELS[report?.category] || report?.category || "-",
+    urgency: URGENCY_LABELS[report?.urgency] || report?.urgency || "-",
     createdOn: report?.createdOn || null,
   };
 

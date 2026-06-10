@@ -1,37 +1,37 @@
-// A-E-manualLog — manual-log submit transforms + idempotency (adminReportDoc.onSubmit).
+// A-E-manualLog - manual-log submit transforms + idempotency (adminReportDoc.onSubmit).
 //
 // An admin manually logs a report on behalf of someone (a phone / in-person
 // disclosure that did not come through the reporter app). The result is an OPEN
 // report with source = MANUAL and NO tracking owner (reporterId stays empty), routed
 // to the assigned compliance admin exactly like a reporter-submitted report.
 //
-// Context A (framework event on adminReportDoc — object graph LIVE; handler lives in
+// Context A (framework event on adminReportDoc - object graph LIVE; handler lives in
 // frames/ per AGENTS.md so it can import Field refs from sections/). Fires when the
 // admin confirms the manual-log form (adminReportDoc rendered BLANK by openManualLog).
 // This is the near-exact mirror of the USER submit flow (anonymous-user
-// submit-report.js), with THREE — and only three — substantive deltas:
+// submit-report.js), with THREE - and only three - substantive deltas:
 //
 //   1. source = SOURCE.MANUAL          (not SOURCE.REPORTER).
 //   2. reporterId = "" EMPTY           (NEVER state.user.userId). A MANUAL report has
 //      no tracking owner, and the LOGGING ADMIN's identity must NEVER become the
-//      reporterId — that would both falsely attribute the report and break anonymity
+//      reporterId - that would both falsely attribute the report and break anonymity
 //      (rule 30 / ER-A2). reporterId is left empty; no reporter notifications, no
 //      reporter transitions are ever wired for a MANUAL report.
 //   3. first statusHistory row actorRole = the LOGGING ADMIN's resolved ROLE
 //      (PRIMARY_ADMIN | SECONDARY_ADMIN via resolveAdminRole), NOT ACTOR_ROLE.REPORTER.
 //      It is a ROLE token only, never an id (anonymity, rule 16).
 //
-// IMPORTANT — onSubmit OWNERSHIP. adminReportDoc has exactly ONE onSubmit slot, owned
+// IMPORTANT - onSubmit OWNERSHIP. adminReportDoc has exactly ONE onSubmit slot, owned
 // HERE by manualLog ONLY. The transition popups bind their OWN capture Docs'
 // onSubmit (resolveCaptureDoc / severityCaptureDoc / noteCaptureDoc), never
-// adminReportDoc.onSubmit — so there is no clobber. (Verified across frames/.)
+// adminReportDoc.onSubmit - so there is no clobber. (Verified across frames/.)
 //
 // Evidence validation: the user app's authoritative gate lives in reportDoc.onSave
 // (report-validation.js). The admin bundle binds NO adminReportDoc.onSave, so the
 // ENFORCEABLE subset (file count ≤ MAX_FILES + extension allow-list) is applied HERE,
 // inline, before save(). Content-type + byte-size enforcement is NOT achievable from a
 // Doc handler with documented APIs (the FILE_FIELD envelope carries no contentType /
-// size and state.frontmlib exposes no S3 HEAD) — that is the deferred
+// size and state.frontmlib exposes no S3 HEAD) - that is the deferred
 // MP-FIX-EVIDENCE-METADATA limitation (see lib/validation.js + report-validation.js),
 // NOT something to invent an S3 metadata call for.
 
@@ -110,10 +110,10 @@ const EVIDENCE_FILE_FIELDS = [
 ];
 
 adminReportDoc.onSubmit = async (self) => {
-  // 0. Resolve the LOGGING ADMIN's ROLE up-front — it is REQUIRED for the
+  // 0. Resolve the LOGGING ADMIN's ROLE up-front - it is REQUIRED for the
   //    statusHistory actorRole (delta 3). We cannot attribute the creation without it,
   //    and an unattributable audit row is not acceptable for a manual log, so a thrown
-  //    read or a null role ABORTS before any persist (no fallback role — that would
+  //    read or a null role ABORTS before any persist (no fallback role - that would
   //    misattribute the audit trail). resolveAdminRole reads the admin-users registry,
   //    which works in any execution context.
   let adminRole;
@@ -138,7 +138,7 @@ adminReportDoc.onSubmit = async (self) => {
     return;
   }
 
-  // 1. Sanitise free-text (idempotent — safe on a re-submit).
+  // 1. Sanitise free-text (idempotent - safe on a re-submit).
   for (const field of FREE_TEXT_FIELDS) {
     const raw = self.f[field.id].value;
     if (typeof raw === "string" && raw !== "") {
@@ -161,7 +161,7 @@ adminReportDoc.onSubmit = async (self) => {
     self.f[locationField.id].value
   );
 
-  // 3. incidentDate must parse AND not be in the future — abort before id work.
+  // 3. incidentDate must parse AND not be in the future - abort before id work.
   if (!isValidIncidentDate(self.f[incidentDateField.id].value)) {
     state.addErrorToStack(
       ERROR_CODES.INVALID_INCIDENT_DATE,
@@ -170,9 +170,9 @@ adminReportDoc.onSubmit = async (self) => {
     return;
   }
 
-  // 3b. Evidence — enforceable subset (file count + extension allow-list). The admin
+  // 3b. Evidence - enforceable subset (file count + extension allow-list). The admin
   //     bundle has no adminReportDoc.onSave gate, so apply it inline here. Content-type
-  //     + size remain deferred (MP-FIX-EVIDENCE-METADATA — see the file header).
+  //     + size remain deferred (MP-FIX-EVIDENCE-METADATA - see the file header).
   const attachedEvidence = EVIDENCE_FILE_FIELDS.map(
     (field) => self.f[field.id].value
   ).filter((envelope) => envelope && envelope.value);
@@ -191,16 +191,16 @@ adminReportDoc.onSubmit = async (self) => {
     }
   }
 
-  // 4. System fields — idempotent (debounce double-submit; never clobber on re-submit).
+  // 4. System fields - idempotent (debounce double-submit; never clobber on re-submit).
   const now = Date.now();
   if (!self.f[reportIdField.id].value) {
     self.f[reportIdField.id].value = generateReportId();
   }
-  // DELTA 2 — reporterId stays EMPTY. A MANUAL report has no tracking owner; the
+  // DELTA 2 - reporterId stays EMPTY. A MANUAL report has no tracking owner; the
   // logging admin's id MUST NEVER be written here (anonymity / rule 30, ER-A2).
-  // (adminReportDoc binds no reporterId field at all — so there is nothing to set; the
+  // (adminReportDoc binds no reporterId field at all - so there is nothing to set; the
   // empty value is enforced by the binding layer. No assignment is made on purpose.)
-  // DELTA 1 — source = MANUAL (not REPORTER).
+  // DELTA 1 - source = MANUAL (not REPORTER).
   if (!self.f[sourceField.id].value) {
     self.f[sourceField.id].value = SOURCE.MANUAL;
   }
@@ -214,18 +214,18 @@ adminReportDoc.onSubmit = async (self) => {
   if (!self.f[versionField.id].value) {
     self.f[versionField.id].value = 1;
   }
-  // reopenCount defaults to 0, and 0 IS a valid value — only seed it when it is not
+  // reopenCount defaults to 0, and 0 IS a valid value - only seed it when it is not
   // already a number, so a re-submit never resets a 0→1 reopen.
   if (typeof self.f[reopenCountField.id].value !== "number") {
     self.f[reopenCountField.id].value = 0;
   }
-  // severity from urgency (D6) — set once at creation; an admin re-triages via the
+  // severity from urgency (D6) - set once at creation; an admin re-triages via the
   // overrideSeverity popup, never by re-submitting this form.
   if (!self.f[severityField.id].value) {
     self.f[severityField.id].value = severityFromUrgency(urgencyToken);
   }
   // Routing (D17): assignedTo is the ROLE enum via the assignedRoleFor chokepoint
-  // (againstAdmin → SECONDARY, else PRIMARY) — identical to the reporter path.
+  // (againstAdmin → SECONDARY, else PRIMARY) - identical to the reporter path.
   if (!self.f[assignedToField.id].value) {
     self.f[assignedToField.id].value = assignedRoleFor({
       againstAdmin: !!self.f[againstAdminField.id].value,
@@ -233,9 +233,9 @@ adminReportDoc.onSubmit = async (self) => {
   }
   self.f[updatedOnField.id].value = now;
 
-  // 5. First statusHistory row (→ OPEN) — transition path (rule 12), idempotent so a
+  // 5. First statusHistory row (→ OPEN) - transition path (rule 12), idempotent so a
   //    resubmit after a validation failure never stacks a 2nd creation row.
-  //    DELTA 3 — actorRole = the logging admin's ROLE (not REPORTER).
+  //    DELTA 3 - actorRole = the logging admin's ROLE (not REPORTER).
   const historyCollection = getStatusHistoryCollection(self);
   const hasCreationRow = (historyCollection.rows || []).some(
     (row) =>
@@ -276,7 +276,7 @@ adminReportDoc.onSubmit = async (self) => {
       });
       return;
     }
-    // save() can abort WITHOUT throwing if a gate adds a validation error and returns —
+    // save() can abort WITHOUT throwing if a gate adds a validation error and returns -
     // detect via the error stack growing; nothing persisted, so do not claim success.
     if ((state.errorStack || []).length > errorsBefore) {
       return;
@@ -291,12 +291,12 @@ adminReportDoc.onSubmit = async (self) => {
       ? "secondary"
       : "primary";
 
-  // 7b. A-F15 admin-notify dispatch (rule 16 — only after the clean save above). A MANUAL
-  //     report notifies its ASSIGNED admins DIRECTLY (NOT via cross-app X1 — there is no
-  //     reporter to address). Best-effort — dispatchAdminNotify never throws, but wrap anyway so
+  // 7b. A-F15 admin-notify dispatch (rule 16 - only after the clean save above). A MANUAL
+  //     report notifies its ASSIGNED admins DIRECTLY (NOT via cross-app X1 - there is no
+  //     reporter to address). Best-effort - dispatchAdminNotify never throws, but wrap anyway so
   //     a notification fault cannot fail this (already persisted) report; a failed send is
   //     recorded for the SLA digest / Alerts fallback (ER-D15). Descriptor IDENTITY-FREE
-  //     (rule 30 — adminReportDoc binds no reporter identity).
+  //     (rule 30 - adminReportDoc binds no reporter identity).
   try {
     await dispatchAdminNotify(
       {

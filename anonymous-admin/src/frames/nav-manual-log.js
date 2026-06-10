@@ -1,34 +1,34 @@
-// Navigation intent: openManualLog — open the manual-log form (A-F13 / A-E-manualLog).
+// Navigation intent: openManualLog - open the manual-log form (A-F13 / A-E-manualLog).
 //
-// Independent intent (Context B — object graph EMPTY on entry; CLAUDE.md "Invocation
+// Independent intent (Context B - object graph EMPTY on entry; CLAUDE.md "Invocation
 // Lifecycle"). Attaches to the EXISTING context via Context.Create (preserves the
-// autoSaveBuffer — rule 22; NEVER re-loadDocument). The source=MANUAL submit handler
+// autoSaveBuffer - rule 22; NEVER re-loadDocument). The source=MANUAL submit handler
 // (adminReportDoc.onSubmit) lives in frames/manual-log.js; this frame opens a BLANK
 // form.
 //
 // AUTHORISE (defence beyond A-F1): only an admin may open the manual-log form. The
 // role is re-resolved authoritatively against the seeded admin-users registry
-// (lib/access.resolveAdminRole — the SINGLE gating source, D3). A thrown read (poor
+// (lib/access.resolveAdminRole - the SINGLE gating source, D3). A thrown read (poor
 // maritime link) is a NEUTRAL retry, never a deny (same reasoning as the A-F1 gate +
 // the takeReview sibling); a null role (caller not an admin) → refuse.
 //
-// FRESH-DRAFT RESET (CRITICAL — anonymity / no identity-or-timeline bleed). The admin
+// FRESH-DRAFT RESET (CRITICAL - anonymity / no identity-or-timeline bleed). The admin
 // may have JUST loaded an existing report into adminReportDoc via a transition
 // (take-review / resolve / escalate / closeRejected all call
 // adminReportDoc.loadDocument({ reportId })), so the shared Data Doc can be holding a
 // previous report's field values AND its embedded statusHistory / amendments rows. The
-// manual-log form MUST open blank. We reset adminReportDoc IN PLACE (rule 26 — NEVER
+// manual-log form MUST open blank. We reset adminReportDoc IN PLACE (rule 26 - NEVER
 // cloneAndInit; the clone shares the original's intentId, gets silently un-registered,
 // and the submit dispatch lands on the wrong instance):
 //   1. set a fresh docId FIRST (so the new report is a new row, not an upsert of the
-//      previously-loaded one — without it save() could clobber the loaded report);
+//      previously-loaded one - without it save() could clobber the loaded report);
 //   2. clear ALL field values;
 //   3. clear the embedded sub-collections' rows via the documented Collection.clearRows()
 //      (frontm-ai-collection-class-comprehensive-guide), reaching the LIVE collections
 //      through adminReportDoc.subCollections (the instances the framework serialises on
-//      save — the same access pattern as status-history-writer.getStatusHistoryCollection,
+//      save - the same access pattern as status-history-writer.getStatusHistoryCollection,
 //      rule 21). Without this a manual report would inherit the previous report's
-//      timeline/amendments — a privacy and audit-integrity defect.
+//      timeline/amendments - a privacy and audit-integrity defect.
 
 import { Intent } from "@frontmltd/frontmjs/core/Intent";
 import { Context } from "@frontmltd/frontmjs/core/Context";
@@ -48,7 +48,7 @@ export const openManualLog = Intent.Create({
 });
 
 openManualLog.onResolution = async () => {
-  // AUTHORISE — authoritative role re-resolution (NOT a display stash). A thrown read
+  // AUTHORISE - authoritative role re-resolution (NOT a display stash). A thrown read
   // is a neutral retry, not a deny (never block a legitimate admin on a flaky link).
   let role;
   try {
@@ -73,7 +73,7 @@ openManualLog.onResolution = async () => {
   // form replaces its tab. The blank-form reset below establishes the draft state.
   await Context.CreateAndInit(userTab(CONTEXT.MANUAL_LOG, state), { state });
 
-  // FRESH-DRAFT RESET (rule 26 — in place, NEVER cloneAndInit).
+  // FRESH-DRAFT RESET (rule 26 - in place, NEVER cloneAndInit).
   // 1. New docId FIRST so the new report is a new row (not an upsert of a loaded one).
   adminReportDoc.docId = state.getUniqueId();
   // 2. Clear ALL field values (content + every infra/system field).
@@ -96,17 +96,17 @@ openManualLog.onResolution = async () => {
 
   // Hide the Status timeline + Amendments embedded sub-collection host sections on the
   // CREATE form. A brand-new manual report has no timeline (the first OPEN row is written
-  // on submit) and no amendments (reporter-appended only, never the admin — rule 30), so
+  // on submit) and no amendments (reporter-appended only, never the admin - rule 30), so
   // they would render as empty, confusing header bars. The report-DETAIL/manage view does
   // NOT use these Data-Doc host sections (it renders via the Display Doc), so hiding them
-  // on the Data-Doc form has no effect there — the manual-log form is the only Data-Doc
+  // on the Data-Doc form has no effect there - the manual-log form is the only Data-Doc
   // form render. (forCollection embedding/persistence is unaffected by `hidden`.)
   statusHistorySection.hidden = true;
   amendmentsSection.hidden = true;
 
   // Render the FORM. A Data-Doc form render IS correct for data ENTRY (the "never
   // sendResponse the Data Doc" rule is about READ/display screens, which use the Display
-  // Doc) — mirrors the user submit form (nav-submit-report.js: reportDoc.sendResponse()).
+  // Doc) - mirrors the user submit form (nav-submit-report.js: reportDoc.sendResponse()).
   adminReportDoc.confirm = "Log report";
   adminReportDoc.title = "Manually log a report";
   adminReportDoc.sendResponse();

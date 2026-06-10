@@ -1,10 +1,10 @@
-// Alerts / Digest — MOBILE renderer (wireframes §5: same list shape as web, restacked
+// Alerts / Digest - MOBILE renderer (wireframes §5: same list shape as web, restacked
 // for narrow widths). A titled card, an optional amber fallback banner, then one stacked
 // bordered block per SLA-breach (status pill + tracking id on top, then age · assigned
 // role and an "Open →" button). Composes the shared theme tokens (theme.js) + the
 // escapeHtml / payloadAttr / statusPillHtml / emptyStateHtml / formatRelative primitives
 // (format.js); every value is escaped at the boundary (NFR-2, rule 10). Pure
-// presentation — index.js owns the read, the breach computation, and the sort.
+// presentation - index.js owns the read, the breach computation, and the sort.
 //
 // NO reporter identity is present in the data (rule 30, ER-A2/A3, C1).
 
@@ -24,9 +24,9 @@ const ASSIGNED_SHORT = {
   [ROLE.PRIMARY_ADMIN]: "PRIMARY",
   [ROLE.SECONDARY_ADMIN]: "SECONDARY",
 };
-const assignedLabel = (assignedTo) => ASSIGNED_SHORT[assignedTo] || "—";
+const assignedLabel = (assignedTo) => ASSIGNED_SHORT[assignedTo] || "-";
 
-// Amber fallback banner — only when ≥1 report could not be notified (ER-D15).
+// Amber fallback banner - only when ≥1 report could not be notified (ER-D15).
 const bannerHtml = (count) => {
   if (!count) return "";
   const noun = count === 1 ? "report" : "reports";
@@ -37,7 +37,7 @@ const bannerHtml = (count) => {
     `margin-bottom:${SPACING.MD}px;color:${COLORS.WARNING};` +
     `font-size:${TYPOGRAPHY.SIZE_SM}px;font-weight:${TYPOGRAPHY.WEIGHT_MEDIUM};">` +
     `<span aria-hidden="true">⚠</span>` +
-    `<span>Could not notify ${count} ${noun} — review below so a missed email never ` +
+    `<span>Could not notify ${count} ${noun} - review below so a missed email never ` +
     `means an unseen report.</span>` +
     `</div>`
   );

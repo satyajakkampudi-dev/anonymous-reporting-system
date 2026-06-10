@@ -1,12 +1,12 @@
-// callQueueDoc — call-queue field schema (USER side: U-F15 creates the RINGING
+// callQueueDoc - call-queue field schema (USER side: U-F15 creates the RINGING
 // entry, U-F16 the voicemail/MISSED path, U-F17 the abandon/end transitions).
 //
 // IDENTITY-FREE by construction (SPEC.md "Anonymous calling data model"): this Doc
 // NEVER carries a reporter id/email/name. `attendedBy` is the ADMIN who claimed the
-// call (written admin-side only — never a reporter). `dbName` values MUST match the
+// call (written admin-side only - never a reporter). `dbName` values MUST match the
 // shared MongoDB collection (and the admin bundle's schema) since both apps read/write
 // the same `call_queue_${systemId}` documents; the JS field intentIds are per-bundle.
-// All fields hidden/system — the call has no rendered form (the reporter UI is the
+// All fields hidden/system - the call has no rendered form (the reporter UI is the
 // Daily.co meeting + ring banners), but the fields must exist so callQueueDoc.save()
 // serialises them and loadDocument({ callRef }) hydrates the Doc for later transitions.
 

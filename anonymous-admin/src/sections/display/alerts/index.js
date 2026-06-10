@@ -1,49 +1,49 @@
 // Display section: Alerts / Digest (schema id: alertsDigest, row 8). A-D-alerts fills
 // the card with the in-app safety net (A-F19, ER-D15): a notification-failure fallback
 // banner + a list of SLA-breaching reports, so a missed email or a slipped SLA is never
-// an unseen report. The CardsSet + placeholder Card were built in A-DISPLAY-SHELL —
-// content only here. readOnly: true (set on the shell card) — every breach row hosts an
+// an unseen report. The CardsSet + placeholder Card were built in A-DISPLAY-SHELL -
+// content only here. readOnly: true (set on the shell card) - every breach row hosts an
 // inline "Open →" button (data-action="intent" data-intent-id="openManageReport"), so
 // the card surface must not swallow the click. Distinct framework ids from any Data Doc
-// section (ids are global — rule 7).
+// section (ids are global - rule 7).
 //
 // THIS IS FRAME A-F19. The digest content is computed entirely in this synchronous
 // onResponse render handler; there is no separate intent that aggregates the data.
 //
-// DATA SOURCE — same gateway contract as the queue/dashboard. onResponse is a Context-A
+// DATA SOURCE - same gateway contract as the queue/dashboard. onResponse is a Context-A
 // render handler called SYNCHRONOUSLY during adminDisplayDoc.sendResponse() (CLAUDE.md
 // "Render handlers are NOT awaited"), so it cannot await a load. It reads the
-// gateway-loaded reportsCollection.rows (populated by app-start's loadReportsForAdmin —
+// gateway-loaded reportsCollection.rows (populated by app-start's loadReportsForAdmin -
 // rule 15; the SINGLE admin read path) and computes the SLA-breach set in code. Every
 // row is re-stripped through applyAdminProjection as a second anonymity layer.
 //
 // SLA BREACH (D11): OPEN unactioned ≥ 24h, OR ESCALATED unactioned ≥ 24h. OPEN age runs
 // from createdOn; ESCALATED age runs from the last write (updatedOn, the escalation
-// time for a report untouched since — there is no dedicated escalatedOn field; falls
+// time for a report untouched since - there is no dedicated escalatedOn field; falls
 // back to createdOn). Thresholds are the shared TIMING.SLA_* constants (rule 19), so the
 // in-app twin and the email digest job (A-F18) breach on the SAME rule.
 //
 // The breach predicate itself (slaForReport + buildBreaches) now lives in the shared
-// lib/sla.js — extracted (A-F18) so the email digest backstop and this in-app twin use
+// lib/sla.js - extracted (A-F18) so the email digest backstop and this in-app twin use
 // ONE identical rule and cannot drift. This section imports buildBreaches and computes
 // the breach set over the gateway-loaded rows; behaviour is unchanged from when the
 // predicate lived inline here.
 //
 // NOTIFICATION-FAILURE BANNER (ER-D15). The durable, cross-admin failure store does NOT
-// exist yet — lib/notifications.js currently only D.log's best-effort failures, and the
+// exist yet - lib/notifications.js currently only D.log's best-effort failures, and the
 // senders (A-F15/A-F17) are unbuilt. A failure occurs in ANOTHER admin's invocation, so
 // it must live in a sharedField, which this synchronous, non-awaited handler cannot read
 // directly. We therefore consume a SYNCHRONOUS state stash (STATE_KEYS.NOTIFICATION_
-// FAILURES) — exactly the CURRENT_REPORT_EVIDENCE pattern: a future Context-B alerts nav
+// FAILURES) - exactly the CURRENT_REPORT_EVIDENCE pattern: a future Context-B alerts nav
 // frame reads the sharedField and stashes it before sendResponse. Until that lands the
 // stash is absent → no banner (empty-safe). Flagged for a /frontm-fix-task; this display
 // lights the banner up automatically once the stash is produced. The SLA-breach list is
 // independent of this and verifiable on the live runtime now.
 //
-// ANONYMITY (the dominant constraint — C1 / rule 30 / ER-A2/A3): this section binds NO
+// ANONYMITY (the dominant constraint - C1 / rule 30 / ER-A2/A3): this section binds NO
 // reporter-identity field and NEVER queries `reports` itself; its only source is the
 // gateway-loaded rows (identity-free by construction, stripped again here). The
-// notification-failure descriptors carry only reportId + failedOn — never a recipient
+// notification-failure descriptors carry only reportId + failedOn - never a recipient
 // address or reporter id.
 //
 // EMPTY-SAFE: this is a screen-level card (like the queue/dashboard), so it always
@@ -137,7 +137,7 @@ alertsDigestDisplaySection.onResponse = () => {
   const allBreaches = buildBreaches(reports);
   const failures = readNotificationFailures();
 
-  // In-memory pagination (rule 36) — slice the computed breach list; the failure-banner
+  // In-memory pagination (rule 36) - slice the computed breach list; the failure-banner
   // count stays over the FULL set (not the page). Page-change re-renders the dashboard via
   // OPEN_DASHBOARD (the alerts panel lives on the Dashboard screen).
   const page = Number(state.getField(STATE_KEYS.ALERTS_PAGE)) || 0;

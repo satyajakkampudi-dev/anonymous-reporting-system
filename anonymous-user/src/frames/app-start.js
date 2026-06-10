@@ -5,11 +5,11 @@
 // Lambda invocation only and the next invocation upserts an empty doc.
 //
 // Order is non-negotiable:
-//   1. Context.CreateAndInit("mainApp") FIRST — wipes the buffer, runs onInit, sets
+//   1. Context.CreateAndInit("mainApp") FIRST - wipes the buffer, runs onInit, sets
 //      state.currentTabId (the gate Field.setAutoSaveFieldValue checks).
 //   2. THEN load the reporter's reports (My Reports list scope; data-loading table).
 //   3. THEN render the DISPLAY Doc (Two-Doc, rule 4/8): hide the tab bar, then
-//      reportDisplayDoc.sendResponse(). reportDoc (the Data Doc) is NEVER sent — it
+//      reportDisplayDoc.sendResponse(). reportDoc (the Data Doc) is NEVER sent - it
 //      owns the Fields + persistence; reportDisplayDoc owns the CardsSet screens.
 
 import { Context } from "@frontmltd/frontmjs/core/Context";
@@ -41,16 +41,16 @@ import "../sections/display/detail-actions";
 import "../sections/display/access-refusal";
 
 export const appStart = async () => {
-  // 0. Context bootstrap FIRST (U-F0a, framework-mapping rule 31) — Context.CreateAndInit
+  // 0. Context bootstrap FIRST (U-F0a, framework-mapping rule 31) - Context.CreateAndInit
   //    creates the conversation tab / state.currentTabId that ANY render needs, deny or
   //    allow. Skipping it on the deny path renders a BLANK screen (no tab to paint into).
   //    Running it for a denied user is harmless (an empty tab; they perform no field writes).
   await Context.CreateAndInit(userTab(CONTEXT.MAIN_APP, state), { state });
 
-  // 0a. Access gate — pure licence-role check: the reporter app requires the FrontM
-  //     `quitelineenduser` role (no registry fallback — no reporter allow-list collection).
+  // 0a. Access gate - pure licence-role check: the reporter app requires the FrontM
+  //     `quitelineenduser` role (no registry fallback - no reporter allow-list collection).
   //     On DENY: render the Restricted screen via the Display Doc (showScreen + sendResponse,
-  //     like every other screen) and STOP — BEFORE the reports load (no data for a denied user).
+  //     like every other screen) and STOP - BEFORE the reports load (no data for a denied user).
   D.warning({
     message: "U-F0a: reporter access gate decision",
     data: { client: state.client, roles: state.user && state.user.roles },
@@ -68,7 +68,7 @@ export const appStart = async () => {
 
   // 3. Render the Display Doc on the Home screen (not all 8 sections stacked).
   //    NOTE: do NOT set tabBarHidden = true. It leaves the conversation with no active
-  //    tab, so the framework never sets state.currentTabId — and every subsequent
+  //    tab, so the framework never sets state.currentTabId - and every subsequent
   //    invoke_intent nav (Context.Create(state.currentTabId)) then crashes with "Cannot
   //    set properties of undefined (setting 'currentTabId')". Sailors-cart keeps the tab
   //    bar visible for exactly this reason; leave it at the framework default.

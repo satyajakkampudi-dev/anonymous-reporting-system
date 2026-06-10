@@ -1,20 +1,20 @@
 // Display section: Report queue (schema id: reportQueue, row 1).
 //
 // Shell (Section + CardsSet + placeholder Card + grid) was built in A-DISPLAY-SHELL;
-// A-D-queue fills the card content. readOnly: true — every row hosts an inline
+// A-D-queue fills the card content. readOnly: true - every row hosts an inline
 // "Open" button (data-action="intent" data-intent-id="openManageReport") and the
 // quick-filter chips re-invoke openQueue, so the card surface must not swallow them.
 //
 // ANONYMITY (the dominant constraint): this section binds NO reporter-identity
 // field (rule 30) and NEVER queries `reports` itself (ER-A3). Its data is the
-// loadReportsForAdmin set — identity-free by construction (the admin bundle's Doc
+// loadReportsForAdmin set - identity-free by construction (the admin bundle's Doc
 // declares no identity fields) and stripped again here through applyAdminProjection
 // as a second defence layer.
 //
 // DATA SOURCE. onResponse is a Context-A render handler called SYNCHRONOUSLY during
 // adminDisplayDoc.sendResponse() (CLAUDE.md "Render handlers are NOT awaited"), so it
 // cannot await a load. It reads a prepared stash (STATE_KEYS.QUEUE_REPORTS) that the
-// role-filter + recusal (A-F4) and priority surfacing/sort (A-F5) tasks will fill —
+// role-filter + recusal (A-F4) and priority surfacing/sort (A-F5) tasks will fill -
 // exactly the A-F2 → DASHBOARD_STATS contract used by the dashboard. Until those ship,
 // the stash is absent and the renderer FALLS BACK to the gateway-loaded
 // reportsCollection.rows (populated by app-start's loadReportsForAdmin call), so the
@@ -27,7 +27,7 @@
 //
 // EMPTY-SAFE: onResponse fires for every sendResponse(), including the no-reports
 // case (empty list → "No reports match this view."). Distinct framework ids from any
-// Data Doc section — ids are global (rule 7).
+// Data Doc section - ids are global (rule 7).
 
 import { Section } from "@frontmltd/frontmjs/core/Section";
 import { Card, CardsSet } from "@frontmltd/frontmjs/core/Card";
@@ -91,7 +91,7 @@ const QUEUE_FILTER_CHIPS = [
 ];
 
 // Role-aware chip set. ESCALATED reports are routed to the SECONDARY admin and HIDDEN
-// from the PRIMARY's queue by the A-F4 role filter (roleSees) — so the "Escalated" chip
+// from the PRIMARY's queue by the A-F4 role filter (roleSees) - so the "Escalated" chip
 // is dead for the primary (always empty). Show it only to the secondary; everyone else
 // gets the rest.
 const chipsForRole = (role) =>
@@ -99,7 +99,7 @@ const chipsForRole = (role) =>
     (c) => c.key !== QUEUE_FILTER.ESCALATED || role === ROLE.SECONDARY_ADMIN
   );
 
-// Derived priority flag (display_elements "Priority" → badge). Pure presentation —
+// Derived priority flag (display_elements "Priority" → badge). Pure presentation -
 // the SORT that floats these to the top is A-F5's job; we only tag the row.
 const isPriorityReport = (r) =>
   r.severity === SEVERITY.CRITICAL ||
@@ -139,7 +139,7 @@ reportQueueDisplaySection.onResponse = () => {
     // Navigation contract consumed by the renderers' buttons.
     openIntent: INTENT.OPEN_MANAGE_REPORT, // per-row Open → manage/detail
     filterIntent: INTENT.OPEN_QUEUE, // chip → re-run the queue with a filter
-    // Prev/next control (rule 36) — carries the active filter so paging preserves it.
+    // Prev/next control (rule 36) - carries the active filter so paging preserves it.
     paginationHtml: renderPaginationControls({
       page,
       hasMore,

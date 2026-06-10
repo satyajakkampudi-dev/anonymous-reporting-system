@@ -1,18 +1,18 @@
-// Shared availability writer — the SINGLE place that writes the caller's OWN on-call
+// Shared availability writer - the SINGLE place that writes the caller's OWN on-call
 // presence to the admin-users registry. Extracted from A-F20 (setAvailability) so the
 // call-answer (A-F21, busy-on-answer, OQ-12) and call-end (A-F22, available-on-end)
 // frames reuse the EXACT same load-own-row + guarded-save discipline rather than
-// duplicating it (rule 14 — single chokepoint).
+// duplicating it (rule 14 - single chokepoint).
 //
 // Context-B safe: the helper loads the caller's own row fresh by their userId, applies
 // the validated availability, and saves with abort detection. If no curated row exists
 // it SELF-SEEDS the caller's OWN row from their FrontM entitlement (so on-call / notify
-// / ring work without the out-of-band D3 seed — dev convenience; gate before prod if
+// / ring work without the out-of-band D3 seed - dev convenience; gate before prod if
 // strict seeding is enforced). It NEVER addresses any row but the caller's own (the key
 // is always state.user.userId, never a payload field).
 //
 // ANONYMITY (rule 30): the only identity touched is the CALLER'S OWN, which is theirs to
-// read/write — never a reporter's. No reporter-identity field exists on adminUserDoc.
+// read/write - never a reporter's. No reporter-identity field exists on adminUserDoc.
 
 import { Context } from "@frontmltd/frontmjs/core/Context";
 import { D, state } from "@frontmltd/frontmjs/core/State";
@@ -34,13 +34,13 @@ import {
 } from "../../../lib/constants";
 import { CONTEXT } from "../constants";
 
-// The closed set of writable presence states (rule 19) — anything outside it is rejected.
+// The closed set of writable presence states (rule 19) - anything outside it is rejected.
 const VALID_AVAILABILITY = Object.values(AVAILABILITY);
 
 // Set the CALLER'S OWN availability to `availability` (must be a known AVAILABILITY
 // enum member). Returns { ok: boolean, reason?: string }. Logs every non-ok path.
 // Best-effort by design for the call frames: a failure to flip presence must not strand
-// a successfully-claimed/ended call — the caller decides whether to surface it.
+// a successfully-claimed/ended call - the caller decides whether to surface it.
 //
 // `attach` (default true): when the caller has ALREADY attached the context in this
 // invocation (A-F21/A-F22 attach before they load the call-queue row), pass false to
@@ -51,7 +51,7 @@ export const setOwnAvailability = async (
 ) => {
   if (!VALID_AVAILABILITY.includes(availability)) {
     D.log({
-      message: "setOwnAvailability rejected — invalid availability value",
+      message: "setOwnAvailability rejected - invalid availability value",
       data: { availability },
     });
     return { ok: false, reason: "invalid" };
@@ -59,32 +59,32 @@ export const setOwnAvailability = async (
 
   const userId = state.user?.userId;
   if (!userId) {
-    D.log({ message: "setOwnAvailability — caller identity unavailable" });
+    D.log({ message: "setOwnAvailability - caller identity unavailable" });
     return { ok: false, reason: "no-identity" };
   }
 
   // Attach + load the caller's OWN row fresh (keyed by their own userId).
   if (attach) {
     // Stable On-call tab (rule 37): the only attach=true caller is setAvailability,
-    // which re-renders the On-call screen — so reuse its tab. (Call frames pass
+    // which re-renders the On-call screen - so reuse its tab. (Call frames pass
     // attach=false and attach their own context.)
     await Context.CreateAndInit(userTab(CONTEXT.ON_CALL, state), { state });
   }
   await adminUserDoc.loadDocument({ adminUserId: userId });
 
-  // Existence — a hydrated row carries its primary key. If the caller has NO curated
+  // Existence - a hydrated row carries its primary key. If the caller has NO curated
   // registry row, SELF-SEED their OWN row from their FrontM entitlement so on-call
   // presence (and, via the seeded row, notifications / on-call ring / call answering)
   // works without the out-of-band D3 seed. Only the caller's OWN identity is written
   // (adminUserId = state.user.userId, their own email, the role from their FrontM grant)
-  // — anonymity-safe (never a reporter). NOTE (dev): if strict out-of-band seeding is
+  // - anonymity-safe (never a reporter). NOTE (dev): if strict out-of-band seeding is
   // enforced later, gate or remove this self-seed.
   if (!adminUserDoc.f[adminUserIdField.id]?.value) {
     const frontmRole = frontmAdminRole(state);
     if (!frontmRole) {
       D.log({
         message:
-          "setOwnAvailability — no registry row and caller is not an admin",
+          "setOwnAvailability - no registry row and caller is not an admin",
         data: { availability },
       });
       return { ok: false, reason: "not-admin" };
@@ -95,23 +95,23 @@ export const setOwnAvailability = async (
     adminUserDoc.f[adminRoleField.id].value = roleToAdminRole(frontmRole);
     adminUserDoc.f[adminScopeField.id].value = SCOPE.GLOBAL;
     D.log({
-      message: "setOwnAvailability — self-seeding caller's admin-users row",
+      message: "setOwnAvailability - self-seeding caller's admin-users row",
       data: { role: roleToAdminRole(frontmRole) },
     });
   }
 
-  // Apply. Presence is last-write-wins (no version/CAS — not a report transition).
+  // Apply. Presence is last-write-wins (no version/CAS - not a report transition).
   adminUserDoc.f[availabilityField.id].value = availability;
   adminUserDoc.f[adminUpdatedOnField.id].value = Date.now();
 
-  // Persist. A save abort adds to the error stack WITHOUT throwing — detect it the same
+  // Persist. A save abort adds to the error stack WITHOUT throwing - detect it the same
   // way the transition frames do and do not claim success.
   const errorsBefore = (state.errorStack || []).length;
   try {
     await adminUserDoc.save();
   } catch (error) {
     D.log({
-      message: "setOwnAvailability — admin-users save failed",
+      message: "setOwnAvailability - admin-users save failed",
       data: { availability, error: String(error) },
     });
     return { ok: false, reason: "save-failed" };

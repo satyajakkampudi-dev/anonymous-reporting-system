@@ -1,9 +1,9 @@
-// Amendments — MOBILE renderer (wireframes §4 amendments card): same data as web,
+// Amendments - MOBILE renderer (wireframes §4 amendments card): same data as web,
 // restacked for narrow widths. A titled card header with a full-width "+ Add" intent
 // button, then one stacked block per amendment (When, Note, then a generous-tap
 // evidence link). APPEND-ONLY (D16, rule 25): no edit/delete affordance. Composes
 // shared theme tokens (theme.js) and the escapeHtml / intentButtonHtml /
-// emptyStateHtml / formatDateTime primitives (format.js) — every interpolated value is
+// emptyStateHtml / formatDateTime primitives (format.js) - every interpolated value is
 // escaped at the boundary (NFR-2, rule 10). Evidence URLs are PRE-SIGNED in index.js
 // before sendResponse; this renderer never sees an S3 key (rule 11/18). Pure presentation.
 
@@ -61,13 +61,13 @@ const amendmentBlock = (a) =>
   `<div style="margin-top:${SPACING.SM}px;">` +
   label("Note") +
   `<div style="font-size:${TYPOGRAPHY.SIZE_MD}px;color:${COLORS.TEXT};margin-top:2px;` +
-  `white-space:pre-wrap;word-break:break-word;">${escapeHtml(a.note || "—")}</div>` +
+  `white-space:pre-wrap;word-break:break-word;">${escapeHtml(a.note || "-")}</div>` +
   `</div>` +
   evidenceBlock(a.evidence) +
   `</div>`;
 
 export const renderMobile = (data) => {
-  // No report loaded (Home / My-Reports screens) — emit nothing (empty-safe).
+  // No report loaded (Home / My-Reports screens) - emit nothing (empty-safe).
   if (!data.hasReport) return "";
 
   const body = data.amendments.length

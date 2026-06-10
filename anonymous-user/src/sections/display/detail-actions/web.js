@@ -1,9 +1,9 @@
-// Report detail actions — WEB renderer (wireframes §4 footer action bar, spanning
+// Report detail actions - WEB renderer (wireframes §4 footer action bar, spanning
 // the full width below the main/timeline split). A title-less bar: lifecycle actions
 // (Amend / Withdraw) on the left, resolution responses (Accept / Reject) on the right.
-// Buttons are pre-gated upstream (index.js, via STATUS_META) — this renderer only
+// Buttons are pre-gated upstream (index.js, via STATUS_META) - this renderer only
 // lays out whatever it is handed; an empty set → it emits nothing (empty-safe). Pure
-// presentation: composes the shared intentButtonHtml primitive (format.js — which
+// presentation: composes the shared intentButtonHtml primitive (format.js - which
 // escapes the label and JSON-escapes the data-payload, NFR-2 / rule 10) and theme
 // tokens (theme.js). No buttons are invented here; the legal set is decided in index.js.
 
@@ -56,7 +56,7 @@ const buttonGroup = (reportId, buttons) =>
   `</div>`;
 
 // Reopen-cap hint (D10): shown when the report is RESOLVED but already reopened once,
-// so Reject is withheld — explains why only Accept remains. Muted, full-width line.
+// so Reject is withheld - explains why only Accept remains. Muted, full-width line.
 const reopenCapNoteHtml = (note) =>
   !note
     ? ""
@@ -65,7 +65,7 @@ const reopenCapNoteHtml = (note) =>
       `${escapeHtml(note)}</div>`;
 
 export const renderWeb = (data) => {
-  // No legal action AND no hint (no report loaded, or terminal status) — emit nothing.
+  // No legal action AND no hint (no report loaded, or terminal status) - emit nothing.
   if (!data.hasActions && !data.reopenCapNote) return "";
 
   const bar = data.hasActions

@@ -1,12 +1,12 @@
-// reportDoc — "Status timeline" embedded sub-collection (rendering: display_only, read-only).
+// reportDoc - "Status timeline" embedded sub-collection (rendering: display_only, read-only).
 //
 // forCollection: true on reportDoc → stored as the embedded array `statusHistory`
 // on the parent report. WRITTEN BY THE TRANSITION PATH ONLY (lib/ticket-status.js
-// transitions in both apps) — never by a reporter popup; pure display on the user
+// transitions in both apps) - never by a reporter popup; pure display on the user
 // side (no add/edit/delete intent, rule 25). The timeline HTML view is a separate
 // Display Doc section (U-D-statushistory).
 //
-// actorRole is ROLE ONLY, never an id (anonymity, SPEC.md) — REPORTER /
+// actorRole is ROLE ONLY, never an id (anonymity, SPEC.md) - REPORTER /
 // PRIMARY_ADMIN / SECONDARY_ADMIN / SYSTEM. All fields hidden (data-only).
 
 import { Section } from "@frontmltd/frontmjs/core/Section";
@@ -23,7 +23,7 @@ export const statusHistorySection = new Section("statusHistorySection", {
   columns: 1,
   collapsable: false,
   forCollection: true,
-  // Hidden on the Data-Doc SUBMIT form — a report being created has no timeline yet, so
+  // Hidden on the Data-Doc SUBMIT form - a report being created has no timeline yet, so
   // showing an empty "Status timeline" section there is noise. This is only the embedded
   // sub-collection HOST (data binding/persistence is unaffected by hidden); the reporter
   // sees the timeline in the DETAIL view via the Display Doc's own status-history card.
@@ -74,7 +74,7 @@ export const toStatusField = new Field("toStatusField", {
   state,
 });
 
-// Role only — NEVER an id (anonymity).
+// Role only - NEVER an id (anonymity).
 export const actorRoleField = new Field("actorRoleField", {
   title: "Actor role",
   doc: statusHistoryDoc,

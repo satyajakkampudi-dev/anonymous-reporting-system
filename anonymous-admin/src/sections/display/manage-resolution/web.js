@@ -1,10 +1,10 @@
-// Manage detail resolution — WEB renderer (wireframes §4 "Resolution" card, admin side):
+// Manage detail resolution - WEB renderer (wireframes §4 "Resolution" card, admin side):
 // a titled card holding the admin-written resolution text and the "Resolved on" date, with
 // an empty-state body ("none yet") until a resolution is recorded, plus an optional
 // read-only block surfacing the reporter's reason for rejecting an earlier resolution
 // (ER-B5/D10). Pure presentation: composes shared theme tokens (theme.js) and the
-// escapeHtml / toneColors primitives (format.js / theme.js) — every interpolated value is
-// escaped at the primitive boundary (NFR-2, rule 10). No buttons here — Resolve / Close as
+// escapeHtml / toneColors primitives (format.js / theme.js) - every interpolated value is
+// escaped at the primitive boundary (NFR-2, rule 10). No buttons here - Resolve / Close as
 // rejected live in the manage-actions card. index.js owns the data.
 //
 // NO reporter identity is present in the data (rule 30, ER-A2/A3, C1).
@@ -22,7 +22,7 @@ const sectionTitle = (text) =>
   `<div style="font-size:${TYPOGRAPHY.SIZE_MD}px;font-weight:${TYPOGRAPHY.WEIGHT_BOLD};` +
   `color:${COLORS.TEXT};margin-bottom:${SPACING.MD}px;">${escapeHtml(text)}</div>`;
 
-// Read-only "reporter rejected an earlier resolution" block — shown ONLY when the reporter
+// Read-only "reporter rejected an earlier resolution" block - shown ONLY when the reporter
 // supplied a reject reason (ER-B5/D10). WARNING tone so the officer registers that this
 // report was reopened and why. The officer cannot edit it (the reporter wrote it).
 const rejectReasonBlock = (reason) => {
@@ -41,7 +41,7 @@ const rejectReasonBlock = (reason) => {
 };
 
 export const renderWeb = (data) => {
-  // No report open (Dashboard / Queue screens, or not found) — emit nothing (empty-safe).
+  // No report open (Dashboard / Queue screens, or not found) - emit nothing (empty-safe).
   if (!data.hasReport) return "";
 
   const body = data.resolution

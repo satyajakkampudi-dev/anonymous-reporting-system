@@ -1,9 +1,9 @@
-// Evidence-slot progressive disclosure — helpers + onClick wiring (admin manual-log).
+// Evidence-slot progressive disclosure - helpers + onClick wiring (admin manual-log).
 //
 // The "Log a report" form shows only "Evidence file 1" by default; a "+ Add another
 // file" button reveals slots 2–5 one at a time (mirror of the user-app
 // frames/evidence-slots.js). Handlers live in frames/ (AGENTS.md) so they can import
-// the Field/Button refs from sections/manual-log — the section must NOT import this
+// the Field/Button refs from sections/manual-log - the section must NOT import this
 // frame (one-way: frames/evidence-slots → sections/manual-log; no circular dep).
 //
 // The Field `hidden` flags are module-level mutables that reset on a Lambda cold start
@@ -12,7 +12,7 @@
 // before any slot-dependent logic runs.
 //
 // revealNextEvidenceSlot re-renders the manual-log form via adminReportDoc.sendResponse()
-// — the same Data Doc openManualLog renders (nav-manual-log.js). Resetting field VALUES
+// - the same Data Doc openManualLog renders (nav-manual-log.js). Resetting field VALUES
 // happens ONLY in resetEvidenceSlots (called from openManualLog); the reveal click only
 // toggles `hidden` + re-renders, never clears values.
 
@@ -67,7 +67,7 @@ export function revealNextEvidenceSlot() {
   return true;
 }
 
-// Reset to "only slot 1 visible, + button visible" — for a fresh manual-log draft.
+// Reset to "only slot 1 visible, + button visible" - for a fresh manual-log draft.
 export function resetEvidenceSlots() {
   setVisibleCount(1);
   ATTACHMENT_FIELDS[0].hidden = false;

@@ -1,13 +1,13 @@
-// RECEIVER — "joinMeeting" lifecycle on the ADMIN bot (join-driven claim).
+// RECEIVER - "joinMeeting" lifecycle on the ADMIN bot (join-driven claim).
 //
 // When THIS admin joins the Daily meeting, the Loft backend fires the framework-convention
 // "joinMeeting" intent on the admin's bot. On WEB the Answer button (A-F21) has already
 // claimed (attendedBy set) → this is a guarded no-op. On MOBILE, lifting the native CallKit
-// call does NOT run A-F21 — so this is where the call gets claimed: RINGING -> ACTIVE, stamp
+// call does NOT run A-F21 - so this is where the call gets claimed: RINGING -> ACTIVE, stamp
 // the answering admin, go busy, stop the ring (own web ring + other admins). Mirrors
 // healthMariner joinMeetingIntent (attendCall + setAvailabilityStatus(busy) on join).
 //
-// Uses state.user.userId as attendedBy (the joiner IS this admin) — no joiner-detection.
+// Uses state.user.userId as attendedBy (the joiner IS this admin) - no joiner-detection.
 // INDEPENDENT INTENT (Context B). Triggered by the backend dispatching intentId "joinMeeting".
 
 import { Intent } from "@frontmltd/frontmjs/core/Intent";
@@ -33,7 +33,7 @@ import { CONTEXT } from "../../constants";
 
 export const callJoinedReceiver = Intent.Create({
   intentId: "joinMeeting",
-  prompt: "I joined the anonymous call — claim it (mobile path)",
+  prompt: "I joined the anonymous call - claim it (mobile path)",
   state,
 });
 

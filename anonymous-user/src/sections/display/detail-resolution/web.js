@@ -1,11 +1,11 @@
-// Report detail resolution — WEB renderer (wireframes §4 "Resolution" card, web
+// Report detail resolution - WEB renderer (wireframes §4 "Resolution" card, web
 // two-column layout, right rail under the timeline). A titled card holding the
 // admin-written resolution text and the "Resolved on" date. Shown ONLY when a
-// resolution is present (display_only, schema id detailResolution) — absent →
+// resolution is present (display_only, schema id detailResolution) - absent →
 // the renderer emits nothing (empty-safe; no empty card, no placeholder). Pure
 // presentation: composes shared theme tokens (theme.js) and the escapeHtml
 // primitive (format.js); every interpolated value is escaped at the boundary
-// (NFR-2, rule 10). No buttons here — Accept/Reject live in the detailActions card.
+// (NFR-2, rule 10). No buttons here - Accept/Reject live in the detailActions card.
 
 import { escapeHtml } from "../../../../../lib/utils/format";
 import { COLORS, SPACING, TYPOGRAPHY } from "../../../../../lib/utils/theme";
@@ -15,7 +15,7 @@ const sectionTitle = (text) =>
   `color:${COLORS.TEXT};margin-bottom:${SPACING.MD}px;">${escapeHtml(text)}</div>`;
 
 export const renderWeb = (data) => {
-  // No resolution yet (or no report loaded) — emit nothing (empty-safe).
+  // No resolution yet (or no report loaded) - emit nothing (empty-safe).
   if (!data.hasResolution) return "";
 
   const resolvedOn = data.resolvedOn

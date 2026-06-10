@@ -1,8 +1,8 @@
-// Navigation intent: openDashboard — the admin landing screen.
+// Navigation intent: openDashboard - the admin landing screen.
 //
 // Independent intent (Context B). Attaches to the existing context via Context.Create
-// (preserves the autoSaveBuffer — rule 22; NO re-loadDocument). Loads the queue set
-// through the anonymity gateway (rule 15). SCAFFOLD: placeholder render — the
+// (preserves the autoSaveBuffer - rule 22; NO re-loadDocument). Loads the queue set
+// through the anonymity gateway (rule 15). SCAFFOLD: placeholder render - the
 // aggregation stat-cards are A-F2 and the Display Doc is A-DISPLAY-SHELL.
 
 import { Intent } from "@frontmltd/frontmjs/core/Intent";
@@ -28,7 +28,7 @@ export const openDashboard = Intent.Create({
 
 openDashboard.onResolution = async () => {
   // Stable per-screen tab (rule 37): reuse the SAME contextId so the dashboard
-  // re-renders IN PLACE on every Alerts pagination / re-nav click — no new tab.
+  // re-renders IN PLACE on every Alerts pagination / re-nav click - no new tab.
   await Context.CreateAndInit(userTab(CONTEXT.MAIN_APP, state), { state });
 
   // Alerts breach-list page (rule 36). The alerts prev/next control re-opens the dashboard
@@ -42,7 +42,7 @@ openDashboard.onResolution = async () => {
 
   const reports = await loadReportsForAdmin({});
 
-  // A-F2: ROLE-SCOPED dashboard (REQUIREMENTS §3 / A-F4 — dashboard + queue are role-filtered).
+  // A-F2: ROLE-SCOPED dashboard (REQUIREMENTS §3 / A-F4 - dashboard + queue are role-filtered).
   // PRIMARY counts only PRIMARY-routed reports; SECONDARY counts everything (superset). Filter the
   // gateway set through the shared roleVisibleReports (same routing + recusal as the queue), then
   // aggregate. The dashboard renderer reads STATE_KEYS.DASHBOARD_STATS (rule 28, ER-A6).
@@ -50,7 +50,7 @@ openDashboard.onResolution = async () => {
   const identity = await resolveAdminIdentity();
   const visible = roleVisibleReports({ reports, viewingRole, identity });
   state.setField(STATE_KEYS.DASHBOARD_STATS, buildDashboardStats(visible));
-  // Stash the role-visible set for the Alerts breach renderer (sync — can't role-filter itself).
+  // Stash the role-visible set for the Alerts breach renderer (sync - can't role-filter itself).
   state.setField(STATE_KEYS.ALERTS_REPORTS, visible);
 
   // Route to the Dashboard screen (dashboard + alerts/digest visible; all other

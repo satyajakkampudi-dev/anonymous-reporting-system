@@ -1,8 +1,8 @@
-// On-call status (availability) — MOBILE renderer (wireframes §6: same content as web,
-// restacked for narrow widths — a titled card, the current presence pill, then the three
+// On-call status (availability) - MOBILE renderer (wireframes §6: same content as web,
+// restacked for narrow widths - a titled card, the current presence pill, then the three
 // state buttons full-width stacked, and the one-line "only available admins are rung"
 // note). Composes the shared theme tokens (theme.js) + the tonePillHtml / intentButtonHtml
-// primitives (format.js). Pure presentation — index.js owns the read.
+// primitives (format.js). Pure presentation - index.js owns the read.
 //
 // Three states, NEVER a boolean toggle (rule 30): the button matching the current state is
 // rendered "active" (filled with the state's tone); the others are calm outlines. Full-

@@ -1,8 +1,8 @@
-// Amendments — WEB renderer (wireframes §4 amendments card): a titled card whose
-// header carries a "+ Add" intent button, then a dense table — one row per amendment
+// Amendments - WEB renderer (wireframes §4 amendments card): a titled card whose
+// header carries a "+ Add" intent button, then a dense table - one row per amendment
 // (When · Note · Evidence). APPEND-ONLY (D16, rule 25): no edit/delete affordance.
 // Composes shared theme tokens (theme.js) and the escapeHtml / intentButtonHtml /
-// emptyStateHtml / formatDateTime primitives (format.js) — every interpolated value
+// emptyStateHtml / formatDateTime primitives (format.js) - every interpolated value
 // is escaped at the primitive boundary (NFR-2, rule 10). Evidence URLs are PRE-SIGNED
 // in index.js before sendResponse; this renderer never sees an S3 key (rule 11/18).
 // Pure presentation: index.js owns the data + sort logic.
@@ -48,7 +48,7 @@ const bodyCell = (inner, extra = "") =>
 
 // Evidence cell: a signed download link, a degraded plain name, or an em-dash.
 const evidenceCell = (evidence) => {
-  if (!evidence) return `<span style="color:${COLORS.TEXT_FAINT};">—</span>`;
+  if (!evidence) return `<span style="color:${COLORS.TEXT_FAINT};">-</span>`;
   const name = escapeHtml(evidence.fileName || "Evidence");
   if (evidence.url) {
     return (
@@ -57,7 +57,7 @@ const evidenceCell = (evidence) => {
       `text-decoration:none;word-break:break-word;">⬇ ${name}</a>`
     );
   }
-  // Signing failed / no bucket — show the name, never a broken link.
+  // Signing failed / no bucket - show the name, never a broken link.
   return (
     `<span style="color:${COLORS.TEXT_MUTED};word-break:break-word;">${name} ` +
     `<span style="color:${COLORS.TEXT_FAINT};">(link unavailable)</span></span>`
@@ -71,7 +71,7 @@ const rowHtml = (a) =>
     "white-space:nowrap;"
   ) +
   bodyCell(
-    `<span style="white-space:pre-wrap;word-break:break-word;">${escapeHtml(a.note || "—")}</span>`
+    `<span style="white-space:pre-wrap;word-break:break-word;">${escapeHtml(a.note || "-")}</span>`
   ) +
   bodyCell(evidenceCell(a.evidence)) +
   `</tr>`;
@@ -87,7 +87,7 @@ const tableHtml = (data) =>
   `</table>`;
 
 export const renderWeb = (data) => {
-  // No report loaded (Home / My-Reports screens) — emit nothing (empty-safe).
+  // No report loaded (Home / My-Reports screens) - emit nothing (empty-safe).
   if (!data.hasReport) return "";
 
   const shell = (inner) =>

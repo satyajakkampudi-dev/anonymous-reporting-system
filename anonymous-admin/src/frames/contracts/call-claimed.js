@@ -1,7 +1,7 @@
-// RECEIVER — MSG_CALL_CLAIMED (anonymous-user -> anonymous-admin).
+// RECEIVER - MSG_CALL_CLAIMED (anonymous-user -> anonymous-admin).
 //
 // Sent by the reporter (owner) app's join-driven claim (contracts/call-lifecycle.js) when an
-// admin JOINS the meeting without having used the web Answer button — i.e. the MOBILE path,
+// admin JOINS the meeting without having used the web Answer button - i.e. the MOBILE path,
 // where lifting the native CallKit call doesn't run A-F21. The owner app has already set the
 // call ACTIVE + attendedBy; this receiver runs in the answering admin's session and sets
 // THEIR presence to busy (the web path already does this in A-F21). Mirrors healthMariner's
@@ -26,7 +26,7 @@ import { CONTEXT } from "../../constants";
 
 export const callClaimedReceiver = Intent.Create({
   intentId: "callClaimedReceiver",
-  prompt: "Set me busy — I joined the anonymous call",
+  prompt: "Set me busy - I joined the anonymous call",
   state,
 });
 
@@ -42,7 +42,7 @@ callClaimedReceiver.onResolution = async () => {
   // Defensive: targeted to the answering admin; only they go busy.
   if (attendedBy && attendedBy !== state.user?.userId) {
     D.log({
-      message: "A-CALL-CLAIMED: not me — ignored",
+      message: "A-CALL-CLAIMED: not me - ignored",
       data: { attendedBy },
     });
     return;
@@ -54,7 +54,7 @@ callClaimedReceiver.onResolution = async () => {
   const busy = await setOwnAvailability(AVAILABILITY.BUSY, { attach: false });
 
   // 2. Silence THIS admin's audible WEB ring. The same admin may have been ringing on a
-  //    web session while they lifted the call on mobile — that web session is still showing
+  //    web session while they lifted the call on mobile - that web session is still showing
   //    the Answer/Dismiss banner and ringing. RING_STOP silences it (the banner re-render in
   //    step 4 dismisses the banner itself).
   try {
@@ -88,7 +88,7 @@ callClaimedReceiver.onResolution = async () => {
     });
   }
 
-  // 4. Render the On-call screen — dismisses the Answer/Dismiss banner (the incoming-call
+  // 4. Render the On-call screen - dismisses the Answer/Dismiss banner (the incoming-call
   //    section emits nothing once the call is no longer RINGING for this admin).
   showScreen(SCREEN.ON_CALL);
   adminDisplayDoc.sendResponse();

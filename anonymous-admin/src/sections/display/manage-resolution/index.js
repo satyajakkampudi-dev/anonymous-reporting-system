@@ -1,22 +1,22 @@
 // Display section: Manage detail resolution (schema id: manageResolution, row 4).
 // A-D-manageresolution fills the card with the admin-written resolution text + the
 // "Resolved on" date (shown when present) and the reporter-written reject reason
-// (read-only context here — the reporter wrote it when rejecting an earlier
-// resolution, ER-B5/D10). The CardsSet + placeholder were built in DISPLAY-SHELL —
-// content only here. Pure display (no buttons — Resolve/Close-as-rejected live in
+// (read-only context here - the reporter wrote it when rejecting an earlier
+// resolution, ER-B5/D10). The CardsSet + placeholder were built in DISPLAY-SHELL -
+// content only here. Pure display (no buttons - Resolve/Close-as-rejected live in
 // manage-actions) → readOnly omitted. Distinct ids (rule 7).
 //
 // DATA SOURCE (same gateway contract as manage-header / manage-content). onResponse is
 // a Context-A render handler called SYNCHRONOUSLY during adminDisplayDoc.sendResponse()
 // (CLAUDE.md "Render handlers are NOT awaited"), so it cannot await a load. The
-// openManageReport nav frame (Context B) has already run the anonymity gateway —
+// openManageReport nav frame (Context B) has already run the anonymity gateway -
 // loadReportForAdmin({ reportId }) → loadReportsForAdmin, which populates
-// reportsCollection.rows — and stashed the reportId (STATE_KEYS.CURRENT_REPORT_ID) in
+// reportsCollection.rows - and stashed the reportId (STATE_KEYS.CURRENT_REPORT_ID) in
 // the SAME invocation. This handler reads that id, finds the matching loaded row, and
 // re-strips it through applyAdminProjection as a second anonymity layer.
 //
 // ANONYMITY (the dominant constraint, C1 / rule 30 / ER-A2/A3): this section binds NO
-// reporter-identity field and NEVER queries `reports` itself — its only source is the
+// reporter-identity field and NEVER queries `reports` itself - its only source is the
 // gateway-loaded rows, identity-free by construction and stripped again here. resolution,
 // resolvedOn and rejectReason all survive adminProjection (none are excluded) and carry
 // zero reporter identity.
@@ -96,7 +96,7 @@ const readOpenedReport = () => {
 
 // resolvedOn is a NUMBER_FIELD (epoch-ms set by the admin RESOLVE transition), but
 // format defensively for either epoch-ms or an ISO string via the shared primitives
-// (compose, do not reinvent) — same helper as the reporter-side resolution renderer.
+// (compose, do not reinvent) - same helper as the reporter-side resolution renderer.
 // Empty → "".
 const formatResolvedOn = (value) => {
   if (value === null || value === "" || typeof value === "undefined") return "";
@@ -106,13 +106,13 @@ const formatResolvedOn = (value) => {
   return formatIsoDate(value);
 };
 
-// Build the card content on every render (empty-safe — no report open → no card).
+// Build the card content on every render (empty-safe - no report open → no card).
 manageResolutionDisplaySection.onResponse = () => {
   const report = readOpenedReport();
   const resolution = report?.resolution || "";
   const rejectReason = report?.rejectReason || "";
 
-  // Show the Resolution block ONLY once there is actual resolution CONTENT — i.e. after
+  // Show the Resolution block ONLY once there is actual resolution CONTENT - i.e. after
   // the report has been RESOLVED (or a reporter reject reason exists from a prior
   // resolution: REOPENED / closed). On OPEN / UNDER_REVIEW / ESCALATED there is no
   // resolution yet, so the block is hidden entirely (no "No resolution recorded yet"

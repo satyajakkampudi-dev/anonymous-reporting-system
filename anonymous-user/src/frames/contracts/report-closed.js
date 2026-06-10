@@ -1,20 +1,20 @@
-// X6 RECEIVER — MSG_REPORT_CLOSED (anonymous-admin -> anonymous-user).
+// X6 RECEIVER - MSG_REPORT_CLOSED (anonymous-admin -> anonymous-user).
 //
 // THE ANONYMITY LINCHPIN (see report-resolved.js for the full rationale). The admin
 // app holds NO reporterId (rule 30) and BROADCASTS this blind to EVERY user of the
 // user bot (auto-close.js A-F17 closeType=CLOSED_BY_SYSTEM; note-transition.js A-F11
-// CLOSED_REJECTED path — both AFTER save()). This receiver fires in EVERY reporter's
+// CLOSED_REJECTED path - both AFTER save()). This receiver fires in EVERY reporter's
 // context; the OWNERSHIP FILTER below prevents notifying the wrong reporter.
 //
 // INDEPENDENT INTENT (Context B). Matched by onMatching === MSG.REPORT_CLOSED.
 // Identity-free payload { reportId, closeType } under state.messageFromUser. We do
-// NOT trust closeType for the copy — notifyReporter re-reads the freshly-loaded
+// NOT trust closeType for the copy - notifyReporter re-reads the freshly-loaded
 // report's own status so the wording matches the persisted close state.
 //
 // FLOW (rule 20/21):
 //   1. reportId from the payload; missing -> silent no-op.
-//   2. Context.Create attach, loadDocument({ reportId }) — load by id before reading.
-//   3. OWNERSHIP FILTER — proceed only if reporterId === state.user.userId; otherwise
+//   2. Context.Create attach, loadDocument({ reportId }) - load by id before reading.
+//   3. OWNERSHIP FILTER - proceed only if reporterId === state.user.userId; otherwise
 //      (different reporter / not found / MANUAL-CALL empty reporterId) silent no-op.
 //   4. Owner -> notifyReporter(reportDoc, { event: CLOSED }) on the reporter's own
 //      channels.
@@ -44,7 +44,7 @@ reportClosedReceiver.onResolution = async () => {
   const { reportId } = state.messageFromUser || {};
   if (!reportId) {
     D.log({
-      message: "X6 receiver: MSG_REPORT_CLOSED missing reportId — ignored",
+      message: "X6 receiver: MSG_REPORT_CLOSED missing reportId - ignored",
     });
     return;
   }
@@ -52,10 +52,10 @@ reportClosedReceiver.onResolution = async () => {
   await Context.CreateAndInit(`user_${state.getUniqueId()}`, { state });
   await reportDoc.loadDocument({ reportId });
 
-  // OWNERSHIP FILTER — the anonymity linchpin.
+  // OWNERSHIP FILTER - the anonymity linchpin.
   if (!ownsReport({ reporterId: reporterIdField.value })) {
     D.log({
-      message: "X6 receiver: not the owning reporter — silent no-op",
+      message: "X6 receiver: not the owning reporter - silent no-op",
       data: { reportId },
     });
     return;

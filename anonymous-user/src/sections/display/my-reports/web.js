@@ -1,8 +1,8 @@
-// My Reports — WEB renderer (wireframes §3 "Web"): a dense table. Header row with
+// My Reports - WEB renderer (wireframes §3 "Web"): a dense table. Header row with
 // the filter chips, then one table row per report (Tracking ID · Status pill ·
 // Category · Urgency · Date · Open). Composes shared theme tokens (theme.js) and the
 // escapeHtml / statusPillHtml / intentButtonHtml / emptyStateHtml primitives
-// (format.js) — every interpolated value is escaped at the primitive boundary
+// (format.js) - every interpolated value is escaped at the primitive boundary
 // (NFR-2, rule 10). Pure presentation: index.js owns the data + filter logic.
 
 import {
@@ -101,7 +101,7 @@ const tableHtml = (data) =>
   `</table>`;
 
 export const renderWeb = (data) => {
-  // "Create report" CTA — top-right of the header. Emits openSubmitReport so the reporter
+  // "Create report" CTA - top-right of the header. Emits openSubmitReport so the reporter
   // can start a new report straight from the list (data.intents.submit).
   const createBtn = intentButtonHtml(
     data.intents.submit,
@@ -124,7 +124,7 @@ export const renderWeb = (data) => {
     inner +
     `</div>`;
 
-  // No reports at all — first-time reporter. Empty state + a way forward.
+  // No reports at all - first-time reporter. Empty state + a way forward.
   if (!data.hasAnyReports) {
     const submit = intentButtonHtml(
       data.intents.submit,

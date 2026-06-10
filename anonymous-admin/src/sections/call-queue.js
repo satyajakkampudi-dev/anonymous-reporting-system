@@ -1,7 +1,7 @@
-// callQueueDoc — call-queue field schema (admin answers/claims/ends calls, A-F21/22).
+// callQueueDoc - call-queue field schema (admin answers/claims/ends calls, A-F21/22).
 //
 // IDENTITY-FREE by construction (SPEC.md): NEVER a reporter id/email/name. `attendedBy`
-// is the ADMIN who claimed the call (admin-side only — never a reporter). All fields
+// is the ADMIN who claimed the call (admin-side only - never a reporter). All fields
 // hidden/system; defined here so loadDocument({ callRef }) hydrates the Doc. The
 // Incoming-call display card is A-DISPLAY-SHELL; the atomic-claim handler is A-F21.
 

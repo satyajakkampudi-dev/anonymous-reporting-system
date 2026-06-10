@@ -13,15 +13,15 @@ import "./sections/contact";
 import "./sections/evidence";
 import "./sections/amendments";
 import "./sections/status-history";
-// Reject-reason capture popup section (U-F11) — registers rejectReasonInputField on
+// Reject-reason capture popup section (U-F11) - registers rejectReasonInputField on
 // the standalone rejectReasonDoc. Imported before the reject-resolution frame, which
 // reads the field reference.
 import "./sections/reject-reason";
-// Call-queue field schema (U-F15) — attaches the identity-free fields to the shared
+// Call-queue field schema (U-F15) - attaches the identity-free fields to the shared
 // callQueueDoc so the start-anonymous-call frame can save the RINGING entry. Imported
 // before that frame, which reads the field references.
 import "./sections/call-queue";
-// Voicemail capture popup section (U-F16) — registers the audio FILE_FIELD on the
+// Voicemail capture popup section (U-F16) - registers the audio FILE_FIELD on the
 // transient voicemailDoc. Imported before the call-timeout frame, which reads it.
 import "./sections/voicemail";
 
@@ -35,7 +35,7 @@ import "./frames/report-validation";
 import "./frames/submit-report";
 
 // --- Evidence slot progressive disclosure (side-effect: bind
-//     addEvidenceSlotButtons.onClick — "+ Add another file" reveals slots 2–5). ---
+//     addEvidenceSlotButtons.onClick - "+ Add another file" reveals slots 2–5). ---
 import "./frames/evidence-slots";
 
 // --- Navigation intents (side-effect: register the intents) ---
@@ -58,25 +58,25 @@ import "./frames/start-anonymous-call";
 // Registers the callTimeout intent + wires voicemailDoc.onSubmit; needs the voicemail
 // section + report-details/evidence/status-history Field exports above.
 import "./frames/call-timeout";
-// Call end/abandon (U-F17) — status-conditional guarded transition handler
+// Call end/abandon (U-F17) - status-conditional guarded transition handler
 // (RINGING->ABANDONED, ACTIVE->ENDED; ER-C12). Registers the callEnd intent; needs the
 // call-queue section Field exports above.
 import "./frames/call-end";
-// Meeting-lifecycle receivers (endMeeting / leaveUser) — the reporter app OWNS the Daily
+// Meeting-lifecycle receivers (endMeeting / leaveUser) - the reporter app OWNS the Daily
 // meeting, so the Loft backend fires these on THIS bot; they end the call + notify the
 // answering admin to go available (MSG_CALL_ENDED). See the frame header.
 import "./frames/contracts/call-lifecycle";
 
 // --- Cross-app receivers (side-effect: register the inbound bot-to-bot intents).
 //     Admin -> user contracts; each loads the report by id and notifies ONLY the
-//     owning reporter (ownership filter — the anonymity linchpin). X4/X5/X6. ---
+//     owning reporter (ownership filter - the anonymity linchpin). X4/X5/X6. ---
 import "./frames/contracts/report-resolved";
 import "./frames/contracts/report-status-changed";
 import "./frames/contracts/report-closed";
 
 import { appStart } from "./frames/app-start";
 
-// Shell UI flags — mirror of BRD §8.1 (rule 23). The ONLY non-default row for
+// Shell UI flags - mirror of BRD §8.1 (rule 23). The ONLY non-default row for
 // anonymous-user is contextAware, REQUIRED because reportDoc is autoSave: true
 // (draft autosave, U-F9). Read by the framework before first render.
 state.onConfig = () => {
@@ -85,7 +85,7 @@ state.onConfig = () => {
 
 export const main = Intent.Create({
   intentId: SYSTEM_INTENTS.MAIN,
-  prompt: "Anonymous Reporting — submit and track reports",
+  prompt: "Anonymous Reporting - submit and track reports",
   state,
 });
 

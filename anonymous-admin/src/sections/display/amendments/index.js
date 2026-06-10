@@ -1,8 +1,8 @@
 // Display section: Amendments (schema id: amendments, row 7). A-D-amendments fills the
 // card with a READ-ONLY table of amendment rows (when · note · optional signed-URL
 // evidence) read from the report's embedded `amendments` array. The admin side is
-// read-only — the reporter appends rows (U-F13); there is NO +Add / edit / delete here
-// (rule 30). The CardsSet + placeholder were built in DISPLAY-SHELL — content only here.
+// read-only - the reporter appends rows (U-F13); there is NO +Add / edit / delete here
+// (rule 30). The CardsSet + placeholder were built in DISPLAY-SHELL - content only here.
 // Pure display, read-only → readOnly omitted. Distinct ids from the Data Doc's
 // amendmentsSection (src/sections/amendments.js): the Data Doc owns the forCollection
 // rows; this Display Doc section owns the CardsSet (framework-mapping rule 7).
@@ -11,16 +11,16 @@
 // onResponse is a Context-A render handler called SYNCHRONOUSLY during
 // adminDisplayDoc.sendResponse() (CLAUDE.md "Render handlers are NOT awaited"), so it
 // cannot await a load or an S3 signing. The openManageReport nav frame (Context B) has
-// already run the anonymity gateway — loadReportForAdmin({ reportId }) → loadReportsForAdmin,
-// which populates reportsCollection.rows — and stashed the reportId
+// already run the anonymity gateway - loadReportForAdmin({ reportId }) → loadReportsForAdmin,
+// which populates reportsCollection.rows - and stashed the reportId
 // (STATE_KEYS.CURRENT_REPORT_ID) in the SAME invocation. This handler reads that id, finds
 // the matching loaded row, re-strips it through applyAdminProjection (second anonymity
 // layer), and reads its embedded `amendments` array.
 //
 // EVIDENCE (consume-only, mirrors manage-content). Signing requires cloud-only AWS creds
-// and MUST happen BEFORE sendResponse (rule 11/18) — never in this synchronous,
+// and MUST happen BEFORE sendResponse (rule 11/18) - never in this synchronous,
 // non-awaited onResponse. We read each amendment's amendmentEvidenceKey media envelope for
-// its S3 key (reading the key for a lookup is allowed — CLAUDE.md "Special Case: Media
+// its S3 key (reading the key for a lookup is allowed - CLAUDE.md "Special Case: Media
 // Fields"; the raw key is NEVER embedded in HTML) and overlay the signed URL from the
 // STATE_KEYS.CURRENT_REPORT_EVIDENCE map (keyed by S3 key). A key with no signed URL →
 // url:"" → the renderer shows the filename marked "(link unavailable)", never a broken
@@ -30,10 +30,10 @@
 // per-key signing failure / expiry.
 //
 // ANONYMITY (the dominant constraint, C1 / rule 30 / ER-A2/A3): this section binds NO
-// reporter-identity field and NEVER queries `reports` itself — its only source is the
+// reporter-identity field and NEVER queries `reports` itself - its only source is the
 // gateway-loaded rows, identity-free by construction and stripped again here. The embedded
 // `amendments` rows carry only amendmentId / amendmentNote / amendmentEvidenceKey /
-// amendedOn — no reporter id.
+// amendedOn - no reporter id.
 //
 // EMPTY-SAFE: onResponse fires for every sendResponse(), including the no-report case
 // (Dashboard / Queue screens, or a report not found) → hasReport:false → renderers emit
@@ -104,7 +104,7 @@ const readOpenedReport = () => {
 // Build the evidence descriptor for one amendment row from its amendmentEvidenceKey
 // media envelope ({ value: <s3-key>, fileName }). Overlays A-F7's pre-signed URLs
 // (STATE_KEYS.CURRENT_REPORT_EVIDENCE map, keyed by S3 key). No key → null (renderer
-// shows "—"). Key but no URL (unsigned / failed / expired) → url:"" (renderer shows the
+// shows "-"). Key but no URL (unsigned / failed / expired) → url:"" (renderer shows the
 // filename marked "(link unavailable)", never the raw key).
 const buildEvidence = (envelope) => {
   const s3Key = envelope?.value;
@@ -116,12 +116,12 @@ const buildEvidence = (envelope) => {
   };
 };
 
-// Build the card content on every render (empty-safe — no report open → no card).
+// Build the card content on every render (empty-safe - no report open → no card).
 amendmentsDisplaySection.onResponse = () => {
   const report = readOpenedReport();
 
   // The amendment log is the embedded `amendments` array on the report (dbName-keyed
-  // rows, appended by the reporter only — U-F13). Defensive against a missing/non-array
+  // rows, appended by the reporter only - U-F13). Defensive against a missing/non-array
   // value. NOTE is reporter free-text → escaped at the renderer boundary (rule 10).
   const amendments = Array.isArray(report?.amendments) ? report.amendments : [];
   const rows = amendments.map((row) => ({
@@ -130,7 +130,7 @@ amendmentsDisplaySection.onResponse = () => {
     evidence: buildEvidence(row?.amendmentEvidenceKey),
   }));
 
-  // Newest first — the most recent amendment leads the table (wireframe §4).
+  // Newest first - the most recent amendment leads the table (wireframe §4).
   rows.sort((a, b) => (Number(b.amendedOn) || 0) - (Number(a.amendedOn) || 0));
 
   const data = {

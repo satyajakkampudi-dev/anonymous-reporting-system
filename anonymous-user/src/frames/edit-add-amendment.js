@@ -1,22 +1,22 @@
-// EDIT frame: addAmendment (U-E-addAmendment / U-F13) — the APPEND-ONLY "Amend" popup.
+// EDIT frame: addAmendment (U-E-addAmendment / U-F13) - the APPEND-ONLY "Amend" popup.
 //
 // A reporter adds a timestamped note (+ optional evidence) to a NON-TERMINAL report.
-// The original reporter-entered fields stay locked — there is no edit and no delete
+// The original reporter-entered fields stay locked - there is no edit and no delete
 // path (D16, framework-mapping rule 25). This file owns BOTH halves of the documented
 // "Adding Rows via Popup" flow (collection guide § "Adding Rows via Popup"):
 //
-//   1. addAmendment.onResolution — the Add intent. Independent intent (Context B):
+//   1. addAmendment.onResolution - the Add intent. Independent intent (Context B):
 //      the reportId arrives ONE LEVEL DEEP under state.messageFromUser.payload
 //      (CLAUDE.md "Custom HTML Payloads"), never at the top level. It ATTACHES to the
-//      existing context (Context.Create — Redis-only, NO loadDocument: rule 22) so the
+//      existing context (Context.Create - Redis-only, NO loadDocument: rule 22) so the
 //      report the reporter is viewing stays in the buffer, then resets the registered
-//      amendmentDoc IN PLACE (docId FIRST, then clear values — rule 26; NEVER
+//      amendmentDoc IN PLACE (docId FIRST, then clear values - rule 26; NEVER
 //      cloneAndInit) and opens the quick-edit popup.
 //
-//   2. amendmentDoc.onSubmit — the persist handler. Context A (object graph live on
+//   2. amendmentDoc.onSubmit - the persist handler. Context A (object graph live on
 //      popup-CONFIRM): generate the row primary key, sanitise the note, stamp amendedOn,
 //      add the row to the LIVE collection via self.collection (never the module
-//      singleton — CLAUDE.md "Collection and parent-Doc access"), persist through the
+//      singleton - CLAUDE.md "Collection and parent-Doc access"), persist through the
 //      parent report, then re-sign the amendment evidence and re-render the Display Doc
 //      so the new row appears in the Amendments table (U-D-amendments).
 //
@@ -31,7 +31,7 @@ import { D, state } from "@frontmltd/frontmjs/core/State";
 import { reportDoc, amendmentDoc } from "../docs/report-doc";
 import { reportDisplayDoc } from "../docs/report-display-doc";
 import { statusField } from "../sections/report-details";
-// Field references only — the rows/collection are reached via self.collection in the
+// Field references only - the rows/collection are reached via self.collection in the
 // Context-A onSubmit handler (CLAUDE.md "Collection and parent-Doc access"), never via
 // the module-level collection singleton.
 import {
@@ -49,7 +49,7 @@ import { saveDocWithSubCollections } from "../../../lib/persist";
 import { showScreen, SCREEN } from "./display-nav";
 import { CONTEXT, INTENT, STATE_KEYS } from "../constants";
 
-// The LIVE embedded amendments collection on `parentDoc` — reached via the parent's own
+// The LIVE embedded amendments collection on `parentDoc` - reached via the parent's own
 // subCollections (the instance the framework loaded rows into + will serialise), never
 // the stale module singleton (CLAUDE.md "Collection and parent-Doc access"). Matched by
 // the collection's array-property name (rule 19). Falls back to the registered singleton.
@@ -74,25 +74,25 @@ addAmendment.onResolution = async () => {
   }
 
   // Fresh context + re-read the report (with its already-saved amendments) from
-  // MongoDB. Context.Create CANNOT be used here — this dispatch carries no usable
+  // MongoDB. Context.Create CANNOT be used here - this dispatch carries no usable
   // tabId, so it throws "Cannot set properties of undefined (setting 'currentTabId')".
   // So accumulation does NOT go through the Redis buffer; it goes through MongoDB:
   // loadDocument rehydrates every previously-saved amendment row, onSubmit appends the
   // new one, and saveDocWithSubCollections persists the FULL array (the embedded
-  // sub-collection now serialises — see lib/persist.js). That is what makes a 2nd
+  // sub-collection now serialises - see lib/persist.js). That is what makes a 2nd
   // amendment ADD a row instead of overwriting the 1st.
   // Stable detail tab (rule 37): the amend popup overlays the detail tab and the
   // onSubmit re-render lands in the same tab.
   await Context.CreateAndInit(userTab(CONTEXT.REPORT_DETAIL, state), { state });
   await reportDoc.loadDocument({ reportId });
-  // Stash the reportId so the popup-CONFIRM invocation (a SEPARATE Lambda call — see
+  // Stash the reportId so the popup-CONFIRM invocation (a SEPARATE Lambda call - see
   // onSubmit) can re-load this report and append to its existing amendments.
   state.setField(STATE_KEYS.CURRENT_REPORT_ID, reportId);
   D.log({ message: "addAmendment: opening amend popup", data: { reportId } });
 
   // Code-enforced non-terminal gate: Amend is legal only when the state machine lists
   // it for the reporter on the report's CURRENT status (the SAME single source of truth
-  // the detail-actions card gates the button on). Defence beyond the hidden button —
+  // the detail-actions card gates the button on). Defence beyond the hidden button -
   // a terminal/illegal status never reaches an append.
   const status = reportDoc.f[statusField.id]?.value || "";
   if (!isActionAllowed(status, ACTOR_ROLE.REPORTER, ACTION.AMEND)) {
@@ -103,7 +103,7 @@ addAmendment.onResolution = async () => {
     return;
   }
 
-  // Reset the REGISTERED sub-entity Doc in place (rule 26 — never cloneAndInit).
+  // Reset the REGISTERED sub-entity Doc in place (rule 26 - never cloneAndInit).
   // Order matters: assign the new docId FIRST so the clear-values buffer unsets target
   // the new (empty) path, not the previous Add's saved entries.
   amendmentDoc.docId = state.getUniqueId();
@@ -116,19 +116,19 @@ addAmendment.onResolution = async () => {
 
 // --- 2. Persist handler: load existing amendments, append the new one, save, re-render.
 //
-// CRITICAL — accumulation, not override. The popup CONFIRM is a SEPARATE Lambda
+// CRITICAL - accumulation, not override. The popup CONFIRM is a SEPARATE Lambda
 // invocation from the Add intent (onResolution) that opened it. The amendments loaded
 // when the popup opened are NOT in memory here, and Context.Create (which would restore
 // them from the Redis buffer) CRASHES in this app (no usable tabId). So a naive
 // addRow(self) saw an EMPTY collection and overwrote the previously-saved amendment.
-// Fix: re-load the report fresh HERE — reportDoc.hasSubDocs is true, so loadDocument
+// Fix: re-load the report fresh HERE - reportDoc.hasSubDocs is true, so loadDocument
 // goes through buildDocumentFromContainer and rehydrates every already-saved amendment
-// row — then append the new one as a NEW row and persist the full array via
-// saveDocWithSubCollections (lib/persist — Doc.save alone never serialises in-memory
+// row - then append the new one as a NEW row and persist the full array via
+// saveDocWithSubCollections (lib/persist - Doc.save alone never serialises in-memory
 // sub-rows). This makes a 2nd amendment ADD a row instead of replacing the 1st.
 // FrontM occasionally fires a popup CONFIRM twice for one click; unguarded, that would
 // append the amendment twice. Module-level lock (reset per invocation; cold-start safe)
-// — mirrors sailors-cart's variantProcessing guard (sailors-seller add-variant.js).
+// - mirrors sailors-cart's variantProcessing guard (sailors-seller add-variant.js).
 let amendmentProcessing = false;
 
 amendmentDoc.onSubmit = async (self) => {
@@ -138,7 +138,7 @@ amendmentDoc.onSubmit = async (self) => {
   }
   amendmentProcessing = true;
   try {
-    // Capture the submitted values up-front — loadDocument below rebuilds the doc graph,
+    // Capture the submitted values up-front - loadDocument below rebuilds the doc graph,
     // so we re-create the row from these locals (nothing is read off `self` afterwards).
     const amendmentId =
       self.f[amendmentIdField.id].value || state.getUniqueId();
@@ -166,7 +166,7 @@ amendmentDoc.onSubmit = async (self) => {
     const existingCount = (collection.rows || []).length;
 
     // Append the new amendment as a NEW row. cloneDoc() is the framework's own row-creation
-    // pattern (buildDocumentFromContainer) — a collection ROW, not an intent dispatch, so
+    // pattern (buildDocumentFromContainer) - a collection ROW, not an intent dispatch, so
     // the rule-26 cloneAndInit caveat (about popup form Docs) does not apply here.
     const row = collection.document.cloneDoc();
     row.docId = amendmentId;
@@ -205,14 +205,14 @@ amendmentDoc.onSubmit = async (self) => {
       data: { reportId, amendmentId, total: collection.rows.length },
     });
 
-    // Re-sign every amendment's evidence (the new row may carry a file) BEFORE rendering —
+    // Re-sign every amendment's evidence (the new row may carry a file) BEFORE rendering -
     // section.onResponse is synchronous and NOT awaited (S3 guide "Signed URLs before
     // sendResponse"). The collection now holds existing + new rows, so prepare() covers all.
     await prepareAmendmentsEvidence();
 
     // Re-render the Display Doc so the Amendments table shows the full, appended list.
     // showScreen(DETAIL) FIRST (rule 37): tabs are reused now, so section visibility is
-    // not reset by a fresh tab — without this every screen's sections stack (broken UI).
+    // not reset by a fresh tab - without this every screen's sections stack (broken UI).
     showScreen(SCREEN.DETAIL);
     reportDisplayDoc.sendResponse();
   } finally {

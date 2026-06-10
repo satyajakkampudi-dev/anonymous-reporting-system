@@ -1,9 +1,9 @@
-// A-F1 — Access-refused screen (wireframes-anonymous-admin §0; framework-mapping rule 27).
+// A-F1 - Access-refused screen (wireframes-anonymous-admin §0; framework-mapping rule 27).
 //
-// A non-admin must hit a clear, unambiguous wall — never a half-rendered console, never a
+// A non-admin must hit a clear, unambiguous wall - never a half-rendered console, never a
 // BLANK screen.
 //
-// ARCHITECTURE (CORRECTED, MP-FIX-ACCESS-REFUSAL-RENDER) — this is a SECTION on
+// ARCHITECTURE (CORRECTED, MP-FIX-ACCESS-REFUSAL-RENDER) - this is a SECTION on
 // adminDisplayDoc rendered through showScreen(SCREEN.REFUSAL) + adminDisplayDoc
 // .sendResponse(), exactly like the Dashboard / Queue screens (and like sailors-cart's
 // accessDeniedDisplayDoc.sendResponse()). It is NOT a standalone CardsSet sent on its own:
@@ -12,7 +12,7 @@
 // state.currentTabId exists), then on DENY shows this screen and returns before the
 // gateway read.
 //
-// ANONYMITY / SAFETY: purely static copy — no field values, no report data, no network.
+// ANONYMITY / SAFETY: purely static copy - no field values, no report data, no network.
 // onResponse is synchronous (the framework does NOT await it); nothing async here.
 
 import { Section } from "@frontmltd/frontmjs/core/Section";
@@ -24,7 +24,7 @@ import { renderForPlatform } from "../../../../../lib/utils/platform";
 import { renderWeb } from "./web";
 import { renderMobile } from "./mobile";
 
-// The refusal copy (wireframes §0). Static — the renderers only lay it out per platform.
+// The refusal copy (wireframes §0). Static - the renderers only lay it out per platform.
 const REFUSAL = {
   title: "Restricted",
   body: "This console is for the compliance team only.",
@@ -57,7 +57,7 @@ export const accessRefusalCard = new Card("accessRefusalCard", {
   state,
 });
 
-// Build the refusal content per platform on every render (synchronous — onResponse is
+// Build the refusal content per platform on every render (synchronous - onResponse is
 // not awaited). Static copy, so it is correct for any caller and needs no data.
 accessRefusalSection.onResponse = () => {
   accessRefusalCard.content = renderForPlatform(REFUSAL, {

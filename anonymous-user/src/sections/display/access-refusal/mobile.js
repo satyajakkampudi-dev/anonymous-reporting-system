@@ -1,8 +1,8 @@
-// U-F0a access-refused guard — MOBILE renderer (wireframes-anonymous-user §0;
+// U-F0a access-refused guard - MOBILE renderer (wireframes-anonymous-user §0;
 // "Mobile / Web (identical, single card)"). Same copy as web; mobile fills the
 // available width (no centring wrapper, no max-width) and uses tighter padding for
 // the small screen. Composes shared theme tokens (lib/utils/theme.js) + escapeHtml
-// (lib/utils/format.js) — copy is static but still escaped at the boundary
+// (lib/utils/format.js) - copy is static but still escaped at the boundary
 // (NFR-2, rule 10).
 
 import { escapeHtml } from "../../../../../lib/utils/format";
@@ -12,7 +12,7 @@ export const renderMobile = (data) => {
   const { title, body, redirect } = data;
 
   return (
-    // Full-width single card — no centring wrapper on the small screen.
+    // Full-width single card - no centring wrapper on the small screen.
     `<div style="font-family:${TYPOGRAPHY.FONT_FAMILY};background:${COLORS.SURFACE};` +
     `border:1px solid ${COLORS.BORDER};border-top:4px solid ${COLORS.PRIMARY};` +
     `border-radius:${TYPOGRAPHY.RADIUS}px;padding:${SPACING.LG}px;` +

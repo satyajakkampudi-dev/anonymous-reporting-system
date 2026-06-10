@@ -1,9 +1,9 @@
-// RECEIVER — MSG_CALL_ENDED (anonymous-user -> anonymous-admin).
+// RECEIVER - MSG_CALL_ENDED (anonymous-user -> anonymous-admin).
 //
 // The reporter app (meeting OWNER) receives the Loft backend's endMeeting/leaveUser
 // lifecycle intents (contracts/call-lifecycle.js) and, after ending the call, sends this
 // identity-free { meetingId, attendedBy } to the ANSWERING admin's bot. This receiver runs
-// in THAT admin's session and frees their on-call presence (busy -> available) — the final
+// in THAT admin's session and frees their on-call presence (busy -> available) - the final
 // hop of the healthMariner notifyMedicalMember -> medicalMeetingEnded pattern. This is the
 // reliable path: the backend fires lifecycle intents on the owner bot, not the admin bot.
 //
@@ -20,7 +20,7 @@ import { CONTEXT } from "../../constants";
 
 export const callEndedReceiver = Intent.Create({
   intentId: "callEndedReceiver",
-  prompt: "Free my on-call presence — the anonymous call ended",
+  prompt: "Free my on-call presence - the anonymous call ended",
   state,
 });
 
@@ -38,7 +38,7 @@ callEndedReceiver.onResolution = async () => {
 
   // Defensive: the message is targeted to the answering admin; only they free presence.
   if (attendedBy && attendedBy !== state.user?.userId) {
-    D.log({ message: "A-CALL-ENDED: not me — ignored", data: { attendedBy } });
+    D.log({ message: "A-CALL-ENDED: not me - ignored", data: { attendedBy } });
     return;
   }
 

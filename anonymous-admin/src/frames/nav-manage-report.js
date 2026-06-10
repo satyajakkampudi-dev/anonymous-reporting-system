@@ -1,8 +1,8 @@
-// Navigation intent: openManageReport — load one report for the manage detail view.
+// Navigation intent: openManageReport - load one report for the manage detail view.
 //
 // Independent intent (Context B). The reportId arrives in the invoke_intent envelope
-// ONE LEVEL DEEP under .payload (CLAUDE.md "Custom HTML Payloads") — never at the top
-// level. Loads the report ONLY through the anonymity gateway (rule 15) —
+// ONE LEVEL DEEP under .payload (CLAUDE.md "Custom HTML Payloads") - never at the top
+// level. Loads the report ONLY through the anonymity gateway (rule 15) -
 // loadReportForAdmin applies { projection: adminProjection } and is role-gated, NOT
 // owner-gated (admins manage any report). Stash the reportId for the manage cards +
 // transition handlers (A-D-manage* / A-E-*). SCAFFOLD: placeholder render.
@@ -27,8 +27,8 @@ export const openManageReport = Intent.Create({
 });
 
 // The five reporter-evidence FILE_FIELD dbName keys, in display order
-// (specs/3.field-spec.md — mirrors the manage-content consumer's EVIDENCE_KEYS).
-// evidenceNotes is reporter TEXT (TEXT_AREA), NOT a file — it is NEVER signed.
+// (specs/3.field-spec.md - mirrors the manage-content consumer's EVIDENCE_KEYS).
+// evidenceNotes is reporter TEXT (TEXT_AREA), NOT a file - it is NEVER signed.
 const EVIDENCE_KEYS = [
   "evidenceFile1",
   "evidenceFile2",
@@ -37,20 +37,20 @@ const EVIDENCE_KEYS = [
   "evidenceFile5",
 ];
 
-// Media-scope handling (envelope.fileScopeValue — field-class guide § "Media Field
+// Media-scope handling (envelope.fileScopeValue - field-class guide § "Media Field
 // Value Shape"). Only DOMAIN-scoped objects are signable from the admin app: their
 // fileScopeValue equals the DOMAIN NAME, the object lives at `${domain}/${key}`, and
 // any admin in the domain may read it (no reporter conversation → anonymity-safe).
 // CONVERSATION-scoped (fileScopeValue = the REPORTER's conversationId) or BOT-scoped
-// objects are OMITTED (consumer shows "(link unavailable)") — the admin must not sign
+// objects are OMITTED (consumer shows "(link unavailable)") - the admin must not sign
 // under, or even depend on, the reporter's conversation (anonymity). The detection +
 // `${domain}/${key}` path live inline in buildEvidenceSignedUrls below.
 
 // Build the { [rawS3Key]: signedUrl } stash the A-D-managecontent renderer
-// consumes (admin/src/constants.js STATE_KEYS.CURRENT_REPORT_EVIDENCE — keyed by
+// consumes (admin/src/constants.js STATE_KEYS.CURRENT_REPORT_EVIDENCE - keyed by
 // raw S3 key, overlaid by key). Per-key failures degrade to omission (the
 // consumer renders "(link unavailable)"), NEVER an exception out of the handler.
-// Signed HERE, in the Context-B frame, BEFORE sendResponse — signing cannot live
+// Signed HERE, in the Context-B frame, BEFORE sendResponse - signing cannot live
 // in the non-awaited manageContent onResponse (rule 11/18). Rebuilt fresh on
 // EVERY open → a new short-lived (SIGNED_URL_EXPIRY_SECONDS = 5 min) URL per open,
 // which is exactly the ER-D16 expired-link re-fetch behaviour.
@@ -59,7 +59,7 @@ const buildEvidenceSignedUrls = async (report) => {
   if (!report) return stash;
 
   // DOMAIN-scoped evidence lands in the CONTENT bucket at `${currentUserDomain}/${key}`
-  // (not conversationsBucket) — readable by any admin in the domain (healthMariner pattern).
+  // (not conversationsBucket) - readable by any admin in the domain (healthMariner pattern).
   const bucket = await state.getStaticData(STATIC_DATA_KEYS.CONTENT_BUCKET);
   if (!bucket) {
     // No bucket configured → cannot sign anything; render filenames without links.
@@ -68,7 +68,7 @@ const buildEvidenceSignedUrls = async (report) => {
   }
 
   // Sign one DOMAIN-scoped S3 key into the stash (keyed by the raw s3Key so every consumer
-  // — manage-content AND amendments — overlays it by key). DOMAIN-scoped evidence lives at
+  // - manage-content AND amendments - overlays it by key). DOMAIN-scoped evidence lives at
   // `${currentUserDomain}/${key}`: a domain-shared path readable by ANY admin in the domain,
   // with NO reporter conversationId in it (anonymity-safe, rule 30). Per-key failure degrades
   // to omission ("(link unavailable)"), never an exception out of the handler.
@@ -96,7 +96,7 @@ const buildEvidenceSignedUrls = async (report) => {
 
   // 1. The five reporter top-level evidence files (manage-content consumer).
   for (const fieldKey of EVIDENCE_KEYS) {
-    // drill the envelope — NEVER the bare envelope
+    // drill the envelope - NEVER the bare envelope
     await signKey(report[fieldKey]?.value, fieldKey);
   }
 
@@ -131,9 +131,9 @@ openManageReport.onResolution = async () => {
   // Stash for the manage cards + transition handlers (Context B → B).
   state.setField(STATE_KEYS.CURRENT_REPORT_ID, reportId);
 
-  // A-F7 — evidence signed URLs. Produce the { [s3Key]: signedUrl } stash the
+  // A-F7 - evidence signed URLs. Produce the { [s3Key]: signedUrl } stash the
   // A-D-managecontent renderer consumes, BEFORE sendResponse (signing cannot live
-  // in the non-awaited onResponse — rule 11/18). Wrapped so a signing failure can
+  // in the non-awaited onResponse - rule 11/18). Wrapped so a signing failure can
   // NEVER block the manage view from rendering: on any error the stash is empty and
   // every attachment degrades to "(link unavailable)". Rebuilt fresh on every open
   // → fresh 5-min URLs (ER-D16 expired-link re-fetch). The 'download at your own
@@ -149,9 +149,9 @@ openManageReport.onResolution = async () => {
     });
   }
 
-  // Route to the Manage (report-detail) screen — the six detail sections (header,
+  // Route to the Manage (report-detail) screen - the six detail sections (header,
   // content, resolution, actions, status-history, amendments) visible; all other
-  // exclusive sections hidden — and render the Display Doc (rule 4/8). The
+  // exclusive sections hidden - and render the Display Doc (rule 4/8). The
   // CURRENT_REPORT_ID / CURRENT_REPORT_EVIDENCE stashes above feed the A-D-manage*
   // onResponse handlers fired by this sendResponse.
   showScreen(SCREEN.MANAGE);

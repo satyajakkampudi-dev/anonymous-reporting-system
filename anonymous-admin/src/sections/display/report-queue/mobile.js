@@ -1,10 +1,10 @@
-// Report queue — MOBILE renderer (wireframes §2 "Mobile": stacked cards, chips on a
+// Report queue - MOBILE renderer (wireframes §2 "Mobile": stacked cards, chips on a
 // horizontal-scroll row). Each report is a bordered card: priority badge + severity
 // tone + status pill on top, tracking id, category · urgency, then age · assigned and
 // an "Open →" button. Composes the shared theme tokens (theme.js) + the escapeHtml /
 // statusPillHtml / tonePillHtml / payloadAttr / emptyStateHtml / formatRelative
 // primitives (format.js); every value is escaped at the boundary (NFR-2, rule 10).
-// Pure presentation — index.js owns the read.
+// Pure presentation - index.js owns the read.
 //
 // NO reporter identity is present (rule 30, ER-A2/A3). Priority SORT is A-F5's job.
 
@@ -35,9 +35,9 @@ const ASSIGNED_SHORT = {
   [ROLE.PRIMARY_ADMIN]: "PRIMARY",
   [ROLE.SECONDARY_ADMIN]: "SECONDARY",
 };
-const assignedLabel = (assignedTo) => ASSIGNED_SHORT[assignedTo] || "—";
+const assignedLabel = (assignedTo) => ASSIGNED_SHORT[assignedTo] || "-";
 
-// A quick-filter chip — an openQueue intent button (active chip filled).
+// A quick-filter chip - an openQueue intent button (active chip filled).
 const chipHtml = (chip, activeFilter, filterIntent) => {
   const active = chip.key === activeFilter;
   return (
@@ -62,8 +62,8 @@ const priorityBadgeHtml = () =>
 
 // One stacked report card.
 const cardHtml = (r, openIntent) => {
-  const category = CATEGORY_LABELS[r.category] || r.category || "—";
-  const urgency = URGENCY_LABELS[r.urgency] || r.urgency || "—";
+  const category = CATEGORY_LABELS[r.category] || r.category || "-";
+  const urgency = URGENCY_LABELS[r.urgency] || r.urgency || "-";
   const severity = SEVERITY_LABELS[r.severity] || r.severity;
   const meta = [category, urgency].filter(Boolean).map(escapeHtml).join(" · ");
   const ageAssigned = [formatRelative(r.createdOn), assignedLabel(r.assignedTo)]
