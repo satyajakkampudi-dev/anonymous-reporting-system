@@ -24,10 +24,10 @@
 // Fields"; the raw key is NEVER embedded in HTML) and overlay the signed URL from the
 // STATE_KEYS.CURRENT_REPORT_EVIDENCE map (keyed by S3 key). A key with no signed URL →
 // url:"" → the renderer shows the filename marked "(link unavailable)", never a broken
-// key. NOTE: A-F7 currently signs only the top-level evidenceFile* keys into that map, not
-// amendmentEvidenceKey — until a follow-up extends the openManageReport frame's signing,
-// amendment evidence degrades to "(link unavailable)". Flagged for a /frontm-fix-task; this
-// display side lights up automatically once amendment keys are signed into the same stash.
+// key. The openManageReport frame (A-F7) signs BOTH the top-level evidenceFile* keys AND
+// each amendment's amendmentEvidenceKey into that map (domain-scoped, `${domain}/${key}`),
+// so amendment evidence now resolves to a working signed link; url:"" only on a genuine
+// per-key signing failure / expiry.
 //
 // ANONYMITY (the dominant constraint, C1 / rule 30 / ER-A2/A3): this section binds NO
 // reporter-identity field and NEVER queries `reports` itself — its only source is the

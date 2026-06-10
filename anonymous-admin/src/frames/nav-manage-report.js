@@ -67,17 +67,13 @@ const buildEvidenceSignedUrls = async (report) => {
     return stash;
   }
 
-  for (const fieldKey of EVIDENCE_KEYS) {
-    const envelope = report[fieldKey]; // { value:<s3-key>, fileName, fileScopeValue } | null
-    const s3Key = envelope?.value; // drill the envelope — NEVER the bare envelope
-    if (!s3Key) continue; // empty slot
-
-    // DOMAIN-scoped evidence (sections/evidence.js, fileScope:"domain", per FrontM
-    // platform team): the bytes live at `${currentUserDomain}/${key}` — a domain-shared
-    // path readable by ANY admin in the domain, with NO reporter conversationId in it
-    // (anonymity-safe, rule 30). Sign that path; stash keyed by the raw s3Key so the
-    // manage-content renderer overlays it by key. Per-key failure degrades to omission
-    // ("(link unavailable)"), never an exception out of the handler.
+  // Sign one DOMAIN-scoped S3 key into the stash (keyed by the raw s3Key so every consumer
+  // — manage-content AND amendments — overlays it by key). DOMAIN-scoped evidence lives at
+  // `${currentUserDomain}/${key}`: a domain-shared path readable by ANY admin in the domain,
+  // with NO reporter conversationId in it (anonymity-safe, rule 30). Per-key failure degrades
+  // to omission ("(link unavailable)"), never an exception out of the handler.
+  const signKey = async (s3Key, label) => {
+    if (!s3Key || stash[s3Key]) return; // empty slot, or already signed
     const keyPath = `${state.currentUserDomain}/${s3Key}`;
     try {
       const url = await state.frontmlib.getS3SignedUrl(
@@ -88,14 +84,29 @@ const buildEvidenceSignedUrls = async (report) => {
       if (url) stash[s3Key] = url;
       D.log({
         message: "openManageReport: evidence signed",
-        data: { fieldKey, keyPath, signed: !!url },
+        data: { label, keyPath, signed: !!url },
       });
     } catch (error) {
       D.log({
         message: "openManageReport: evidence signing failed (degraded)",
-        data: { fieldKey, keyPath, error: String(error) },
+        data: { label, keyPath, error: String(error) },
       });
     }
+  };
+
+  // 1. The five reporter top-level evidence files (manage-content consumer).
+  for (const fieldKey of EVIDENCE_KEYS) {
+    // drill the envelope — NEVER the bare envelope
+    await signKey(report[fieldKey]?.value, fieldKey);
+  }
+
+  // 2. Per-amendment evidence (amendments consumer). Each amendment row carries its own
+  //    DOMAIN-scoped amendmentEvidenceKey envelope ({ value:<s3-key>, fileName }); sign each
+  //    into the SAME stash so the read-only Amendments table can link it. report.amendments
+  //    is the embedded sub-collection array returned by loadReportForAdmin (extractRowData).
+  const amendments = Array.isArray(report.amendments) ? report.amendments : [];
+  for (const row of amendments) {
+    await signKey(row?.amendmentEvidenceKey?.value, "amendmentEvidenceKey");
   }
 
   return stash;
