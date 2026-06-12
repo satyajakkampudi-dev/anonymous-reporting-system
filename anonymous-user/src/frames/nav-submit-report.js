@@ -3,8 +3,8 @@
 // Independent intent (Context B). Attaches to the existing context via
 // Context.Create (preserves the autoSaveBuffer - rule 22; NO re-loadDocument).
 // Renders the U-F5 anonymity guard immediately above the Data Doc submit form
-// ("inline at the top", wireframes §2). The fresh-draft reset is a later task;
-// for now the in-flight draft (autosaved) shows.
+// ("inline at the top", wireframes §2). Opens a FRESH form on every entry via
+// the in-place reset below (MP-FIX-SUBMIT-FRESH-FORM).
 //
 // U-F5: the guard is a STANDALONE CardsSet (it cannot live on reportDoc - Fields
 // + CardsSet may not share a Doc). It is sent BEFORE reportDoc.sendResponse() so
@@ -31,6 +31,20 @@ export const openSubmitReport = Intent.Create({
 openSubmitReport.onResolution = async () => {
   D.log({ message: "openSubmitReport: opening submit form" });
   await Context.CreateAndInit(userTab(CONTEXT.SUBMIT_REPORT, state), { state }); // stable submit tab (rule 37)
+
+  // Fresh-form reset (MP-FIX-SUBMIT-FRESH-FORM; mirrors the admin manual-log
+  // opener). A WARM Lambda still holds the previous report's field singletons
+  // - docId and reportId included. Without this reset the form opens
+  // pre-filled with the last report (evidence attachments too), and because
+  // submit-report.js mints reportId only when ABSENT (double-submit
+  // idempotency), submitting again silently OVERWRITES the previous report
+  // row. Cold starts mask the bug. Order matters (rule 26): new docId FIRST
+  // so the value-clear unsets target the new buffer path, THEN clear values.
+  reportDoc.docId = state.getUniqueId();
+  for (const field of reportDoc.fields) {
+    field.value = null;
+  }
+
   sendSubmitGuard(); // U-F5 - anonymity guard, above the form
   // Fresh form → only Evidence file 1 + "+ Add another file" visible (slots 2–5
   // hidden). Resets the persisted slot count BEFORE the form is rendered.
